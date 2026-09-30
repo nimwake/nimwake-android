@@ -3,7 +3,7 @@
 > **목표 버전:** `nimwake-android v0.1.0`
 > **주제:** Install · Start · Recovery · Boot · Power · Real lifecycle
 > **시작 조건:** Core `v0.0.3 — HTTP + Scale-to-Zero` merge
-> **상태:** 계획
+> **상태:** 진행 중 — A1 (Core는 `v0.0.5`까지 merge)
 
 ---
 
@@ -21,24 +21,28 @@ Android에서 검증할 것은 Nimwake 내부 알고리즘이 아니라 **Androi
 그 질문은 실제 HTTP → spawn → readiness → proxy → idle → SIGTERM이 한 줄로 이어진 `v0.0.3`부터 물을 수 있다.
 
 반대로 `/proc` 가시성, proot 아래의 signal · process group, Android sleep, Termux background kill은
-Linux CI로 재현할 수 없다. `v0.1.0` 이후에 발견하면 구조 변경이 되고, `v0.0.4` 전에 발견하면 수정이 된다.
+Linux CI로 재현할 수 없다. `v0.1.0` 이후에 발견하면 구조 변경이 되고, 그 전에 발견하면 수정이 된다.
 
 ```text
 Core                                   Android (이 레포)
 
 v0.0.1  Lifecycle Foundation
 v0.0.2  Process Runtime
-v0.0.3  HTTP + Scale-to-Zero ────────▶ A0  Repository bootstrap
-   │                                   A1  Manual baseline + 실험
-   ▼                                   A2  Start + Supervisor
-v0.0.4  E2E + Perf baseline  ◀──피드백── A3  Boot + Power
-   │    (동일 workload 비교) ─────────▶ A4  Install automation
-   ▼                                   A5  LAN lifecycle + 24h soak
-v0.0.5  Stress + Qualification ◀──────── 24h soak 결과
+v0.0.3  HTTP + Scale-to-Zero
+v0.0.4  E2E + Perf baseline
+v0.0.5  Stress + Qualification ──────▶ A0  Repository bootstrap (최소판)
+   │    (+ host interface §74)         A1  Manual baseline + 실험
+   │                                   A2  Start + Supervisor
+   │         ◀──── 실험 결과 · 이슈 ──── A3  Boot + Power
+   │                                   A4  Install automation
+   │    (v0.0.4 workload 비교) ────────▶ A5  LAN lifecycle + 24h soak
    │                                   A6  72h soak
    ▼                                        │
 v0.1.0  Core MVP  ◀──────── Android 체크리스트 ┘
 ```
+
+계획은 `v0.0.3` 직후 시작을 전제했지만 Core가 `v0.0.5`까지 먼저 나갔다.
+실기기 피드백은 모두 `v0.1.0` 판정으로 모인다. → [03 계획과 달라진 점](03-core-sync.md#계획과-달라진-점)
 
 Core와 이 레포의 동기화 지점, Core에 요청한 변경(빌드 artifact, 문서 수정, 인터페이스)은 [03. Core 동기화](03-core-sync.md)에 있다.
 Core binary 빌드는 Core CI가 소유한다. 이 레포는 빌드하지 않는다. → [nimwake#3](https://github.com/nimwake/nimwake/issues/3)

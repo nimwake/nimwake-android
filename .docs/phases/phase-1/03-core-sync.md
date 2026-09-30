@@ -11,15 +11,19 @@
 
 | Core                       | Android                    | 주고받는 것                                                     |
 | -------------------------- | -------------------------- | --------------------------------------------------------------- |
-| 지금                       | A0                         | Core 이슈 #3–#7 등록 (아래)                                     |
-| `v0.0.3` merge + #3        | A1 시작                    | `core.lock` = v0.0.3 merge SHA, 그 SHA의 aarch64 artifact        |
-| `v0.0.4` 진행 중           | A1 결과                    | 실험 E1–E7 결과 → 기존 이슈에 코멘트 또는 새 Core 이슈           |
-| `v0.0.4` 완료              | A5                         | E2E workload · `RequestTrace`/`StartupTrace` 지표를 기기에서 재실행 |
-| `v0.0.5` 판정 전           | A5 24h soak                | soak 리포트 → Core stress · leak 판정의 참고 자료              |
-| `v0.0.5` `release.yml`     | `fetch-core.sh` 경로 변경  | workflow artifact → release artifact                            |
-| `v0.1.0` 직전              | A6 72h soak                | Android 체크리스트 → Core acceptance                            |
+| `v0.0.5` merge 이후 (지금) | A1                         | `core.lock` = Core SHA, 그 SHA의 aarch64 artifact (`release.yml`) |
+| `v0.1.0` 준비 중           | A1 결과                    | 실험 E1–E7 결과 → 기존 이슈에 코멘트 또는 새 Core 이슈           |
+| `v0.1.0` 준비 중           | A5                         | Core `v0.0.4` E2E workload · `RequestTrace`/`StartupTrace` 지표를 기기에서 재실행 → CI Linux와 비교 |
+| `v0.1.0` 준비 중           | A5 24h soak                | soak 리포트 → Core stress · leak 판정의 참고 자료              |
+| `v0.1.0` 직전              | A6 72h soak                | Android 체크리스트 → Core acceptance ([Core PRD §65](https://github.com/nimwake/nimwake/blob/main/.docs/prd/03-delivery/08-definition-of-done.md)) |
 
 `core.lock`을 올릴 때마다 A1 lifecycle · A2 recovery 시나리오를 다시 돌리고 리포트를 남긴다.
+
+### 계획과 달라진 점
+
+이 계획은 Core `v0.0.3` 직후 A0를 시작해 `v0.0.4` · `v0.0.5`에 실기기 피드백을 넣는 것을 전제했다.
+실제로는 Core가 `v0.0.5`까지 먼저 나갔다 (2026-09-30). 그 두 지점은 지났고, **실기기 피드백은 모두 `v0.1.0` 판정으로 모인다.**
+구조 변경이 필요한 발견이 나오면 `v0.1.0` 전에 Core 이슈로 올린다.
 
 ---
 
@@ -27,20 +31,23 @@
 
 Core `v0.0.3` 코드(PR #2)를 읽고 실기기 없이 확정된 간극과, 이 계획이 유효하기 위한 선행 변경이다.
 
-| 이슈 | 내용 | Android 쪽 영향 | 필요 시점 |
-| ---- | ---- | --------------- | --------- |
-| [nimwake#3](https://github.com/nimwake/nimwake/issues/3) | aarch64 빌드 artifact job (`nimwaked` + fixture) | 이 레포는 빌드하지 않고 artifact만 받는다 | **A1 시작 전** |
-| [nimwake#4](https://github.com/nimwake/nimwake/issues/4) | Android 검증 시점을 `v0.1.0` 이후 → `v0.0.3` 이후 병렬로 (Core PRD §50, phase 문서) | 단일 출처 규칙상 이 계획의 전제 | A1 시작 전 |
-| [nimwake#5](https://github.com/nimwake/nimwake/issues/5) | gateway listen address 설정 — 지금은 `127.0.0.1:8080` 고정 | LAN에서 접근 불가. **A5 blocker** | A5 전 (`v0.0.4` 권장) |
-| [nimwake#6](https://github.com/nimwake/nimwake/issues/6) | 종료 코드로 실패 원인 구분 (`78` 설정 오류 / `69` bind / `1`) | supervisor의 crash-loop 판정 (PRD §24) | A2 (없으면 휴리스틱) |
-| [nimwake#7](https://github.com/nimwake/nimwake/issues/7) | host interface 계약 — health probe가 app을 깨우지 않음, 인자 · 신호 명시 | supervisor health probe (D-A5) | A2 |
+| 이슈 | 내용 | Android 쪽 영향 | 상태 |
+| ---- | ---- | --------------- | ---- |
+| [nimwake#3](https://github.com/nimwake/nimwake/issues/3) | aarch64 빌드 artifact job (`nimwaked` + fixture) | 이 레포는 빌드하지 않고 artifact만 받는다 | 해결 — nimwake#10 (`release.yml` aarch64 job), smoke 수정 nimwake#14 |
+| [nimwake#4](https://github.com/nimwake/nimwake/issues/4) | Android 검증 시점을 `v0.1.0` 이후 → `v0.0.3` 이후 병렬로 (Core PRD §50, phase 문서) | 단일 출처 규칙상 이 계획의 전제 | nimwake#13 |
+| [nimwake#5](https://github.com/nimwake/nimwake/issues/5) | gateway listen address 설정 | LAN 접근 (A5) | 해결 — nimwake#9 (`--listen`, `NIMWAKE_LISTEN`) |
+| [nimwake#6](https://github.com/nimwake/nimwake/issues/6) | 종료 코드로 실패 원인 구분 | supervisor의 crash-loop 판정 (PRD §24) | 해결 — nimwake#9 |
+| [nimwake#7](https://github.com/nimwake/nimwake/issues/7) | host interface 계약 — health probe가 app을 깨우지 않음, 인자 · 신호 명시 | supervisor health probe (D-A5) | 해결 — nimwake#9 |
 
-### 이슈가 해결되기 전의 임시 방식
+### 이 레포가 쓰는 Core 계약
 
-- **#3**: A1까지 늦어지면 Core 레포에서 한 번 수동 빌드한다. 이 레포에 빌드 스크립트를 만들지 않는다. → [01 §5](01-repository-setup.md#5-core-binary-조달)
-- **#5**: A1–A4는 기기 내부 loopback 또는 `ssh -L 8080:127.0.0.1:8080`. Termux 쪽 TCP relay는 쓰지 않는다 — 측정값을 오염시킨다.
-- **#6**: "기동 후 N초 안에 종료"를 연속 K회 보면 crash-loop로 판정한다.
-- **#7**: 미등록 Host로 요청해 `404`를 받으면 alive. 미등록 Host는 `acquire()` 전에 반환되므로 app을 깨우지 않는다 (`gateway/mod.rs` `handle`).
+nimwake#9가 [Core PRD §74 Host Interface](https://github.com/nimwake/nimwake/blob/main/.docs/prd/04-platform/03-host-interface.md)로 고정했다. 바뀌면 Core가 CHANGELOG와 PR 본문에 명시한다.
+
+- **실행:** `nimwaked [APPS_DIR] [--listen ADDR] [--port PORT]`. 기동 성공 시 stdout에 `listening on http://…` 한 줄.
+- **Listen:** 기본 `127.0.0.1:8080`. LAN은 `--listen 0.0.0.0:8080`으로 opt-in (A5). A1–A4는 loopback.
+- **종료:** `SIGTERM`/`SIGINT` → 모든 app 정지 완료까지 기다린 뒤 종료. managed child 잔존 0.
+- **종료 코드:** `0` 정상 · `78` 설정 오류 (재기동 안 함, `UNHEALTHY`) · `69` bind 실패 · `1` 그 외 (backoff 후 재시도).
+- **Health probe:** 미등록 Host (`Host: nimwake-health.invalid`) → `404`. 어떤 app의 lifecycle도 건드리지 않는다.
 
 실기기 실험에서 새 간극이 나오면 Core 이슈로 올리고 이 표에 한 줄 추가한다.
 
@@ -72,9 +79,10 @@ A1에서 수행한다. 대부분 Core fixture로 관측한다. 결과가 기대�
 | D-A2 | `host.conf`는 `KEY=value` (shell source)                   | shell에서 TOML을 안전하게 파싱할 수 없다. PRD §32의 TOML은 hostd 도입 시점에 전환      |
 | D-A3 | Core binary 빌드는 Core CI가 소유한다. 이 레포는 artifact만 받는다 ([nimwake#3](https://github.com/nimwake/nimwake/issues/3)) | 빌드 책임이 두 레포로 갈라지지 않는다. target · 빌드 방식은 Core가 정한다 |
 | D-A4 | Core는 commit SHA로 `core.lock`에 pin                       | 검증 리포트의 재현성. branch 이름은 움직인다                                            |
-| D-A5 | health probe는 미등록 Host → `404`                          | probe가 app을 깨우면 scale-to-zero가 무력화된다. [nimwake#7](https://github.com/nimwake/nimwake/issues/7) 결과에 따라 교체 |
+| D-A5 | health probe는 미등록 Host → `404`                          | probe가 app을 깨우면 scale-to-zero가 무력화된다. Core §74 계약 ([nimwake#7](https://github.com/nimwake/nimwake/issues/7)) |
 | D-A6 | 실기기 테스트는 CI 밖, 결과는 `.docs/validation/` 리포트    | 기기 · 제조사 · OS 조합이 CI로 재현되지 않는다                                         |
 | D-A7 | 개발환경은 macOS와 WSL2만 지원                              | 팀 개발환경. Windows 네이티브 shell은 CRLF · 실행 비트 · POSIX 차이로 기기 스크립트를 깨뜨린다 |
+| D-A8 | Guest는 `proot-distro`의 Ubuntu 26.04 (`ubuntu:26.04`)로 고정 | 첫 실기기(A1)가 이 버전으로 통과했다. Core binary는 musl static이라 glibc와 무관하지만, app runtime(Node 등)과 apt 패키지는 guest 버전에 따라 달라진다. alias `ubuntu`는 최신을 가리켜 기기마다 달라진다 |
 
 ---
 

@@ -23,8 +23,11 @@ repo  수동   start  boot  install LAN   72h
       실험   recov  power  자동   24h
 ```
 
-A0은 기기도 Core binary도 필요 없다. Core `v0.0.3` merge 전에 지금 시작한다.
+A0은 기기도 Core binary도 필요 없다.
 A1부터 실기기와 Core aarch64 artifact([nimwake#3](https://github.com/nimwake/nimwake/issues/3))가 필요하다.
+
+Core가 이미 `v0.0.5`까지 나갔으므로 A0는 **A1에 필요한 최소판**(`core.lock` · `fetch-core` · `deploy`)만 먼저 하고,
+CI · bats · `host/lib`은 실기기 결과를 본 뒤에 채운다. → [03 계획과 달라진 점](03-core-sync.md#계획과-달라진-점)
 
 ---
 
@@ -51,13 +54,13 @@ A1부터 실기기와 Core aarch64 artifact([nimwake#3](https://github.com/nimwa
 ## A1 — Manual baseline + 실기기 실험
 
 PRD §43 Phase 0. 자동화 전에 **손으로** 전 경로를 한 번 통과시키고, Core 가정을 실기기에서 확인한다.
-여기서 나온 결과가 Core `v0.0.4`로 가는 첫 피드백이다.
+여기서 나온 결과가 Core `v0.1.0`으로 가는 첫 피드백이다.
 
-**선행 조건:** Core aarch64 artifact — [nimwake#3](https://github.com/nimwake/nimwake/issues/3). 늦어지면 Core 레포에서 한 번 수동 빌드한다. → [01 §5](01-repository-setup.md#5-core-binary-조달)
+**선행 조건:** Core aarch64 artifact — Core `release.yml`. → [01 §5](01-repository-setup.md#5-core-binary-조달)
 
 - [ ] `make fetch-core`로 `core.lock` SHA의 artifact를 `dist/aarch64/`에 받는다
-- [ ] Termux(F-Droid 또는 GitHub release) + Termux:Boot — **같은 출처**로 설치
-- [ ] `pkg install proot-distro openssh` → `proot-distro install ubuntu`
+- [ ] Termux + Termux:Boot — **같은 출처**로 설치 (F-Droid / GitHub / Google Play 중 하나. 서명이 달라 섞을 수 없다)
+- [ ] `pkg install proot-distro openssh` → `proot-distro install ubuntu:26.04` ([D-A8](03-core-sync.md#이-레포의-설계-결정))
 - [ ] Termux sshd + key auth, 개발 머신 `~/.ssh/config`
 - [ ] `scripts/deploy.sh`로 `dist/` + `guest/apps/echo` 배치
 - [ ] proot 안에서 `nimwaked` 수동 실행, Termux 쪽에서 `curl -H 'Host: echo.local' 127.0.0.1:8080`
@@ -67,7 +70,7 @@ PRD §43 Phase 0. 자동화 전에 **손으로** 전 경로를 한 번 통과시
 
 **완료 조건**
 
-- 기기 내부(loopback)에서 lifecycle 시나리오가 Core `v0.0.3` smoke와 같은 결과를 낸다.
+- 기기 내부(loopback)에서 lifecycle 시나리오가 Core E2E와 같은 결과를 낸다 (cold → same PID → sleep → new PID).
 - E1–E7 결과가 리포트에 있고, 실패 항목은 Core 이슈로 올라가 있다.
 
 ---
@@ -100,10 +103,10 @@ nimwake-host start
 probe가 등록된 app의 `Host`로 요청하면 그 요청이 `acquire()`를 거쳐 **app을 깨우고 idle timer를 계속 리셋한다.**
 supervisor가 scale-to-zero를 무력화한다.
 
-MVP probe: 등록되지 않은 Host(`Host: nimwake-health.invalid`)로 요청해 **`404`가 오면 gateway alive**로 본다.
-Core의 gateway는 미등록 Host에 app lifecycle을 건드리지 않고 `404`를 반환한다.
-이 동작을 Core 계약으로 고정하거나 전용 health 경로를 두는 것은 Core 피드백 항목이다. → [nimwake#7](https://github.com/nimwake/nimwake/issues/7)
-crash-loop 판정은 종료 코드 구분([nimwake#6](https://github.com/nimwake/nimwake/issues/6))이 들어오면 휴리스틱에서 종료 코드 기반으로 바꾼다.
+probe: 등록되지 않은 Host(`Host: nimwake-health.invalid`)로 요청해 **`404`가 오면 gateway alive**로 본다.
+Core가 이것을 계약으로 고정했다 — 미등록 Host 요청은 어떤 app의 lifecycle도 건드리지 않는다. → [Core §74](https://github.com/nimwake/nimwake/blob/main/.docs/prd/04-platform/03-host-interface.md)
+
+crash-loop 판정은 **종료 코드 기반**이다 (§74): `78`이면 재기동하지 않고 `UNHEALTHY`, `69` · `1`이면 backoff 후 재시도, `0`이면 정상 종료.
 
 **완료 조건**
 
@@ -153,7 +156,7 @@ PRD §35–§36.
 
 ## A5 — LAN lifecycle + 24h soak (MVP [6])
 
-- [ ] LAN 접근: `curl -H 'Host: echo.local' http://PHONE_IP:8080` — listen address 설정([nimwake#5](https://github.com/nimwake/nimwake/issues/5))이 선행 조건
+- [ ] LAN 접근: `nimwaked --listen 0.0.0.0:8080` → `curl -H 'Host: echo.local' http://PHONE_IP:8080` (외부 노출은 opt-in, Core §74)
 - [ ] concurrent cold start: LAN에서 동시 요청 N개 → PID 하나
 - [ ] Wi-Fi 끊김 → 재연결 후 요청 성공 (daemon 재기동 없이)
 - [ ] Core `v0.0.4` workload를 기기에서 실행해 CI Linux와 같은 지표로 비교 (Core PRD §50)
@@ -162,7 +165,7 @@ PRD §35–§36.
 **완료 조건**
 
 - 개발 머신에서 LAN으로 lifecycle 시나리오 통과.
-- 24h soak 리포트가 Core `v0.0.5` 판정 전에 전달된다.
+- 24h soak 리포트가 Core `v0.1.0` 판정 전에 전달된다.
 
 ---
 

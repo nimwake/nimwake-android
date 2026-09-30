@@ -29,7 +29,7 @@ Core 레포의 규칙을 그대로 따른다. → [nimwake/.docs/README.md](http
 
 | 페이즈                              | 버전     | 주제                                               | 상태      |
 | ----------------------------------- | -------- | -------------------------------------------------- | --------- |
-| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 계획      |
+| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 진행 중   |
 
 ---
 

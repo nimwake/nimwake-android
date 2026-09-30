@@ -115,8 +115,7 @@ Ubuntu   /opt/nimwake/bin/{nimwaked, echo-server, ...}
 ### WSL 규칙
 
 1. **레포는 WSL 파일시스템에 clone한다.** `~/dev/nimwake/nimwake-android` — `/mnt/c/...` 금지.
-   Windows 파일시스템에서는 실행 비트가 사라지고, `git status`가 모든 파일을 mode 변경으로 보며, 빌드가 수 배 느리다.
-   지금 `C:\Users\...\nimwake-android`에 있는 체크아웃은 WSL 안으로 다시 clone한다. Core 레포도 같다.
+   Windows 파일시스템에서는 실행 비트가 사라지고, `git status`가 모든 파일을 mode 변경으로 보며, 빌드가 수 배 느리다. Core 레포도 같다.
 2. `git config --global core.autocrlf false` + `.gitattributes`의 `* text=auto eol=lf`. CRLF가 섞인 shell은 Termux에서 `$'\r': command not found`로 죽는다.
 3. 실행 비트는 `git update-index --chmod=+x`로 커밋한다. CI가 `test -x`로 검사한다.
 4. **WSL은 USB 장치를 보지 못한다.** 기기 접근은 ssh가 기본이다. adb가 필요하면 Wireless debugging(`adb pair` / `adb connect`)을 쓴다. usbipd-win은 선택.
@@ -169,18 +168,19 @@ password 로그인은 끈다. (PRD §40)
 
 **빌드는 Core가 소유한다.** 이 레포는 Core CI가 만든 aarch64 artifact를 내려받기만 한다.
 
-Core의 `release.yml`은 `v0.0.5`에 들어가지만, 그때까지 기다리면 실기기 피드백이 `v0.0.4` / `v0.0.5`에 들어갈 수 없다.
-그래서 release 전체가 아니라 **aarch64 빌드 job만 Core에 먼저 들이는 것**을 요청했다. → [nimwake#3](https://github.com/nimwake/nimwake/issues/3)
+Core `release.yml`의 `aarch64` job이 만든다 → [nimwake#3](https://github.com/nimwake/nimwake/issues/3).
+tag push마다 돌고, tag가 없는 commit은 Core 레포에서 `gh workflow run release.yml --ref <branch>`로 돌린다.
+`publish` job은 tag에서만 도므로 dispatch는 release를 만들지 않는다.
 
 ```text
 core.lock
    │  repo = nimwake/nimwake
    │  rev  = <full commit SHA>
-   │  note = v0.0.3 merge commit
+   │  note = 무엇을 pin했는가
    ▼
-Core CI (nimwake#3)  → artifact  nimwake-aarch64-<sha>
+Core release.yml (aarch64 job)  → workflow artifact  nimwake-aarch64-<sha>
    ▼
-scripts/fetch-core.sh  → gh run download … → dist/aarch64/
+scripts/fetch-core.sh  → 그 SHA의 성공한 run → gh run download … → dist/aarch64/
    ├── nimwaked
    ├── echo-server          # 응답 body = 자기 pid → same/new PID를 HTTP로 관측
    ├── crash-server
@@ -189,15 +189,10 @@ scripts/fetch-core.sh  → gh run download … → dist/aarch64/
    └── BUILD_INFO           # Core commit, rustc, target, 빌드 방식
 ```
 
-- target(`aarch64-unknown-linux-musl` static 제안)과 빌드 방식은 Core가 정한다.
+- target은 `aarch64-unknown-linux-musl` static, 빌드는 `cross`다 (Core D40). guest의 glibc 버전과 무관하다.
 - 기기에서 빌드하지 않는다. (PRD §29)
 - branch 이름이 아니라 **commit SHA**로 pin한다. 검증 리포트는 항상 SHA를 남긴다.
-- Core `v0.0.5` 이후에는 release artifact로 옮긴다. `fetch-core.sh`의 다운로드 경로만 바뀐다.
-
-### nimwake#3이 A1보다 늦어지면
-
-A0는 binary가 필요 없다. A1 시작 시점에 Core job이 아직 없으면, 개발자가 **Core 레포에서** 한 번 수동 빌드해 `dist/aarch64/`에 둔다.
-이 레포에 빌드 스크립트나 workflow를 만들지 않는다. 리포트의 `BUILD_INFO`에 "수동 빌드"를 남긴다.
+- workflow artifact 보존 기간은 90일이다. tag release에 aarch64 asset이 붙으면 `fetch-core.sh`를 그쪽으로 옮긴다.
 
 ### private repo 접근
 
@@ -214,10 +209,10 @@ Core와 이 레포 모두 private이다.
 | ---------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
 | `ci.yml`         | PR, push `main`                      | `shellcheck -s sh`, `shfmt -d`, `bats tests/unit`, 실행 비트 검사. ubuntu + macos matrix |
 
-aarch64 binary의 smoke는 Core CI(nimwake#3)가 한다. Android 동작은 어느 CI도 증명하지 않는다.
+aarch64 binary의 smoke(qemu에서 종료 코드 78)는 Core `release.yml`이 한다. Android 동작은 어느 CI도 증명하지 않는다.
 
 **실기기 테스트는 CI에 넣지 않는다.** 결과는 `.docs/validation/`에 리포트로 남긴다.
-리포트 필수 항목: 기기 모델 · Android 버전 · 제조사 스킨 · Termux 버전과 설치 경로(F-Droid / GitHub) · proot-distro 버전 · Core SHA · 시나리오별 결과 · 측정값.
+리포트 필수 항목: 기기 모델 · Android 버전 · 제조사 스킨 · Termux 버전과 설치 경로(F-Droid / GitHub / Google Play) · proot-distro 버전 · guest Ubuntu 버전 · Core SHA · 시나리오별 결과 · 측정값.
 
 ---
 
@@ -230,7 +225,7 @@ aarch64 binary의 smoke는 Core CI(nimwake#3)가 한다. Android 동작은 어�
 
 ```text
 nimwake-android   core.lock          검증 리포트
-A2                <v0.0.3 SHA>       validation/01-...
+A1                <Core SHA>         validation/01-...
 ```
 
 ---
