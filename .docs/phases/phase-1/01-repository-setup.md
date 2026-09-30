@@ -20,6 +20,19 @@ Core aarch64 빌드 파이프라인 (임시)
 
 이름에 "android"가 있지만 **Gradle/Android Studio 프로젝트가 아니다.** 산출물은 shell과, Core를 aarch64로 교차 빌드한 binary다.
 
+### 언어
+
+Nimwake 조직의 코어 언어는 **Rust**다. 이 레포도 그 원칙을 따른다.
+
+| 대상                                 | 언어       | 비고                                                                 |
+| ------------------------------------ | ---------- | -------------------------------------------------------------------- |
+| Core (`nimwaked`, fixture)           | **Rust**   | Core 레포 소유. 이 레포는 소스를 가져와 빌드만 한다                  |
+| Host Layer MVP (`host/`, `guest/`)   | POSIX sh   | Termux 기동 · proot 진입 · 재기동 같은 glue. → [D-A1](03-core-sync.md#이-레포의-설계-결정) |
+| Host Layer 이후 (`nimwake-hostd`)    | **Rust**   | shell로 부족해지면 Rust binary로 옮긴다 (PRD §8)                     |
+
+**Zig는 이 레포의 언어가 아니다.** Zig 소스는 한 줄도 없다.
+Rust 코드를 aarch64 Linux로 교차 빌드할 때 `cargo-zigbuild`가 `zig cc`를 **C 링커로만** 빌려 쓴다. → [§3 교차 빌드](#교차-빌드--rust를-cargo-zigbuild로)
+
 ---
 
 ## 2. 디렉터리 구조
@@ -96,22 +109,31 @@ Ubuntu   /opt/nimwake/bin/{nimwaked, echo-server, ...}
 | ---------------------- | ----------------------------- | -------------------------------------------- |
 | git, make, ssh, curl   | 기본 / Xcode CLT              | `apt install build-essential openssh-client` |
 | Rust (rustup)          | rustup.rs                     | rustup.rs                                    |
-| zig + cargo-zigbuild   | `brew install zig`            | `pip install ziglang` 또는 tarball           |
+| cargo-zigbuild         | `cargo install cargo-zigbuild` | `cargo install cargo-zigbuild`              |
+| zig (링커로만 사용)    | `brew install zig`            | `pip install ziglang` 또는 tarball           |
 | shellcheck, shfmt      | `brew install shellcheck shfmt` | `apt install shellcheck shfmt`             |
 | bats-core              | `brew install bats-core`      | `apt install bats`                           |
 | adb (선택)             | `brew install android-platform-tools` | `apt install adb`                    |
 
 `make doctor-dev`가 위 도구의 존재와 버전을 확인한다.
 
-### 교차 빌드는 cargo-zigbuild 하나로
+### 교차 빌드 — Rust를 cargo-zigbuild로
 
 ```text
+source   Rust (Core 레포)
 target   aarch64-unknown-linux-musl   (static)
+compile  rustc
+link     zig cc   ← 여기에만 zig가 쓰인다
 ```
+
+`rustc`는 aarch64 코드를 직접 만들지만, 마지막 링크 단계에는 aarch64 Linux용 C 링커와 libc가 필요하다.
+`zig cc`는 여러 타깃의 링커와 libc를 binary 하나에 담고 있어 이 역할을 대신한다. `cargo-zigbuild`는 `cargo build`를 감싸 링커만 바꾼다.
+빌드되는 코드와 결과 binary는 일반 `cargo build`와 같은 Rust다.
 
 - `cross`는 Docker가 필요하다. WSL과 macOS에서 Docker 설정이 갈린다. 쓰지 않는다.
 - Apple Silicon도 Darwin이므로 Linux binary는 어차피 교차 빌드다. macOS · WSL · CI가 같은 경로를 탄다.
 - musl static binary는 proot Ubuntu의 glibc 버전과 무관하고, 나중에 proot 없이 Termux에서 직접 실행하는 선택지도 남긴다.
+- 임시 수단이다. Core `v0.0.5` release artifact가 생기면 내려받는 것으로 바꾼다. 링커를 `cross`나 네이티브 arm64 runner로 바꿔도 Rust 코드는 바뀌지 않는다.
 
 ### WSL 규칙
 
@@ -186,7 +208,7 @@ dist/aarch64/
    ├── crash-server
    ├── group-server         # 손자 process 생성 → process group 정리 관측
    ├── slow-start-server
-   └── BUILD_INFO           # core rev, rustc, zig 버전
+   └── BUILD_INFO           # core rev, rustc, zig(링커) 버전
 ```
 
 - 기기에서 빌드하지 않는다. (PRD §29)

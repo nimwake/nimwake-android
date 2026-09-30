@@ -97,9 +97,9 @@ A1에서 수행한다. 대부분 Core fixture로 관측한다. 결과가 기대�
 
 | ID   | 결정                                                       | 이유                                                                                   |
 | ---- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| D-A1 | Host Layer MVP는 POSIX shell. `nimwake-hostd`는 필요가 드러나면 | PRD §8이 허용. 실험 결과 전에는 무엇이 어려운지 모른다. Termux에 Rust toolchain 불필요 |
+| D-A1 | Host Layer MVP는 POSIX shell. 이후 `nimwake-hostd`는 조직 코어 언어인 Rust로 | PRD §8이 허용. 실험 결과 전에는 무엇이 어려운지 모른다. MVP 단계에서 Termux에 Rust toolchain 불필요 |
 | D-A2 | `host.conf`는 `KEY=value` (shell source)                   | shell에서 TOML을 안전하게 파싱할 수 없다. PRD §32의 TOML은 hostd 도입 시점에 전환      |
-| D-A3 | 교차 빌드는 `cargo-zigbuild` · `aarch64-unknown-linux-musl` | macOS · WSL · CI가 Docker 없이 같은 경로. proot glibc와 무관한 static binary          |
+| D-A3 | Rust Core의 교차 빌드는 `cargo-zigbuild` · `aarch64-unknown-linux-musl`. zig는 링커로만 쓰고 언어로 채택하지 않는다 | macOS · WSL · CI가 Docker 없이 같은 경로. proot glibc와 무관한 static binary |
 | D-A4 | Core는 commit SHA로 pin, `v0.0.5`까지 이 레포가 빌드       | Core release pipeline이 `v0.0.5`에 생긴다. 검증 리포트의 재현성                        |
 | D-A5 | health probe는 미등록 Host → `404`                          | probe가 app을 깨우면 scale-to-zero가 무력화된다. F3 해결 시 교체                       |
 | D-A6 | 실기기 테스트는 CI 밖, 결과는 `.docs/validation/` 리포트    | 기기 · 제조사 · OS 조합이 CI로 재현되지 않는다                                         |
