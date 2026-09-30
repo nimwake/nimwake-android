@@ -1,0 +1,18 @@
+# 검증용 manifest. Core fixture `echo-server`는 응답 body로 자기 pid를 돌려준다.
+# → same PID / new PID를 HTTP만으로 관측한다.
+name = "echo"
+
+[server]
+host = "echo.local"
+port = 3101
+
+[runtime]
+command = ["/opt/nimwake/bin/echo-server", "3101"]
+working_dir = "/home/nimwake"
+
+[lifecycle]
+# lifecycle 시나리오가 idle → sleep을 기다리는 시간. 짧게 둔다.
+idle_timeout_seconds = 5
+startup_timeout_seconds = 10
+shutdown_timeout_seconds = 5
+max_pending_requests = 256

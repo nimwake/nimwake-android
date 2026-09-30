@@ -1,0 +1,3 @@
+repo=nimwake/nimwake
+rev=adf1e20b959ef4717b1aae9def8cfed7910b3d4e
+note=v0.0.5 + #11 + fix/aarch64-smoke-log (release.yml smoke 수정 브랜치). 머지 후 main SHA로 올린다.
