@@ -40,7 +40,8 @@ v0.0.5  Stress + Qualification ◀──────── 24h soak 결과
 v0.1.0  Core MVP  ◀──────── Android 체크리스트 ┘
 ```
 
-Core와 이 레포의 동기화 지점, Core에 먼저 반영해야 할 문서 변경은 [03. Core 동기화](03-core-sync.md)에 있다.
+Core와 이 레포의 동기화 지점, Core에 요청한 변경(빌드 artifact, 문서 수정, 인터페이스)은 [03. Core 동기화](03-core-sync.md)에 있다.
+Core binary 빌드는 Core CI가 소유한다. 이 레포는 빌드하지 않는다. → [nimwake#3](https://github.com/nimwake/nimwake/issues/3)
 
 ---
 
@@ -50,7 +51,7 @@ Core와 이 레포의 동기화 지점, Core에 먼저 반영해야 할 문서 �
 | -------------------------------------------------- | -------------------------------------------------------- |
 | [01. 레포지토리 셋업](01-repository-setup.md)      | 디렉터리 구조 · macOS/WSL 개발환경 · 빌드 · CI · Core pin |
 | [02. 마일스톤](02-milestones.md)                   | A0 ~ A6 작업 항목과 완료 조건                            |
-| [03. Core 동기화](03-core-sync.md)                 | 동기화 지점 · Core 피드백 항목 · 실기기 실험 목록         |
+| [03. Core 동기화](03-core-sync.md)                 | 동기화 지점 · Core 이슈 #3–#7 · 실기기 실험 목록          |
 
 ---
 

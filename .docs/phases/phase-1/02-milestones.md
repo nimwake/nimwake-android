@@ -23,7 +23,8 @@ repo  수동   start  boot  install LAN   72h
       실험   recov  power  자동   24h
 ```
 
-A0은 기기 없이, A1부터 실기기가 필요하다. A0은 Core `v0.0.3` merge 전에 시작해도 된다.
+A0은 기기도 Core binary도 필요 없다. Core `v0.0.3` merge 전에 지금 시작한다.
+A1부터 실기기와 Core aarch64 artifact([nimwake#3](https://github.com/nimwake/nimwake/issues/3))가 필요하다.
 
 ---
 
@@ -31,18 +32,19 @@ A0은 기기 없이, A1부터 실기기가 필요하다. A0은 Core `v0.0.3` mer
 
 기기 없이 끝나는 것. 개발 머신 두 종류(macOS, WSL)에서 같은 명령이 도는 것을 확인한다.
 
-- [ ] `.gitattributes`, `.editorconfig`, `.gitignore`(`.cache/`, `dist/`)
+- [ ] `.gitattributes`, `.editorconfig`, `.gitignore`(`dist/`)
 - [ ] `PRD.md` 이름 정리: `Ember` → `Nimwake`, `emberd` → `nimwaked`
-- [ ] `Makefile`: `doctor-dev` · `lint` · `test` · `build-core` · `deploy`
-- [ ] `core.lock` + `scripts/fetch-core.sh` + `scripts/build-core.sh`
-- [ ] `ci.yml` (ubuntu + macos matrix), `core-build.yml` + `CORE_DEPLOY_KEY`
+- [ ] `Makefile`: `doctor-dev` · `lint` · `test` · `fetch-core` · `deploy`
+- [ ] `core.lock` + `scripts/fetch-core.sh` (artifact가 아직 없으면 명확한 오류로 종료)
+- [ ] `ci.yml` (ubuntu + macos matrix)
+- [ ] `host/lib` 골격 + `tests/unit` — backoff 계산, restart window, 설정 파싱은 binary 없이 테스트한다
 - [ ] README: 개발환경(macOS / WSL) 셋업, 호환 표
 - [ ] `.docs/validation/` 리포트 템플릿
 
 **완료 조건**
 
-- macOS와 WSL 각각에서 `make doctor-dev lint test build-core`가 성공하고, 두 `dist/aarch64/nimwaked`의 `BUILD_INFO` rev가 같다.
-- `core-build.yml`의 qemu smoke가 통과한다.
+- macOS와 WSL 각각에서 `make doctor-dev lint test`가 성공한다.
+- `ci.yml`이 ubuntu · macos 양쪽에서 통과한다.
 
 ---
 
@@ -51,6 +53,9 @@ A0은 기기 없이, A1부터 실기기가 필요하다. A0은 Core `v0.0.3` mer
 PRD §43 Phase 0. 자동화 전에 **손으로** 전 경로를 한 번 통과시키고, Core 가정을 실기기에서 확인한다.
 여기서 나온 결과가 Core `v0.0.4`로 가는 첫 피드백이다.
 
+**선행 조건:** Core aarch64 artifact — [nimwake#3](https://github.com/nimwake/nimwake/issues/3). 늦어지면 Core 레포에서 한 번 수동 빌드한다. → [01 §5](01-repository-setup.md#5-core-binary-조달)
+
+- [ ] `make fetch-core`로 `core.lock` SHA의 artifact를 `dist/aarch64/`에 받는다
 - [ ] Termux(F-Droid 또는 GitHub release) + Termux:Boot — **같은 출처**로 설치
 - [ ] `pkg install proot-distro openssh` → `proot-distro install ubuntu`
 - [ ] Termux sshd + key auth, 개발 머신 `~/.ssh/config`
@@ -97,7 +102,8 @@ supervisor가 scale-to-zero를 무력화한다.
 
 MVP probe: 등록되지 않은 Host(`Host: nimwake-health.invalid`)로 요청해 **`404`가 오면 gateway alive**로 본다.
 Core의 gateway는 미등록 Host에 app lifecycle을 건드리지 않고 `404`를 반환한다.
-전용 health endpoint는 Core 피드백 항목이다. → [03 F3](03-core-sync.md#core-피드백-항목)
+이 동작을 Core 계약으로 고정하거나 전용 health 경로를 두는 것은 Core 피드백 항목이다. → [nimwake#7](https://github.com/nimwake/nimwake/issues/7)
+crash-loop 판정은 종료 코드 구분([nimwake#6](https://github.com/nimwake/nimwake/issues/6))이 들어오면 휴리스틱에서 종료 코드 기반으로 바꾼다.
 
 **완료 조건**
 
@@ -147,7 +153,7 @@ PRD §35–§36.
 
 ## A5 — LAN lifecycle + 24h soak (MVP [6])
 
-- [ ] LAN 접근: `curl -H 'Host: echo.local' http://PHONE_IP:8080` — Core 피드백 F1(listen address)이 선행 조건
+- [ ] LAN 접근: `curl -H 'Host: echo.local' http://PHONE_IP:8080` — listen address 설정([nimwake#5](https://github.com/nimwake/nimwake/issues/5))이 선행 조건
 - [ ] concurrent cold start: LAN에서 동시 요청 N개 → PID 하나
 - [ ] Wi-Fi 끊김 → 재연결 후 요청 성공 (daemon 재기동 없이)
 - [ ] Core `v0.0.4` workload를 기기에서 실행해 CI Linux와 같은 지표로 비교 (Core PRD §50)
