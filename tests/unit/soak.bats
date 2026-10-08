@@ -54,7 +54,7 @@ EOF
 @test "summary is identical across the awk implementations on this machine" {
 	summary="$root/tests/device/soak-summary.awk"
 	expected="$(sample_csv | awk -F, -f "$summary")"
-	for impl in mawk "gawk --posix" original-awk nawk busybox; do
+	for impl in mawk "gawk --posix" original-awk nawk "busybox awk"; do
 		command -v "${impl%% *}" >/dev/null 2>&1 || continue
 		got="$(sample_csv | $impl -F, -f "$summary" 2>&1)"
 		if [ "$got" != "$expected" ]; then
