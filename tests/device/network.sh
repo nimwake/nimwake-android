@@ -62,7 +62,9 @@ cmd_lan() {
 	cold="$2"
 	# shellcheck disable=SC2046 # "code pid"를 두 인자로 나눈다
 	set -- $(lan_get echo.local)
-	[ "$1" = 200 ] && [ "$2" = "$cold" ] || fail "warm request: expected pid $cold, got http $1 pid ${2:-}"
+	if [ "$1" != 200 ] || [ "$2" != "$cold" ]; then
+		fail "warm request: expected pid $cold, got http $1 pid ${2:-}"
+	fi
 	echo "ok  cold → warm over LAN  pid=$cold (same PID)"
 
 	sleep "$idle_wait"

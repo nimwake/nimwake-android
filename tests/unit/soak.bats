@@ -23,8 +23,8 @@ header='epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,sta
 	[ ! -f "$HOME/.nimwake-host/run/soak.pid" ]
 }
 
-@test "summarize counts samples, failures, restarts and orphans" {
-	run "$soak" summarize <<EOF
+sample_csv() {
+	cat <<EOF
 $header
 1000,2026-10-09 00:00:00,200,0.040,101,0,9000,2000,RUNNING,80,30.0,100000
 1300,2026-10-09 00:05:00,200,0.030,102,0,9000,2100,RUNNING,81,31.0,100000
@@ -32,6 +32,11 @@ $header
 1900,2026-10-09 00:15:00,200,0.050,103,1,9100,1900,RUNNING,83,35.5,99980
 2800,2026-10-09 00:30:00,200,0.060,104,0,9100,2200,RUNNING,84,33.0,99970
 EOF
+}
+
+@test "summarize counts samples, failures, restarts and orphans" {
+	run sh -c "\"$soak\" summarize" < <(sample_csv)
+	echo "$output"
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"samples          5"* ]]
 	[[ "$output" == *"max gap          900s"* ]]
@@ -43,4 +48,20 @@ EOF
 	[[ "$output" == *"daemon restarts  1"* ]]
 	[[ "$output" == *"daemon RSS       2000 → 2200 KB  (max 2200)"* ]]
 	[[ "$output" == *"max temp 35.5°C"* ]]
+}
+
+# macOS(one-true-awk) · Linux(mawk · gawk)에서 요약이 같아야 한다. 이 머신에 있는 구현을 모두 돌린다.
+@test "summary is identical across the awk implementations on this machine" {
+	summary="$root/tests/device/soak-summary.awk"
+	expected="$(sample_csv | awk -F, -f "$summary")"
+	for impl in mawk "gawk --posix" original-awk nawk busybox; do
+		command -v "${impl%% *}" >/dev/null 2>&1 || continue
+		got="$(sample_csv | $impl -F, -f "$summary" 2>&1)"
+		if [ "$got" != "$expected" ]; then
+			echo "== $impl differs:"
+			echo "$got"
+			return 1
+		fi
+		echo "ok  $impl"
+	done
 }
