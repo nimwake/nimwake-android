@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/sh
 # Termux:Boot 진입점 — 재부팅 후 nimwaked를 띄우고 READY까지 기다린다. (A3, PRD §10)
-# make deploy가 ~/.termux/boot/ 에 설치한다. Termux:Boot는 이 디렉터리의 실행 파일을 이름 순으로 실행한다.
+# make deploy가 ~/.termux/boot/ 에 설치한다. Termux:Boot는 00-sshd와 거의 동시에 이것을 시작한다.
 #
 # 단계마다 시각을 ~/.nimwake-host/logs/boot.log에 남기고, 시작 줄에 부팅 시각(`uptime -s`)을 적는다.
 # "실행이 안 됐는지, 늦게 됐는지"를 구분하지 못하면 원인을 좁힐 수 없다. (validation/01 A3 사전 확인)

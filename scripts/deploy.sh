@@ -21,7 +21,7 @@ fi
 ssh "$device" "proot-distro login ubuntu --bind \$HOME/$stage:/mnt/nimwake-stage \
 	-- sh /mnt/nimwake-stage/guest/setup-ubuntu.sh /mnt/nimwake-stage"
 
-# Termux:Boot는 이 디렉터리의 실행 파일을 이름 순으로 실행한다 (00-sshd → 10-nimwake).
+# Termux:Boot는 이 디렉터리의 실행 파일을 이름 순으로 시작한다. 앞 스크립트를 기다리지는 않는다. (validation/02)
 # 다음 재부팅부터 nimwaked가 자동으로 뜬다. 이미 떠 있는 daemon은 건드리지 않는다.
 ssh "$device" "mkdir -p \$HOME/.termux/boot && install -m 700 $stage/host/boot/* \$HOME/.termux/boot/ \
 	&& echo 'deploy: boot scripts installed' && ls \$HOME/.termux/boot"
