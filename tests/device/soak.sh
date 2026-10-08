@@ -17,7 +17,9 @@ device="${NIMWAKE_DEVICE:-nimwake-phone}"
 cmd_start() {
 	hours="${1:-24}"
 	interval="${2:-300}"
+	# `{ … } </dev/null`: termux-wake-lock 등이 표준 입력(=이 스크립트)을 삼키지 못하게 한다 (scripts/doctor.sh 참고)
 	ssh "$device" sh -s "$hours" "$interval" <<'EOF'
+{
 set -eu
 host="$HOME/.nimwake-host"
 if [ -f "$host/run/soak.pid" ] && kill -0 "$(cat "$host/run/soak.pid")" 2>/dev/null; then
@@ -30,6 +32,7 @@ fi
 termux-wake-lock
 nohup "$host/bin/nimwake-soak" "$2" "$1" >/dev/null 2>&1 &
 echo "soak: started (pid $!) — ${1}h, every ${2}s → ~/.nimwake-host/logs/soak.csv"
+} </dev/null
 EOF
 }
 
