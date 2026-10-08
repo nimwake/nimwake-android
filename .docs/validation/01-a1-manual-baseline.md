@@ -129,14 +129,32 @@ Termux에서 본 `nimwaked`의 `comm`은 `nimwaked`가 아니라 **잘린 경로
 
 **A2 supervisor 반영:** daemon을 이름으로 찾지 않는다. 기동 시 pid를 `run/` 아래에 기록하거나, 최소한 전체 경로로 찾는다(`pgrep -f /opt/nimwake/bin/nimwaked`). 생존 판단은 pid가 아니라 health probe(`404`)로 한다 (Core PRD §74).
 
+### A3 사전 확인 — Termux:Boot로 sshd 자동 기동
+
+A3 본 작업(`host/boot/10-nimwake`) 전에 Termux:Boot 경로가 이 기기에서 동작하는지만 확인했다.
+
+```sh
+# ~/.termux/boot/00-sshd  (0700)
+#!/data/data/com.termux/files/usr/bin/sh
+termux-wake-lock
+sshd
+```
+
+- `~/.termux/boot/`는 Termux:Boot가 만들지 않는다. 직접 만든다.
+- 첫 재부팅에서는 개발 머신의 ssh가 `Connection refused`였다. Termux:Boot 앱 1회 실행과 배터리 설정을 확인한 뒤 다시 재부팅해서 성공했다. 어느 조치가 결정적이었는지는 분리하지 않았다.
+- 성공한 재부팅: Termux를 열지 않은 상태에서 개발 머신의 `ssh ... 'echo ok'` → `ok`.
+- 기기 기록: `uptime` 3분 시점에 `sshd` 실행 시간 1분 48초. **부팅 후 약 1분 12초에 sshd가 떴다.** 부팅 직후 load average가 12.5로 높다.
+
+**A3 반영:** boot script는 단계별 시각을 `logs/boot.log`에 남긴다. 이번처럼 "실행이 안 됐는지, 늦게 됐는지"를 구분할 수 없으면 원인을 좁히지 못한다. 재부팅 후 READY까지 1분 이상을 기본 예상치로 둔다.
+
 ---
 
 ## 위험 · 후속
 
 | 항목 | 내용 | 영향 |
 | ---- | ---- | ---- |
-| Termux 출처 | ~~Google Play 빌드~~ → 2026-10-08 Termux · Termux:Boot 모두 F-Droid로 재설치 | **해소.** A3 남은 작업: `~/.termux/boot/` 스크립트 + 재부팅 확인, 절전 예외, phantom process 해제 |
-| 화면 잠금 | 잠금이 있으면 재부팅 후 한 번 풀기 전까지 Termux:Boot가 실행되지 않는다 | A3에서 확인하고 무인 운영 조건으로 기록 |
+| Termux 출처 | ~~Google Play 빌드~~ → 2026-10-08 Termux · Termux:Boot 모두 F-Droid로 재설치 | **해소.** 재부팅 후 Termux:Boot로 sshd 자동 기동 확인. A3 남은 작업: nimwaked까지 자동 기동, 연속 재부팅, phantom process 해제 |
+| 화면 잠금 | 잠금이 있으면 재부팅 후 한 번 풀기 전까지 Termux:Boot가 실행되지 않는다. 이번 확인에서 기기의 잠금 설정은 기록하지 않았다 | A3에서 잠금 있음/없음 각각 확인하고 무인 운영 조건으로 기록 |
 | sshd | 재설치로 `PasswordAuthentication`이 기본값(yes)으로 돌아갔다 | key 등록 확인 후 `no`로 끈다 (PRD §40) |
 | process 이름 | proot 아래 `comm`이 `/opt/nimwake/bi` | A2 supervisor는 pid 파일 · 전체 경로 · health probe 사용 |
 | 기존 Ubuntu | 이전 수동 설치본(`~/ubuntu22-fs`)이 별도로 있다. 이번 검증은 proot-distro Ubuntu만 사용 | 없음. 정리는 사용자 판단 |
