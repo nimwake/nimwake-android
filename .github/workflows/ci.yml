@@ -1,7 +1,8 @@
-# Pull Request — lint + 기기 없는 테스트
+# Pull Request — lint + 기기 없는 테스트 (Linux, 항상)
 #
 # 실기기 테스트(tests/device)는 CI에 넣지 않는다. 결과는 .docs/validation/ 리포트로 남긴다. (Phase 1 D-A6)
-# 스크립트는 macOS(BSD)와 WSL·Linux(GNU)에서 같은 명령으로 돌아야 하므로 두 OS에서 돌린다. (D-A7)
+# macOS는 ci-macos.yml이 개발 머신 스크립트가 바뀔 때만 돌린다. BSD/GNU 차이의 대부분은
+# 여기의 check-portability(make lint)와 original-awk 비교 테스트가 잡는다. (D-A7)
 
 name: CI
 
@@ -11,7 +12,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -19,46 +20,16 @@ env:
 
 jobs:
   check:
-    name: lint / unit (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: lint / unit (ubuntu-latest)
+    runs-on: ubuntu-latest
     timeout-minutes: 10
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
 
-      # original-awk은 macOS awk와 같은 one-true-awk다. Linux에서도 그 방언으로 요약 스크립트를 돌린다.
-      - name: Install tools (ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bats original-awk
-
-      - name: Install tools (macOS)
-        if: runner.os == 'macOS'
-        run: brew install bats-core
-
-      # 버전마다 경고가 다르다 (0.9.0만 SC2015를 냈다). 개발 머신 · 기기와 같은 버전으로 고정한다.
-      - name: Install ShellCheck ${{ env.SHELLCHECK_VERSION }}
-        run: |
-          case "$RUNNER_OS-$RUNNER_ARCH" in
-            Linux-X64) target=linux.x86_64 ;;
-            macOS-ARM64) target=darwin.aarch64 ;;
-            macOS-X64) target=darwin.x86_64 ;;
-            *) echo "::error::no ShellCheck build for $RUNNER_OS-$RUNNER_ARCH"; exit 1 ;;
-          esac
-          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.${target}.tar.xz" \
-            | tar -xJ -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/shellcheck-v${SHELLCHECK_VERSION}" >> "$GITHUB_PATH"
-
-      - name: Versions
-        run: |
-          shellcheck --version | head -2
-          bats --version
+      - uses: ./.github/actions/tools
+        with:
+          shellcheck-version: ${{ env.SHELLCHECK_VERSION }}
 
       # git이 실행 비트를 잃으면 기기에서 Permission denied가 난다. (validation/02 작업 중 실제로 겪었다)
       - name: Executable bits
@@ -73,6 +44,7 @@ jobs:
           done
           exit "$missing"
 
+      # shellcheck + check-portability
       - name: Lint
         run: make lint
 

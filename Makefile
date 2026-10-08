@@ -5,8 +5,10 @@ INTERVAL ?= 300
 
 .PHONY: lint test fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi soak-start soak-stop soak-report
 
+# shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
 	shellcheck $(SCRIPTS)
+	scripts/check-portability.sh
 
 # 기기 없이 도는 테스트 (bats-core). host/lib 판단 로직 + 가짜 daemon으로 감시 루프
 test:

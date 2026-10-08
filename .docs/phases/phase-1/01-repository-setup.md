@@ -135,8 +135,14 @@ Ubuntu   /opt/nimwake/bin/{nimwaked, echo-server, ...}
 | `timeout`                       | 스크립트 안의 polling loop              |
 | bash 전용 문법 (`[[`, 배열)     | POSIX `[`                              |
 
-기기 쪽 스크립트(`host/`, `guest/`, `install/`)는 Termux의 `sh`(dash 계열)와 Ubuntu `sh`에서 돈다. 규칙은 같다.
-CI의 `shellcheck -s sh`가 bash 문법을 잡는다. BSD/GNU 옵션 차이는 lint가 못 잡으므로 CI를 macOS runner에서도 한 번 돌린다.
+기기 쪽 스크립트(`host/`, `guest/`, `install/`)는 Termux의 `sh`(dash 계열)와 Ubuntu `sh`에서 돈다. POSIX 문법 규칙은 같지만,
+Termux에는 GNU coreutils가 있으므로 `timeout` 같은 명령은 쓸 수 있다 (예: soak sampler의 `timeout 10 termux-battery-status`).
+
+`make lint`가 두 가지를 본다.
+
+- ShellCheck(0.11.0 고정) — bash 문법
+- `scripts/check-portability.sh` — 위 표의 금지 패턴을 개발 머신 스크립트에서 grep한다. ShellCheck는 BSD/GNU 옵션 차이를 못 잡는다.
+  기기에서만 도는 줄(ssh로 보내는 heredoc 등)이라 괜찮으면 줄 끝에 `# portable-ok`를 붙인다.
 
 ---
 
@@ -205,9 +211,13 @@ Core와 이 레포 모두 private이다.
 
 ## 6. CI
 
-| workflow         | trigger                              | 내용                                                                                 |
-| ---------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
-| `ci.yml`         | PR, push `main`                      | `shellcheck -s sh`, `shfmt -d`, `bats tests/unit`, 실행 비트 검사. ubuntu + macos matrix |
+| workflow         | runner | trigger | 내용 |
+| ---------------- | ------ | ------- | ---- |
+| `ci.yml`         | ubuntu | 모든 PR, push `main` | 실행 비트 · `make lint`(ShellCheck + check-portability) · `make test`(bats). original-awk(macOS awk와 같은 계열)로 soak 요약 비교 |
+| `ci-macos.yml`   | macOS  | 개발 머신 쪽 코드가 바뀐 PR · push, 매주 월요일, 수동 | `make lint` · `make test`. 문서 · `guest/` · `host/boot/` · `core.lock`만 바뀌면 건너뛴다 |
+
+macOS runner는 배정이 15분 넘게 밀릴 때가 있다 (#8). 그래서 macOS는 항상 돌리지 않고, 머지를 막는 필수 체크로도 두지 않는다 — 실패는 실패로 보인다.
+BSD/GNU 차이의 대부분은 ubuntu의 check-portability와 original-awk 비교가 먼저 잡는다. 설치 단계는 `.github/actions/tools`를 같이 쓴다.
 
 aarch64 binary의 smoke(qemu에서 종료 코드 78)는 Core `release.yml`이 한다. Android 동작은 어느 CI도 증명하지 않는다.
 
