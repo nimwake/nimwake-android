@@ -1,6 +1,9 @@
 SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fixtures/*')
 
-.PHONY: lint test fetch-core deploy run stop test-device test-boot test-recovery
+HOURS ?= 24
+INTERVAL ?= 300
+
+.PHONY: lint test fetch-core deploy run stop test-device test-boot test-recovery soak-start soak-stop soak-report
 
 lint:
 	shellcheck $(SCRIPTS)
@@ -29,3 +32,13 @@ test-boot:
 
 test-recovery:
 	tests/device/recovery.sh
+
+# 장시간 soak — sampler는 기기에서 돈다. make soak-start HOURS=72
+soak-start:
+	tests/device/soak.sh start $(HOURS) $(INTERVAL)
+
+soak-stop:
+	tests/device/soak.sh stop
+
+soak-report:
+	tests/device/soak.sh report
