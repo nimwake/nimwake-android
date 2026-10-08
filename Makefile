@@ -1,9 +1,13 @@
-SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*')
+SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fixtures/*')
 
-.PHONY: lint fetch-core deploy run stop doctor test-device test-boot
+.PHONY: lint test fetch-core deploy run stop doctor test-device test-boot test-recovery
 
 lint:
 	shellcheck $(SCRIPTS)
+
+# 기기 없이 도는 테스트 (bats-core). host/lib 판단 로직 + 가짜 daemon으로 감시 루프
+test:
+	bats tests/unit
 
 fetch-core:
 	scripts/fetch-core.sh
@@ -25,3 +29,6 @@ test-device:
 
 test-boot:
 	tests/device/boot.sh
+
+test-recovery:
+	tests/device/recovery.sh

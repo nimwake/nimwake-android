@@ -1,0 +1,13 @@
+# ~/.nimwake-host/host.conf — nimwake-host 설정 (KEY=value, shell이 source한다)
+# 없는 값은 host/lib/config.sh의 기본값을 쓴다. make deploy는 이 파일이 있으면 덮지 않는다.
+
+# LAN에서 접근하려면 연다. 비우면 Core 기본값 127.0.0.1:8080 (Core PRD §74 — 노출은 opt-in)
+#NIMWAKE_LISTEN=0.0.0.0:8080
+
+# health probe 간격과, 연속 실패 몇 번에 daemon을 내리고 재기동할지
+#NIMWAKE_HEALTH_INTERVAL=30
+#NIMWAKE_HEALTH_FAILURES=3
+
+# 재기동 상한: window(초) 안에서 이 횟수에 닿으면 crash loop → UNHEALTHY (PRD §23–§24)
+#NIMWAKE_MAX_RESTARTS=5
+#NIMWAKE_RESTART_WINDOW=300

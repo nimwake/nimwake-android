@@ -6,9 +6,11 @@ set -eu
 
 device="${NIMWAKE_DEVICE:-nimwake-phone}"
 
-# 부팅 때 10-nimwake가 띄운 daemon이 있으면 port가 겹쳐 69(bind 실패)로 끝난다. 먼저 알려 준다.
-if ssh "$device" "pgrep -f '^/opt/nimwake/bin/nimwaked'" >/dev/null; then
-	echo "run: nimwaked is already running on the device (started at boot?). make stop first." >&2
+# supervisor나 daemon이 떠 있으면 port가 겹쳐 69(bind 실패)로 끝나거나, supervisor가 하나를 더 띄운다.
+# backoff 중인 supervisor는 daemon 없이 떠 있으므로 둘 다 본다.
+# `[_]_supervise`: 원격 셸 자신의 명령줄(패턴 문자열 포함)이 잡히지 않게 한다 — 그러면 항상 거부한다.
+if ssh "$device" "pgrep -f '^/opt/nimwake/bin/nimwaked|nimwake-host [_]_supervise'" >/dev/null; then
+	echo "run: nimwaked or its supervisor is already running on the device (started at boot?). make stop first." >&2
 	exit 1
 fi
 

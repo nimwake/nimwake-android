@@ -1,0 +1,125 @@
+#!/bin/sh
+# nimwake-host — Android Host Layer 진입점. (A2, PRD §33 최소판)
+#
+#   nimwake-host start      supervisor를 백그라운드로 띄운다 (이미 떠 있으면 그대로)
+#   nimwake-host stop       nimwaked를 graceful하게 내리고 supervisor를 끝낸다
+#   nimwake-host status     상태 · supervisor · nimwaked · health
+#   nimwake-host logs [N]   supervisor.log와 nimwaked.log의 마지막 N줄 (기본 40)
+#
+# 기기에서는 make deploy가 ~/.nimwake-host/{bin,lib}에 설치하고 $PREFIX/bin에 링크한다.
+#   NIMWAKE_HOST_LIB  lib 디렉터리 (기본 ~/.nimwake-host/lib). 테스트가 레포의 host/lib를 가리킨다
+set -u
+
+lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
+# shellcheck source=../lib/config.sh
+. "$lib/config.sh"
+# shellcheck source=../lib/policy.sh
+. "$lib/policy.sh"
+# shellcheck source=../lib/supervisor.sh
+. "$lib/supervisor.sh"
+
+pid_file="$NIMWAKE_RUN/supervisor.pid"
+
+supervisor_pid() {
+	[ -f "$pid_file" ] || return 1
+	_pid="$(cat "$pid_file")"
+	# pid가 재사용됐을 수 있다. 우리 supervisor인지 명령줄로 확인한다.
+	if kill -0 "$_pid" 2>/dev/null && ps -o args= -p "$_pid" 2>/dev/null | grep -q '__supervise'; then
+		echo "$_pid"
+		return 0
+	fi
+	return 1
+}
+
+cmd_start() {
+	if _pid="$(supervisor_pid)"; then
+		echo "nimwake-host: supervisor is already running (pid $_pid)"
+		return 0
+	fi
+	if _daemon="$(daemon_pid)" && [ -n "$_daemon" ]; then
+		echo "nimwake-host: nimwaked (pid $_daemon) is running without a supervisor — run nimwake-host stop first" >&2
+		return 1
+	fi
+	# 이전 실행의 RUNNING을 새 실행의 것으로 읽지 않게 상태를 비운다 (10-nimwake가 이것을 기다린다)
+	rm -f "$NIMWAKE_RUN/stop" "$NIMWAKE_RUN/hung" "$NIMWAKE_RUN/state"
+	nohup "$0" __supervise >/dev/null 2>&1 &
+	echo "$!" >"$pid_file"
+	echo "nimwake-host: supervisor started (pid $!)"
+}
+
+cmd_supervise() {
+	echo "$$" >"$pid_file"
+	trap 'rm -f "$pid_file"' EXIT
+	trap '' HUP
+	host_log "supervisor started (pid $$)"
+	supervise
+	_result=$?
+	host_log "supervisor exited ($(cut -d' ' -f1 "$NIMWAKE_RUN/state"))"
+	return "$_result"
+}
+
+cmd_stop() {
+	: >"$NIMWAKE_RUN/stop"
+	_waited=0
+	# daemon이 아직 기동 중일 수 있으므로 끝날 때까지 TERM을 다시 보낸다.
+	while supervisor_pid >/dev/null || [ -n "$(daemon_pid)" ]; do
+		if [ "$_waited" -ge "$NIMWAKE_STOP_TIMEOUT" ]; then
+			echo "nimwake-host: still running after ${NIMWAKE_STOP_TIMEOUT}s — sending KILL" >&2
+			daemon_signal KILL
+			break
+		fi
+		daemon_signal TERM
+		sleep 1
+		_waited=$((_waited + 1))
+	done
+	# supervisor 없이 떠 있던 daemon을 내린 경우에도 상태를 남긴다
+	if ! supervisor_pid >/dev/null && ! grep -q '^STOPPED' "$NIMWAKE_RUN/state" 2>/dev/null; then
+		set_state STOPPED "stopped by nimwake-host stop"
+	fi
+	rm -f "$NIMWAKE_RUN/stop"
+	echo "nimwake-host: stopped after ${_waited}s"
+}
+
+cmd_status() {
+	if [ -f "$NIMWAKE_RUN/state" ]; then
+		echo "state       $(cat "$NIMWAKE_RUN/state")"
+	else
+		echo "state       (never started)"
+	fi
+	if _pid="$(supervisor_pid)"; then
+		echo "supervisor  running (pid $_pid)"
+	else
+		echo "supervisor  not running"
+	fi
+	_daemon="$(daemon_pid)"
+	if [ -n "$_daemon" ]; then
+		echo "nimwaked    running (pid $_daemon)"
+	else
+		echo "nimwaked    not running"
+	fi
+	if health_probe; then
+		echo "health      OK (404)"
+	else
+		echo "health      FAIL"
+	fi
+}
+
+cmd_logs() {
+	_lines="${1:-40}"
+	echo "== supervisor.log"
+	tail -n "$_lines" "$NIMWAKE_LOGS/supervisor.log" 2>/dev/null
+	echo "== nimwaked.log"
+	tail -n "$_lines" "$NIMWAKE_LOGS/nimwaked.log" 2>/dev/null
+}
+
+case "${1:-}" in
+start) cmd_start ;;
+stop) cmd_stop ;;
+status) cmd_status ;;
+logs) shift; cmd_logs "$@" ;;
+__supervise) cmd_supervise ;;
+*)
+	echo "usage: nimwake-host start | stop | status | logs [N]" >&2
+	exit 2
+	;;
+esac

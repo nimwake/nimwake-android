@@ -21,7 +21,28 @@ fi
 ssh "$device" "proot-distro login ubuntu --bind \$HOME/$stage:/mnt/nimwake-stage \
 	-- sh /mnt/nimwake-stage/guest/setup-ubuntu.sh /mnt/nimwake-stage"
 
+# Host Layer: nimwake-host (supervisor)와 lib. 설정 host.conf는 이미 있으면 덮지 않는다.
+# 떠 있는 supervisor는 건드리지 않는다. 새 코드는 다음 nimwake-host start부터 쓰인다.
+# `{ … } </dev/null`: 안의 명령이 표준 입력(=이 스크립트)을 삼키지 못하게 한다 (doctor 작업 중 실제로 겪었다)
+ssh "$device" sh -s "$stage" <<'EOF'
+{
+set -eu
+stage="$HOME/$1"
+host="$HOME/.nimwake-host"
+mkdir -p "$host/bin" "$host/lib"
+install -m 700 "$stage"/host/bin/* "$host/bin/"
+install -m 600 "$stage"/host/lib/*.sh "$host/lib/"
+# #!/bin/sh는 Termux에 없다. termux-exec 없이도 돌도록 shebang을 Termux 경로로 바꾼다.
+termux-fix-shebang "$host"/bin/*
+ln -sf "$host/bin/nimwake-host" "$PREFIX/bin/nimwake-host"
+if [ ! -f "$host/host.conf" ]; then
+	install -m 600 "$stage/host/host.conf.example" "$host/host.conf"
+fi
+echo "deploy: nimwake-host installed ($(command -v nimwake-host))"
+} </dev/null
+EOF
+
 # Termux:Boot는 이 디렉터리의 실행 파일을 이름 순으로 시작한다. 앞 스크립트를 기다리지는 않는다. (validation/02)
-# 다음 재부팅부터 nimwaked가 자동으로 뜬다. 이미 떠 있는 daemon은 건드리지 않는다.
+# 다음 재부팅부터 10-nimwake가 supervisor를 띄운다.
 ssh "$device" "mkdir -p \$HOME/.termux/boot && install -m 700 $stage/host/boot/* \$HOME/.termux/boot/ \
 	&& echo 'deploy: boot scripts installed' && ls \$HOME/.termux/boot"
