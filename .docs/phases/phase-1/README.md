@@ -3,7 +3,8 @@
 > **목표 버전:** `nimwake-android v0.1.0`
 > **주제:** Install · Start · Recovery · Boot · Power · Real lifecycle
 > **시작 조건:** Core `v0.0.3 — HTTP + Scale-to-Zero` merge
-> **상태:** 진행 중 — A1 (Core는 `v0.0.5`까지 merge)
+> **상태:** 진행 중 — A0 · A1 · A2 · A3 완료, A5 LAN · Wi-Fi 완료, **24h soak 진행 중** (2026-10-09, Core `v0.1.0-rc1`)
+> Core `v0.1.0`은 이 레포의 Android 8항목을 기다린다 — 6개 충족, soak 2개 남음. → [02 현황](02-milestones.md#현황--2026-10-09)
 
 ---
 

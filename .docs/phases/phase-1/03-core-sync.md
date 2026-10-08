@@ -11,11 +11,19 @@
 
 | Core                       | Android                    | 주고받는 것                                                     |
 | -------------------------- | -------------------------- | --------------------------------------------------------------- |
-| `v0.0.5` merge 이후 (지금) | A1                         | `core.lock` = Core SHA, 그 SHA의 aarch64 artifact (`release.yml`) |
-| `v0.1.0` 준비 중           | A1 결과                    | 실험 E1–E7 결과 → 기존 이슈에 코멘트 또는 새 Core 이슈           |
-| `v0.1.0` 준비 중           | A5                         | Core `v0.0.4` E2E workload · `RequestTrace`/`StartupTrace` 지표를 기기에서 재실행 → CI Linux와 비교 |
-| `v0.1.0` 준비 중           | A5 24h soak                | soak 리포트 → Core stress · leak 판정의 참고 자료              |
+| `v0.0.5` merge 이후        | A1                         | `core.lock` = Core SHA, 그 SHA의 aarch64 artifact (`release.yml`) — 완료 |
+| `v0.1.0-rc1` (2026-10-08)  | A1–A3 · A5 재검증          | `core.lock` = `tag=v0.1.0-rc1`, release asset (#7). boot · lifecycle · recovery · LAN 통과 — 완료 |
+| `v0.1.0` 준비 중           | A1 결과                    | 실험 E2–E4 결과 → 기존 이슈에 코멘트 또는 새 Core 이슈 — 남음 |
+| `v0.1.0` 준비 중           | A5                         | Core E2E workload · `RequestTrace`/`StartupTrace` 지표를 기기에서 재실행 → CI Linux와 비교 — `nimwake-bench`가 aarch64 artifact에 없어 막힘 |
+| `v0.1.0` 준비 중           | A5 24h soak                | soak 리포트 → Core stress · leak 판정의 참고 자료 — **진행 중** |
 | `v0.1.0` 직전              | A6 72h soak                | Android 체크리스트 → Core acceptance ([Core PRD §65](https://github.com/nimwake/nimwake/blob/main/.docs/prd/03-delivery/08-definition-of-done.md)) |
+
+### Core에 알릴 것 (아직 이슈로 올리지 않음)
+
+| 내용 | 근거 |
+| ---- | ---- |
+| `v0.1.0-rc1` binary가 기동 로그에서 자기 버전을 `nimwaked 0.0.1`로 알린다. Cargo 패키지 버전이 release 태그와 맞지 않아 운영 로그로 release를 구분할 수 없다 | [validation/03](../../validation/03-core-v0.1.0-rc1.md) |
+| aarch64 artifact에 `nimwake-bench`가 없다. Core PRD §50의 "CI Linux와 같은 workload로 기기 비교"를 할 수 없다 | A5 |
 
 `core.lock`을 올릴 때마다 A1 lifecycle · A2 recovery 시나리오를 다시 돌리고 리포트를 남긴다.
 
