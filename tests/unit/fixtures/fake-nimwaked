@@ -1,0 +1,37 @@
+#!/bin/sh
+# supervisor 테스트용 가짜 nimwaked. $FAKE_DIR/mode 파일로 동작을 고른다.
+#   ok      READY($FAKE_DIR/up)를 만들고 TERM을 받으면 0으로 끝난다
+#   config  즉시 78로 끝난다 (설정 오류)
+#   crash   READY 후 1초 뒤 1로 끝난다
+#   hung    READY 후 1초 뒤 probe에 응답하지 않는다($FAKE_DIR/up 삭제). TERM이면 0
+# 기동할 때마다 $FAKE_DIR/launches에 한 줄을 남긴다.
+set -u
+
+echo "launch" >>"$FAKE_DIR/launches"
+mode="$(cat "$FAKE_DIR/mode")"
+
+trap 'rm -f "$FAKE_DIR/up"; exit 0' TERM
+
+case "$mode" in
+config)
+	exit 78
+	;;
+crash)
+	: >"$FAKE_DIR/up"
+	sleep 1
+	rm -f "$FAKE_DIR/up"
+	exit 1
+	;;
+hung)
+	: >"$FAKE_DIR/up"
+	sleep 1
+	rm -f "$FAKE_DIR/up"
+	;;
+*)
+	: >"$FAKE_DIR/up"
+	;;
+esac
+
+while :; do
+	sleep 1
+done

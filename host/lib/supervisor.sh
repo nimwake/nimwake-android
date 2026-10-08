@@ -1,0 +1,149 @@
+# shellcheck shell=sh
+# nimwaked 감시 루프. (A2, PRD §8 Host Supervisor · §21 Health Model · §23–§24)
+# config.sh · policy.sh 다음에 source한다.
+#
+#   STARTING → (health 404) → RUNNING → (exit / health 실패) → BACKOFF → STARTING …
+#                                                            ↘ STOPPED   정상 종료 · stop 요청
+#                                                            ↘ UNHEALTHY 설정 오류 · crash loop
+#
+# 판단(종료 코드 분류, backoff, crash loop)은 policy.sh에 있다. 여기는 프로세스를 다룬다.
+# 상태는 run/state 한 줄 "STATE YYYY-MM-DD HH:MM:SS 이유"에 둔다. nimwake-host status가 읽는다.
+
+host_log() {
+	printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$NIMWAKE_LOGS/supervisor.log"
+}
+
+set_state() {
+	printf '%s %s %s\n' "$1" "$(date '+%Y-%m-%d %H:%M:%S')" "$2" >"$NIMWAKE_RUN/state"
+	host_log "state $1${2:+ — $2}"
+}
+
+health_probe() {
+	if [ -n "$NIMWAKE_PROBE" ]; then
+		sh -c "$NIMWAKE_PROBE"
+		return
+	fi
+	[ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' -H 'Host: nimwake-health.invalid' "$NIMWAKE_GATEWAY" 2>/dev/null)" = 404 ]
+}
+
+daemon_pid() {
+	pgrep -f "$NIMWAKE_DAEMON_MATCH" 2>/dev/null | head -n 1
+}
+
+# daemon 자신에게 신호를 보낸다. 래퍼(proot)는 daemon이 끝나면 따라 끝난다.
+daemon_signal() {
+	pkill "-$1" -f "$NIMWAKE_DAEMON_MATCH" 2>/dev/null
+}
+
+stop_requested() {
+	[ -f "$NIMWAKE_RUN/stop" ]
+}
+
+# 기동 직후부터 daemon이 끝날 때까지 health를 본다. 별도 subshell로 돈다.
+# READY가 오지 않거나 probe가 연달아 실패하면 run/hung을 남기고 daemon을 내린다
+# — 이 경우 종료 코드가 0이어도 재기동 대상이다.
+monitor_daemon() {
+	_waited=0
+	until health_probe; do
+		if [ "$_waited" -ge "$NIMWAKE_STARTUP_TIMEOUT" ]; then
+			host_log "not ready after ${NIMWAKE_STARTUP_TIMEOUT}s — stopping it"
+			: >"$NIMWAKE_RUN/hung"
+			daemon_signal TERM
+			return
+		fi
+		sleep 1
+		_waited=$((_waited + 1))
+	done
+	set_state RUNNING "nimwaked pid $(daemon_pid), ready after ${_waited}s"
+
+	_failures=0
+	while :; do
+		sleep "$NIMWAKE_HEALTH_INTERVAL"
+		if health_probe; then
+			_failures=0
+			continue
+		fi
+		_failures=$((_failures + 1))
+		host_log "health probe failed ($_failures/$NIMWAKE_HEALTH_FAILURES)"
+		if [ "$_failures" -ge "$NIMWAKE_HEALTH_FAILURES" ]; then
+			: >"$NIMWAKE_RUN/hung"
+			daemon_signal TERM
+			sleep "$NIMWAKE_STOP_TIMEOUT"
+			daemon_signal KILL
+			return
+		fi
+	done
+}
+
+# backoff 동안 1초마다 stop 요청을 본다. stop이면 거짓(1)을 돌려준다.
+sleep_unless_stopped() {
+	_left=$1
+	while [ "$_left" -gt 0 ]; do
+		stop_requested && return 1
+		sleep 1
+		_left=$((_left - 1))
+	done
+	! stop_requested
+}
+
+# 0: STOPPED로 끝남 · 1: UNHEALTHY로 끝남
+supervise() {
+	_restarts=""
+	while :; do
+		rm -f "$NIMWAKE_RUN/hung"
+		set_state STARTING ""
+		host_log "launch: $NIMWAKE_LAUNCH"
+		# exec로 sh를 대체한다. wait가 받는 종료 코드는 기동 명령의 것이다.
+		sh -c "exec $NIMWAKE_LAUNCH" >>"$NIMWAKE_LOGS/nimwaked.log" 2>&1 &
+		_child=$!
+
+		monitor_daemon &
+		_monitor=$!
+
+		_code=0
+		wait "$_child" || _code=$?
+		kill "$_monitor" 2>/dev/null
+		wait "$_monitor" 2>/dev/null
+
+		if stop_requested; then
+			set_state STOPPED "stop requested (exit $_code)"
+			return 0
+		fi
+
+		if [ -f "$NIMWAKE_RUN/hung" ]; then
+			_decision=retry
+			_why="health probe failed (exit $_code)"
+		else
+			_decision="$(policy_classify_exit "$_code")"
+			_why="exit $_code"
+		fi
+
+		case "$_decision" in
+		stopped)
+			set_state STOPPED "nimwaked exited 0"
+			return 0
+			;;
+		config)
+			set_state UNHEALTHY "configuration error (exit 78) — fix it, then nimwake-host start"
+			return 1
+			;;
+		esac
+
+		_now="$(date +%s)"
+		# shellcheck disable=SC2086 # 목록을 인자로 나눈다
+		_restarts="$(policy_prune "$_now" "$NIMWAKE_RESTART_WINDOW" $_restarts)"
+		_count="$(policy_count "$_restarts")"
+		if policy_crash_loop "$_count" "$NIMWAKE_MAX_RESTARTS"; then
+			set_state UNHEALTHY "crash loop: $_count restarts within ${NIMWAKE_RESTART_WINDOW}s, last $_why"
+			return 1
+		fi
+
+		_restarts="${_restarts:+$_restarts }$_now"
+		_delay="$(policy_backoff $((_count + 1)))"
+		set_state BACKOFF "$_why — restart $((_count + 1)) in ${_delay}s"
+		if ! sleep_unless_stopped "$_delay"; then
+			set_state STOPPED "stop requested during backoff"
+			return 0
+		fi
+	done
+}
