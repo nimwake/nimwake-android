@@ -16,7 +16,11 @@ set -eu
 device="${NIMWAKE_DEVICE:-nimwake-phone}"
 adb="${ADB:-adb}"
 
+# 스크립트는 표준 입력으로 간다. 안의 명령(cmd, proot-distro 등)이 표준 입력을 읽으면
+# 아직 실행하지 않은 나머지 스크립트를 삼키고 조용히 끝난다 — 실제로 겪었다.
+# `{ … } </dev/null`로 감싸면 셸이 블록 전체를 먼저 읽고, 안의 명령은 /dev/null을 읽는다.
 device_report="$(ssh "$device" sh -s <<'EOF'
+{
 ok() { echo "[OK]     $*"; }
 warn() { echo "[WARN]   $*"; }
 fail() { echo "[FAIL]   $*"; }
@@ -96,6 +100,7 @@ else
 		fail "last boot run did not reach READY ($started) — see ~/.nimwake-host/logs/"
 	fi
 fi
+} </dev/null
 EOF
 )"
 

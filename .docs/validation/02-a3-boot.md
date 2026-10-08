@@ -1,6 +1,6 @@
 # 02. A3 부팅 자동 기동 — 재부팅 6회
 
-> **마일스톤:** A3 · **일시:** 2026-10-08 · **결과:** 재부팅 6회 연속 무인 READY · 부팅 직후 전부 SLEEPING · 화면 꺼짐 PASS
+> **마일스톤:** A3 · **일시:** 2026-10-08 – 10-09 · **결과:** **A3 완료** — 재부팅 6회 연속 무인 READY · 부팅 직후 전부 SLEEPING · 화면 꺼짐 + 충전 1시간 뒤 cold start PASS
 >
 > 비밀번호 잠금 기기다. 재부팅 후 잠금 해제 한 번은 사람이 한다.
 
@@ -75,12 +75,59 @@ PASS boot
 
 잠금 없음 조건은 확인하지 않았다.
 
-## 남은 것
+## 화면 꺼짐 + 충전 1시간 — 2026-10-09
+
+화면을 끄고 충전기에 연결한 채 **1시간 동안 아무도 기기에 접속하지 않았다.**
+처음 기준은 23:15:55였지만 23:23:21에 확인용 ssh가 한 번 붙어 Doze를 깼을 수 있어, 그 시각부터 다시 셌다.
+
+| 시각 | nimwaked pid 10344 | RSS | 비고 |
+| ---- | ------------------ | --- | ---- |
+| 23:23:21 | 실행 17분 36초 | 2080 KB | 마지막 접속 |
+| 00:24:53 | 실행 1시간 19분 08초 | **0 KB** | 1시간 뒤 첫 접속. ssh 1초 만에 붙음 |
+| 00:25:27 | 실행 1시간 19분 33초 | 1820 KB (VmSwap 152 KB) | `make test-boot` 직후 |
+
+```text
+ok  every application is asleep after boot
+ok  cold start   pid=20693  0.102686s
+ok  warm         pid=20693  0.012195s  (same PID)
+ok  sleep        pid=20693 gone
+ok  cold start   pid=20730  0.036452s  (new PID)
+PASS boot
+```
+
+- **daemon은 재시작 없이 살아 있었다** (같은 pid, 23:05 부팅 이후 연속).
+- **1시간 동안 쓰이지 않은 daemon 메모리는 통째로 swap(zram)으로 밀려났다** (RSS 0). 첫 요청에서 다시 올라왔다.
+- **그래서 첫 cold start만 103ms로 느렸다.** 평소(35–45ms)의 약 2.5배이고, 바로 다음 cold start는 36ms다. 오래 쉰 뒤 첫 요청의 지연은 soak에서 계속 본다.
+
+## doctor — 2026-10-09
+
+`make doctor`(이 PR)의 첫 실기기 실행.
+
+```text
+[OK]     Termux build: F_DROID
+[OK]     Termux:Boot installed, same source as Termux (org.fdroid.fdroid)
+[OK]     boot script ~/.termux/boot/00-sshd
+[OK]     boot script ~/.termux/boot/10-nimwake
+[WARN]   sshd password login is enabled — set PasswordAuthentication no (PRD §40)
+[OK]     nimwaked installed in Ubuntu (core adf1e20)
+[OK]     nimwaked running, health probe 404
+[OK]     storage 98996MB free
+[OK]     last boot run reached READY (2026-10-08 23:05:42)
+[MANUAL] phantom process limit — needs adb (pair wireless debugging, or set ADB)
+[MANUAL] battery optimization exemption for Termux, Termux:Boot — needs adb
+```
+
+첫 실행은 첫 줄만 출력하고 exit 0으로 끝났다. `ssh … sh -s`로 보낸 스크립트를 안의 `cmd package`가 표준 입력으로 읽어 **나머지 스크립트를 삼켰다.** 오류 없이 조용히 끝나 더 위험하다. 원격 스크립트를 `{ … } </dev/null`로 감싸 고쳤다 — 셸이 블록을 끝까지 읽은 뒤 실행하므로 안의 명령은 `/dev/null`을 읽는다. 같은 구조인 deploy · soak start도 같이 고쳤다.
+
+## 결론과 남은 것
+
+A3 완료 조건(Phase 1 [02-milestones](../phases/phase-1/02-milestones.md#a3--boot--power-mvp-4-5))을 모두 충족했다.
 
 | 항목 | 상태 |
 | ---- | ---- |
 | 재부팅 5회 연속 무인 READY | **완료** (6회, 비밀번호 잠금 해제 1회 포함) |
 | 부팅 직후 전부 SLEEPING | **완료** (1, 2, 6회차 확인) |
-| 화면 잠금 | 비밀번호 잠금 확인. 잠금 없음은 미확인 |
-| 화면 꺼짐 + 충전 1시간 뒤 cold start | 진행 중. 기준: 23:15:55, nimwaked pid 10344, 실행 10분 14초, RSS 2080KB |
-| phantom process 제한 해제 | 미수행 (Android 13 → `adb shell device_config ...`) |
+| 화면 꺼짐 + 충전 1시간 뒤 cold start | **완료** (daemon 생존, 첫 cold start 103ms) |
+| 화면 잠금 | 비밀번호 잠금 확인. 잠금 없음은 미확인 (선택) |
+| phantom process 제한 해제 · 배터리 최적화 예외 | 설치 checklist 항목. adb 페어링 후 `make doctor`로 확인한다 |
+| sshd 비밀번호 로그인 | `doctor`가 WARN. `PasswordAuthentication no`로 끈다 |
