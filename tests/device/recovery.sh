@@ -48,13 +48,20 @@ before="$(daemon_pid)"
 echo "ok  RUNNING  nimwaked pid=$before"
 
 on_device "kill -9 $before"
-killed_at="$(date +%s)"
-wait_state BACKOFF 15 || true
-wait_state RUNNING 60 || fail "nimwaked was not restarted"
-after="$(daemon_pid)"
-[ "$after" != "$before" ] || fail "pid did not change ($after)"
-echo "ok  restarted  pid=$before → $after  in $(($(date +%s) - killed_at))s"
-on_device "grep -E 'exit [0-9]+' \$HOME/.nimwake-host/logs/supervisor.log | tail -n 1"
+# BACKOFF는 1초도 안 걸려 polling으로 못 볼 수 있다. 새 pid로 RUNNING이 될 때까지만 기다린다.
+# 걸린 시간은 ssh polling 간격이 섞이므로 supervisor.log의 시각으로 본다.
+i=0
+while :; do
+	after="$(daemon_pid)"
+	if [ -n "$after" ] && [ "$after" != "$before" ] && [ "$(state)" = RUNNING ]; then
+		break
+	fi
+	[ "$i" -ge 60 ] && fail "nimwaked was not restarted"
+	sleep 1
+	i=$((i + 1))
+done
+echo "ok  restarted  pid=$before → $after"
+on_device "grep -E 'state (BACKOFF|RUNNING)' \$HOME/.nimwake-host/logs/supervisor.log | tail -n 2"
 "$root/tests/device/lifecycle.sh"
 
 echo "== 2. configuration error (78) → UNHEALTHY, no restart"
@@ -74,7 +81,9 @@ on_device "nimwake-host start >/dev/null"
 wait_state RUNNING 60 || fail "supervisor did not come back with the normal config"
 on_device "curl -s -o /dev/null -H 'Host: echo.local' http://127.0.0.1:8080/"
 on_device "nimwake-host stop"
-left="$(on_device "pgrep -f '^/opt/nimwake/bin/|nimwake-host __supervise' || true")"
+# `[_]_supervise`: 이 명령을 실행하는 원격 셸의 명령줄에는 패턴 문자열이 그대로 있으므로
+# `__supervise`로 쓰면 셸 자신이 잡힌다. 정규식은 `__supervise`에만 맞는다.
+left="$(on_device "pgrep -f '^/opt/nimwake/bin/|nimwake-host [_]_supervise' || true")"
 [ -z "$left" ] || fail "left behind: $left"
 echo "ok  nothing left after stop"
 
