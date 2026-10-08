@@ -23,7 +23,9 @@ ssh "$device" "proot-distro login ubuntu --bind \$HOME/$stage:/mnt/nimwake-stage
 
 # Host Layer: nimwake-host (supervisor)와 lib. 설정 host.conf는 이미 있으면 덮지 않는다.
 # 떠 있는 supervisor는 건드리지 않는다. 새 코드는 다음 nimwake-host start부터 쓰인다.
+# `{ … } </dev/null`: 안의 명령이 표준 입력(=이 스크립트)을 삼키지 못하게 한다 (doctor 작업 중 실제로 겪었다)
 ssh "$device" sh -s "$stage" <<'EOF'
+{
 set -eu
 stage="$HOME/$1"
 host="$HOME/.nimwake-host"
@@ -37,6 +39,7 @@ if [ ! -f "$host/host.conf" ]; then
 	install -m 600 "$stage/host/host.conf.example" "$host/host.conf"
 fi
 echo "deploy: nimwake-host installed ($(command -v nimwake-host))"
+} </dev/null
 EOF
 
 # Termux:Boot는 이 디렉터리의 실행 파일을 이름 순으로 시작한다. 앞 스크립트를 기다리지는 않는다. (validation/02)
