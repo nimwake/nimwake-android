@@ -92,7 +92,11 @@ cmd_status() {
 		echo "supervisor  not running"
 	fi
 	_daemon="$(daemon_pid)"
-	echo "nimwaked    ${_daemon:+running (pid $_daemon)}${_daemon:-not running}"
+	if [ -n "$_daemon" ]; then
+		echo "nimwaked    running (pid $_daemon)"
+	else
+		echo "nimwaked    not running"
+	fi
 	if health_probe; then
 		echo "health      OK (404)"
 	else
