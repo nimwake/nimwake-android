@@ -54,10 +54,16 @@ for script in 00-sshd 10-nimwake; do
 	fi
 done
 
-if grep -Eq '^[[:space:]]*PasswordAuthentication[[:space:]]+no' "$PREFIX/etc/ssh/sshd_config" 2>/dev/null; then
-	ok "sshd password login disabled"
+# 파일을 grep하지 않고 실제 적용값(sshd -T)을 본다. sshd_config는 sshd_config.d/*.conf를 Include하고
+# 같은 키는 먼저 나온 값이 이긴다 — 본문만 보면 sshd_config.d의 설정을 놓친다.
+sshd_effective="$(sshd -T 2>/dev/null | tr 'A-Z' 'a-z')"
+if [ -z "$sshd_effective" ]; then
+	warn "sshd config could not be read (sshd -T)"
+elif printf '%s\n' "$sshd_effective" | grep -qx 'passwordauthentication no' &&
+	printf '%s\n' "$sshd_effective" | grep -qx 'kbdinteractiveauthentication no'; then
+	ok "sshd allows key login only"
 else
-	warn "sshd password login is enabled — set PasswordAuthentication no (PRD §40)"
+	warn "sshd allows password login — PasswordAuthentication no · KbdInteractiveAuthentication no in \$PREFIX/etc/ssh/sshd_config.d/ (PRD §40)"
 fi
 
 commit="$(proot-distro login ubuntu -- sed -n 's/^commit=//p' /opt/nimwake/BUILD_INFO 2>/dev/null || true)"
