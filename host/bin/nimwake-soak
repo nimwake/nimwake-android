@@ -30,6 +30,31 @@ read_or_na() {
 	cat "$1" 2>/dev/null || echo NA
 }
 
+# battery · temp를 채운다. Android는 앱에서 /sys/class/power_supply를 막는다 (SELinux — 2026-10-09 시운전에서 NA).
+# Termux:API(같은 출처의 앱 + pkg termux-api)가 있으면 그것을 쓴다. 앱이 없으면 명령이
+# 응답하지 않고 멈추므로 timeout을 건다. 둘 다 안 되면 NA.
+battery_status() {
+	battery=NA
+	temp=NA
+	if command -v termux-battery-status >/dev/null 2>&1; then
+		_json="$(timeout 10 termux-battery-status 2>/dev/null | tr -d '\n ')"
+		_pct="$(printf '%s' "$_json" | sed -n 's/.*"percentage":\([0-9][0-9]*\).*/\1/p')"
+		_temp="$(printf '%s' "$_json" | sed -n 's/.*"temperature":\(-*[0-9][0-9.]*\).*/\1/p')"
+		[ -n "$_pct" ] && battery="$_pct"
+		[ -n "$_temp" ] && temp="$(awk -v t="$_temp" 'BEGIN { printf "%.1f", t }')"
+	fi
+	if [ "$battery" = NA ]; then
+		battery="$(read_or_na /sys/class/power_supply/battery/capacity)"
+	fi
+	if [ "$temp" = NA ]; then
+		_raw="$(read_or_na /sys/class/power_supply/battery/temp)"
+		case "$_raw" in
+		'' | NA | *[!0-9-]*) ;;
+		*) temp="$(awk -v t="$_raw" 'BEGIN { printf "%.1f", t / 10 }')" ;;
+		esac
+	fi
+}
+
 # 테스트용: 표본 수를 제한한다 (0이면 시간으로만 끝난다)
 samples_left="${NIMWAKE_SOAK_SAMPLES:-0}"
 
@@ -52,12 +77,8 @@ while [ "$(date +%s)" -lt "$end" ]; do
 	fi
 
 	state="$(cut -d' ' -f1 "$host/run/state" 2>/dev/null)"
-	battery="$(read_or_na /sys/class/power_supply/battery/capacity)"
-	temp_raw="$(read_or_na /sys/class/power_supply/battery/temp)"
-	case "$temp_raw" in
-	'' | NA | *[!0-9-]*) temp=NA ;;
-	*) temp="$(awk -v t="$temp_raw" 'BEGIN { printf "%.1f", t / 10 }')" ;;
-	esac
+	battery_status
+
 	free_mb=$(($(df -Pk "$HOME" | awk 'NR == 2 { print $4 }') / 1024))
 
 	printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
