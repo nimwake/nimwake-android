@@ -3,7 +3,7 @@ SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fi
 HOURS ?= 24
 INTERVAL ?= 300
 
-.PHONY: lint test fetch-core deploy run stop test-device test-boot test-recovery test-lan test-wifi soak-start soak-stop soak-report
+.PHONY: lint test fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi soak-start soak-stop soak-report
 
 lint:
 	shellcheck $(SCRIPTS)
@@ -23,6 +23,9 @@ run:
 
 stop:
 	scripts/stop.sh
+
+doctor:
+	scripts/doctor.sh
 
 test-device:
 	tests/device/lifecycle.sh
