@@ -1,0 +1,94 @@
+#!/bin/sh
+# 기기에서 도는 soak sampler. (A5 · A6, Core PRD §51 Android Soak Test)
+#
+#   nimwake-soak INTERVAL_SECONDS HOURS
+#
+# INTERVAL마다 한 줄을 ~/.nimwake-host/logs/soak.csv에 붙인다. 개발 머신이 꺼져 있어도 돈다.
+# 요청은 echo app 하나에 보낸다. idle timeout(5s)보다 간격이 훨씬 길어 매 표본이 cold start → sleep 한 바퀴다.
+#
+# 측정할 수 없는 값은 NA로 남긴다 (기기마다 /sys 접근이 다르다).
+#   apps_before  요청 직전에 떠 있던 application 수. scale-to-zero면 0이어야 한다 — 0이 아니면 잔존(orphan)
+#   daemon_pid   바뀌면 supervisor가 재기동했다는 뜻이다
+set -u
+
+interval="${1:-300}"
+hours="${2:-24}"
+host="$HOME/.nimwake-host"
+out="$host/logs/soak.csv"
+tmp="$host/run/soak.body"
+gateway='http://127.0.0.1:8080/'
+
+mkdir -p "$host/logs" "$host/run"
+echo "$$" >"$host/run/soak.pid"
+trap 'rm -f "$host/run/soak.pid" "$tmp"' EXIT
+
+if [ ! -f "$out" ]; then
+	echo "epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb" >"$out"
+fi
+
+read_or_na() {
+	cat "$1" 2>/dev/null || echo NA
+}
+
+# battery · temp를 채운다. Android는 앱에서 /sys/class/power_supply를 막는다 (SELinux — 2026-10-09 시운전에서 NA).
+# Termux:API(같은 출처의 앱 + pkg termux-api)가 있으면 그것을 쓴다. 앱이 없으면 명령이
+# 응답하지 않고 멈추므로 timeout을 건다. 둘 다 안 되면 NA.
+battery_status() {
+	battery=NA
+	temp=NA
+	if command -v termux-battery-status >/dev/null 2>&1; then
+		_json="$(timeout 10 termux-battery-status 2>/dev/null | tr -d '\n ')"
+		_pct="$(printf '%s' "$_json" | sed -n 's/.*"percentage":\([0-9][0-9]*\).*/\1/p')"
+		_temp="$(printf '%s' "$_json" | sed -n 's/.*"temperature":\(-*[0-9][0-9.]*\).*/\1/p')"
+		[ -n "$_pct" ] && battery="$_pct"
+		[ -n "$_temp" ] && temp="$(awk -v t="$_temp" 'BEGIN { printf "%.1f", t }')"
+	fi
+	if [ "$battery" = NA ]; then
+		battery="$(read_or_na /sys/class/power_supply/battery/capacity)"
+	fi
+	if [ "$temp" = NA ]; then
+		_raw="$(read_or_na /sys/class/power_supply/battery/temp)"
+		case "$_raw" in
+		'' | NA | *[!0-9-]*) ;;
+		*) temp="$(awk -v t="$_raw" 'BEGIN { printf "%.1f", t / 10 }')" ;;
+		esac
+	fi
+}
+
+# 테스트용: 표본 수를 제한한다 (0이면 시간으로만 끝난다)
+samples_left="${NIMWAKE_SOAK_SAMPLES:-0}"
+
+end=$(($(date +%s) + hours * 3600))
+while [ "$(date +%s)" -lt "$end" ]; do
+	apps_before="$(pgrep -f '^/opt/nimwake/bin/.*-server' 2>/dev/null | wc -l | tr -d ' ')"
+
+	rm -f "$tmp"
+	# 연결이 거부돼도 curl은 "-w"를 출력하고(000 0.0001) 실패 코드로 끝난다. 출력이 비었을 때만 채운다.
+	result="$(curl -s -m 60 -o "$tmp" -w '%{http_code} %{time_total}' -H 'Host: echo.local' "$gateway" 2>/dev/null)"
+	[ -n "$result" ] || result='000 NA'
+	http="${result% *}"
+	seconds="${result#* }"
+	app_pid="$(tr -cd '0-9' <"$tmp" 2>/dev/null)"
+
+	daemon_pid="$(pgrep -f '^/opt/nimwake/bin/nimwaked' 2>/dev/null | head -n 1)"
+	daemon_rss=NA
+	if [ -n "$daemon_pid" ]; then
+		daemon_rss="$(awk '/^VmRSS:/ { print $2 }' "/proc/$daemon_pid/status" 2>/dev/null)"
+	fi
+
+	state="$(cut -d' ' -f1 "$host/run/state" 2>/dev/null)"
+	battery_status
+
+	free_mb=$(($(df -Pk "$HOME" | awk 'NR == 2 { print $4 }') / 1024))
+
+	printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+		"$(date +%s)" "$(date '+%Y-%m-%d %H:%M:%S')" "$http" "$seconds" "${app_pid:-NA}" \
+		"$apps_before" "${daemon_pid:-NA}" "${daemon_rss:-NA}" "${state:-NA}" \
+		"$battery" "$temp" "$free_mb" >>"$out"
+
+	if [ "$samples_left" -gt 0 ]; then
+		samples_left=$((samples_left - 1))
+		[ "$samples_left" -eq 0 ] && break
+	fi
+	sleep "$interval"
+done
