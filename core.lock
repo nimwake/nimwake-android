@@ -1,3 +1,4 @@
 repo=nimwake/nimwake
-rev=adf1e20b959ef4717b1aae9def8cfed7910b3d4e
-note=v0.0.5 + #11 + fix/aarch64-smoke-log (release.yml smoke 수정 브랜치). 머지 후 main SHA로 올린다.
+tag=v0.1.0-rc1
+rev=17975b1e1f977f193e55e4f975f74d6d93a26ff8
+note=Core v0.1.0-rc1 (prerelease). Core v0.1.0은 이 레포의 Android 8항목 리포트를 기다린다.
