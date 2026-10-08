@@ -1,0 +1,11 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Termux:Boot 진입점 — 재부팅 후 개발 머신이 손대지 않고 접속할 수 있게 sshd를 먼저 띄운다.
+# nimwaked 기동이 실패해도 원격으로 들어가 원인을 볼 수 있어야 하므로 10-nimwake와 따로 둔다.
+# Termux:Boot는 이름 순으로 시작하지만 앞 스크립트를 기다리지 않는다. 순서에 기대지 않는다. (validation/02)
+# make deploy가 ~/.termux/boot/ 에 설치한다.
+
+mkdir -p "$HOME/.nimwake-host/logs"
+termux-wake-lock
+sshd
+printf '%s sshd: started (booted at %s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" \
+	"$(uptime -s 2>/dev/null || echo unknown)" >>"$HOME/.nimwake-host/logs/boot.log"

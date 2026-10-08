@@ -1,0 +1,72 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Termux:Boot 진입점 — 재부팅 후 nimwaked를 띄우고 READY까지 기다린다. (A3, PRD §10)
+# make deploy가 ~/.termux/boot/ 에 설치한다. Termux:Boot는 00-sshd와 거의 동시에 이것을 시작한다.
+#
+# 단계마다 시각을 ~/.nimwake-host/logs/boot.log에 남기고, 시작 줄에 부팅 시각(`uptime -s`)을 적는다.
+# "실행이 안 됐는지, 늦게 됐는지"를 구분하지 못하면 원인을 좁힐 수 없다. (validation/01 A3 사전 확인)
+# Android는 앱에서 /proc/uptime을 읽지 못하게 막는다. `uptime -s`는 sysinfo()를 써서 동작한다.
+#
+# 재기동 정책(backoff, crash-loop)은 A2 supervisor의 일이다. 여기서는 한 번 띄우고 결과만 기록한다.
+#   NIMWAKE_READY_TIMEOUT  health 404를 기다릴 초 (기본 60)
+#   NIMWAKE_MIN_FREE_MB    이보다 여유 공간이 적으면 경고 (기본 1024). 기동은 막지 않는다
+set -u
+
+host="$HOME/.nimwake-host"
+logs="$host/logs"
+run="$host/run"
+daemon=/opt/nimwake/bin/nimwaked
+apps=/home/nimwake/.nimwake/apps
+gateway='http://127.0.0.1:8080/'
+ready_timeout="${NIMWAKE_READY_TIMEOUT:-60}"
+min_free_mb="${NIMWAKE_MIN_FREE_MB:-1024}"
+
+mkdir -p "$logs" "$run"
+
+stamp() {
+	printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$logs/boot.log"
+}
+
+stamp "boot: start (booted at $(uptime -s 2>/dev/null || echo unknown))"
+
+termux-wake-lock
+stamp "wake-lock: requested"
+
+free_kb="$(df -Pk "$HOME" | awk 'NR == 2 { print $4 }')"
+free_mb=$((free_kb / 1024))
+if [ "$free_mb" -lt "$min_free_mb" ]; then
+	stamp "storage: WARN ${free_mb}MB free (< ${min_free_mb}MB)"
+else
+	stamp "storage: ok ${free_mb}MB free"
+fi
+
+# proot 아래에서 comm은 `/opt/nimwake/bi`로 잘린다. 이름(-x)이 아니라 전체 경로로 찾는다.
+# `^`로 묶어 proot · sh -c 래퍼가 아니라 daemon 자신만 고른다. (validation/01)
+if pgrep -f "^$daemon" >/dev/null 2>&1; then
+	stamp "nimwaked: already running, skip"
+	exit 0
+fi
+
+nohup proot-distro login ubuntu --user nimwake -- "$daemon" "$apps" \
+	>>"$logs/nimwaked.log" 2>&1 &
+wrapper=$!
+echo "$wrapper" >"$run/proot.pid"
+stamp "nimwaked: launched (proot wrapper pid $wrapper)"
+
+# 생존 판단은 pid가 아니라 health probe다. 미등록 Host는 어떤 app도 깨우지 않는다. (Core PRD §74)
+waited=0
+while [ "$waited" -lt "$ready_timeout" ]; do
+	code="$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: nimwake-health.invalid' "$gateway" 2>/dev/null || true)"
+	if [ "$code" = 404 ]; then
+		stamp "ready: health 404 after ${waited}s"
+		exit 0
+	fi
+	if ! kill -0 "$wrapper" 2>/dev/null; then
+		stamp "nimwaked: exited before ready — see logs/nimwaked.log"
+		exit 1
+	fi
+	sleep 1
+	waited=$((waited + 1))
+done
+
+stamp "ready: TIMEOUT after ${ready_timeout}s"
+exit 1

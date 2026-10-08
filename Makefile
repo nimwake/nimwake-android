@@ -1,6 +1,6 @@
-SCRIPTS := $(shell git ls-files '*.sh')
+SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*')
 
-.PHONY: lint fetch-core deploy run test-device
+.PHONY: lint fetch-core deploy run stop test-device test-boot
 
 lint:
 	shellcheck $(SCRIPTS)
@@ -14,5 +14,11 @@ deploy:
 run:
 	scripts/run.sh
 
+stop:
+	scripts/stop.sh
+
 test-device:
 	tests/device/lifecycle.sh
+
+test-boot:
+	tests/device/boot.sh
