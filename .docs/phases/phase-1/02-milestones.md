@@ -35,7 +35,7 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 
 | 마일스톤 | 상태 | 근거 |
 | -------- | ---- | ---- |
-| A0 | 대부분 완료. `.editorconfig` · PRD 이름 정리 · README · 리포트 템플릿 남음 | #2 · #4 · #9 |
+| A0 | 완료 — `make doctor-dev`(개발 머신 도구 점검)만 남음 | #2 · #4 · #9 · #11 |
 | A1 | 완료. 실험은 E1 · E5만 정식 수행, E2–E4 남음 | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) |
 | A2 | **완료** — 완료 조건 4개 충족. crash 뒤 orphan 정리(E4)는 남음 | [validation/04](../../validation/04-a2-recovery.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start. phantom process 해제 남음 | [validation/02](../../validation/02-a3-boot.md) |
@@ -49,14 +49,14 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 
 기기 없이 끝나는 것. 개발 머신 두 종류(macOS, WSL)에서 같은 명령이 도는 것을 확인한다.
 
-- [x] `.gitattributes`, `.gitignore`(`dist/`) · [ ] `.editorconfig`
-- [ ] `PRD.md` 이름 정리: `Ember` → `Nimwake`, `emberd` → `nimwaked` — 아직 20곳
+- [x] `.gitattributes`, `.gitignore`(`dist/`), `.editorconfig` (#11)
+- [x] `PRD.md` 이름 정리: `Ember` → `Nimwake`, `emberd` → `nimwaked` — 20곳 (#11)
 - [x] `Makefile`: `lint` · `test` · `fetch-core` · `deploy` (+ `run` · `stop` · `doctor` · `test-*` · `soak-*`) · [ ] `doctor-dev`
 - [x] `core.lock` + `scripts/fetch-core.sh` — release asset(`tag=`) 또는 run artifact, `BUILD_INFO` commit 검사 (#7)
 - [x] CI — ubuntu 항상, macOS는 개발 머신 코드가 바뀔 때만 (#4 · #9)
 - [x] `host/lib` + `tests/unit` — policy · supervisor(가짜 daemon) · soak, bats 22개 (#4 · #5)
-- [ ] README: 개발환경(macOS / WSL) 셋업, 호환 표 — 루트 `README.md`가 비어 있다
-- [ ] `.docs/validation/` 리포트 템플릿 — 리포트 01–05가 사실상의 형식이다
+- [x] README: 개발환경(macOS / WSL) 셋업, 기기 준비, 명령, Core 호환 표 (#11)
+- [x] `.docs/validation/00-template.md` — 리포트 01–05의 형식을 템플릿으로 (#11)
 
 **완료 조건**
 

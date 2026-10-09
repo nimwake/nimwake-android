@@ -94,7 +94,7 @@ Nimwake Core에 Android API나 Termux 전용 로직을 직접 넣지 않는다.
 
 ## 4. 목표
 
-1. Android 재부팅 후 Ember를 자동 복구한다.
+1. Android 재부팅 후 Nimwake를 자동 복구한다.
 2. Termux가 background에서 종료되는 위험을 최소화한다.
 3. Ubuntu proot 환경을 자동으로 기동한다.
 4. Nimwake daemon이 죽으면 감지하고 복구한다.
@@ -153,7 +153,7 @@ Nimwake Core에 Android API나 Termux 전용 로직을 직접 넣지 않는다.
 ┌───────────────────────────────┐
 │       Ubuntu proot            │
 │                               │
-│ emberd                        │
+│ nimwaked                      │
 │ apps                          │
 │ optional ingress              │
 └───────────────────────────────┘
@@ -186,7 +186,7 @@ termux-wake-lock
    ↓
 proot-distro login ubuntu
    ↓
-emberd
+nimwaked
 ```
 
 ---
@@ -203,7 +203,7 @@ MVP에서는 shell script 또는 소형 Rust binary로 시작할 수 있다.
 
 ```text
 Host Supervisor
-├── emberd health check
+├── nimwaked health check
 ├── proot health check
 ├── network check
 ├── disk check
@@ -224,7 +224,7 @@ Termux
 │
 └── Ubuntu proot
     │
-    ├── emberd
+    ├── nimwaked
     ├── application processes
     └── optional integrations
 ```
@@ -232,7 +232,7 @@ Termux
 중요 원칙:
 
 - `nimwake-hostd`는 Android/Termux 레이어에 존재
-- `emberd`는 Ubuntu/Linux 레이어에 존재
+- `nimwaked`는 Ubuntu/Linux 레이어에 존재
 - 두 프로세스의 책임을 섞지 않는다.
 
 ---
@@ -265,7 +265,7 @@ READY
 
 애플리케이션은 자동으로 모두 실행하지 않는다.
 
-Ember의 기본 정책을 그대로 따른다.
+Nimwake의 기본 정책을 그대로 따른다.
 
 ```text
 App State after reboot:
@@ -275,7 +275,7 @@ api        SLEEPING
 portfolio  SLEEPING
 ```
 
-`always_on = true` 앱만 Ember가 다시 실행한다.
+`always_on = true` 앱만 Nimwake가 다시 실행한다.
 
 ---
 
@@ -403,7 +403,7 @@ MVP 명령 예:
 
 ```bash
 proot-distro login ubuntu -- \
-  /opt/nimwake/bin/emberd
+  /opt/nimwake/bin/nimwaked
 ```
 
 실제 경로는 설치 방식에 따라 configurable해야 한다.
@@ -538,7 +538,7 @@ HEALTHY:
 Termux OK
 Wake Lock OK
 proot OK
-emberd OK
+nimwaked OK
 storage OK
 ```
 
@@ -555,7 +555,7 @@ UNHEALTHY 예:
 
 ```text
 proot launch failure
-emberd repeated crash
+nimwaked repeated crash
 storage critically low
 ```
 
@@ -746,7 +746,7 @@ Nimwake Deploy
 ```text
 new nimwake binary
    ↓
-stop emberd
+stop nimwaked
    ↓
 replace
    ↓
@@ -774,8 +774,8 @@ Nimwake binary 업데이트 실패 시 직전 버전으로 rollback할 수 있�
 ```text
 ~/.nimwake-host/bin/
 
-emberd-current
-emberd-prev
+nimwaked-current
+nimwaked-prev
 ```
 
 업데이트 후 health check 실패 시 이전 binary를 다시 실행한다.
@@ -792,7 +792,7 @@ name = "android-node-01"
 
 [proot]
 distribution = "ubuntu"
-ember_binary = "/usr/local/bin/emberd"
+nimwaked_binary = "/usr/local/bin/nimwaked"
 
 [boot]
 auto_start = true
@@ -864,7 +864,7 @@ Storage     31 GB free
 [OK] Termux
 [OK] proot-distro
 [OK] Ubuntu
-[OK] emberd
+[OK] nimwaked
 [OK] wake lock
 [WARN] battery optimization status unknown
 [OK] storage
@@ -1144,7 +1144,7 @@ Nimwake app count reduced
 
 초기 Android 머신에서 다음이 만족되면 MVP 성공으로 본다.
 
-1. Android 재부팅 후 수동 SSH 없이 Ember가 복구된다.
+1. Android 재부팅 후 수동 SSH 없이 Nimwake가 복구된다.
 2. 24시간 이상 안정적으로 Nimwake daemon이 동작한다.
 3. Wi-Fi 재연결 후 서비스가 자동 복구된다.
 4. Nimwake crash 후 자동 재시작된다.
@@ -1170,7 +1170,7 @@ RAM 4GB / Storage 64GB
         │
         └── Ubuntu proot
                 │
-                ├── emberd
+                ├── nimwaked
                 ├── app processes
                 └── optional tunnel/VPN
 ```
@@ -1202,7 +1202,7 @@ Rust / Go services
 ```text
 Android Host Layer
 
-"Android에서 Ember를 살아 있게 만드는 책임"
+"Android에서 Nimwake를 살아 있게 만드는 책임"
 
 
 Nimwake Core
@@ -1210,4 +1210,4 @@ Nimwake Core
 "필요한 애플리케이션만 살아 있게 만드는 책임"
 ```
 
-이 두 책임을 분리함으로써 Ember는 일반 Linux PaaS로 유지되고, Android Host Layer만 Android 특유의 운영 문제를 해결한다.
+이 두 책임을 분리함으로써 Nimwake는 일반 Linux PaaS로 유지되고, Android Host Layer만 Android 특유의 운영 문제를 해결한다.
