@@ -73,7 +73,10 @@ header='epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,sta
 @test "a second sampler does not start while one is running" {
 	export HOME="$BATS_TEST_TMPDIR/home"
 	mkdir -p "$HOME/.nimwake-host/run"
-	sleep 30 &
+	# 명령줄에 nimwake-soak가 있는 가짜 sampler
+	printf '#!/bin/sh\nsleep 30\n' >"$BATS_TEST_TMPDIR/nimwake-soak"
+	chmod +x "$BATS_TEST_TMPDIR/nimwake-soak"
+	"$BATS_TEST_TMPDIR/nimwake-soak" &
 	running=$!
 	echo "$running" >"$HOME/.nimwake-host/run/soak.pid"
 	echo "$(($(date +%s) + 3600)) 1" >"$HOME/.nimwake-host/run/soak.active"
@@ -83,6 +86,21 @@ header='epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,sta
 	[ "$status" -eq 0 ]
 	[[ "$output" == *"already running"* ]]
 	[ ! -f "$HOME/.nimwake-host/logs/soak.csv" ]
+}
+
+# 재부팅 뒤 남은 pid 파일의 번호를 다른 process가 받았을 수 있다 — 그것을 sampler로 보면 soak이 멈춘다
+@test "a stale pid reused by another process does not block --resume" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/run"
+	sleep 30 &
+	other=$!
+	echo "$other" >"$HOME/.nimwake-host/run/soak.pid"
+	echo "$(($(date +%s) + 3600)) 1" >"$HOME/.nimwake-host/run/soak.active"
+
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" --resume
+	kill "$other"
+	[ "$status" -eq 0 ]
+	[ "$(wc -l <"$HOME/.nimwake-host/logs/soak.csv" | tr -d ' ')" -eq 2 ]
 }
 
 sample_csv() {

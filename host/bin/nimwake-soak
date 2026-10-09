@@ -23,9 +23,12 @@ gateway='http://127.0.0.1:8080/'
 
 mkdir -p "$host/logs" "$host/run"
 
-# 이미 도는 sampler가 있으면 하나만 둔다
-if [ -f "$host/run/soak.pid" ] && kill -0 "$(cat "$host/run/soak.pid")" 2>/dev/null; then
-	echo "nimwake-soak: already running (pid $(cat "$host/run/soak.pid"))" >&2
+# 이미 도는 sampler가 있으면 하나만 둔다. pid만 보면 안 된다 — 재부팅 뒤에는 남은 pid 파일의 번호를
+# 다른 process가 받았을 수 있고, 그러면 이어서 돌아야 할 soak이 "이미 도는 중"으로 멈춘다. 명령줄까지 본다.
+running="$(cat "$host/run/soak.pid" 2>/dev/null || true)"
+if [ -n "$running" ] && kill -0 "$running" 2>/dev/null &&
+	ps -o args= -p "$running" 2>/dev/null | grep -q 'nimwake-soak'; then
+	echo "nimwake-soak: already running (pid $running)" >&2
 	exit 0
 fi
 
