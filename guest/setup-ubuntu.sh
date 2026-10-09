@@ -12,7 +12,10 @@ if ! id nimwake >/dev/null 2>&1; then
 fi
 
 install -d -m 755 /opt/nimwake/bin
-for binary in "$stage"/dist/aarch64/nimwaked "$stage"/dist/aarch64/*-server; do
+# release에 담긴 binary를 모두 놓는다 (nimwaked · nimwake-bench · *-server). 이름을 나열하면
+# Core가 binary를 더할 때 조용히 빠진다 — nimwake-bench가 그랬다 (nimwake#25).
+for binary in "$stage"/dist/aarch64/*; do
+	[ "$(basename "$binary")" = BUILD_INFO ] && continue
 	install -m 755 "$binary" /opt/nimwake/bin/
 done
 install -m 644 "$stage"/dist/aarch64/BUILD_INFO /opt/nimwake/BUILD_INFO

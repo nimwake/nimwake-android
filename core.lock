@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=v0.1.0-rc1
-rev=17975b1e1f977f193e55e4f975f74d6d93a26ff8
-note=Core v0.1.0-rc1 (prerelease). Core v0.1.0은 이 레포의 Android 8항목 리포트를 기다린다.
+tag=
+rev=d7c55907ccc7179d0591b155b9f155845cd5c064
+note=Core main d7c5590 — nimwake#24(버전 0.1.0) · #25(nimwake-bench 포함) 반영, release.yml workflow_dispatch artifact. v0.1.0 태그 전 검증용.

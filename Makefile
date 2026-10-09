@@ -3,7 +3,7 @@ SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fi
 HOURS ?= 24
 INTERVAL ?= 300
 
-.PHONY: lint test doctor-dev install fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev install fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -58,6 +58,10 @@ test-wifi:
 # 실패 경로 실험 E2–E4 + 고아 정리 (별도 경로 /opt/nimwake-exp · 포트 :8090 — 운영 daemon과 soak은 건드리지 않는다)
 test-experiments:
 	tests/device/experiments.sh
+
+# Core PRD §50: CI와 같은 workload(nimwake-bench)를 기기에서 돌려 CI baseline과 비교. soak 중에는 거부한다
+bench:
+	tests/device/bench.sh
 
 # 장시간 soak — sampler는 기기에서 돈다. make soak-start HOURS=72
 soak-start:
