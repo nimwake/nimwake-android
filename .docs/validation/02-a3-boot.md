@@ -129,5 +129,24 @@ A3 완료 조건(Phase 1 [02-milestones](../phases/phase-1/02-milestones.md#a3--
 | 부팅 직후 전부 SLEEPING | **완료** (1, 2, 6회차 확인) |
 | 화면 꺼짐 + 충전 1시간 뒤 cold start | **완료** (daemon 생존, 첫 cold start 103ms) |
 | 화면 잠금 | 비밀번호 잠금 확인. 잠금 없음은 미확인 (선택) |
-| phantom process 제한 해제 · 배터리 최적화 예외 | 설치 checklist 항목. adb 페어링 후 `make doctor`로 확인한다 |
-| sshd 비밀번호 로그인 | `doctor`가 WARN. `PasswordAuthentication no`로 끈다 |
+| phantom process 제한 해제 · 배터리 최적화 예외 | **완료** (2026-10-09, 아래) |
+| sshd 비밀번호 로그인 | **완료** — 키 로그인만 (`sshd_config.d/10-nimwake.conf`, #8) |
+
+## adb — phantom process · 배터리 최적화 (2026-10-09)
+
+무선 디버깅 페어링 후 개발 머신(WSL)에서 Windows SDK의 `adb.exe`로 했다. 24h soak 중이었고 실행 중인 프로세스에는 영향이 없다.
+
+| 항목 | 전 | 후 |
+| ---- | -- | -- |
+| `device_config activity_manager max_phantom_processes` | `null` (Android 기본 32) | `2147483647` |
+| `settings global settings_enable_monitor_phantom_procs` | `null` | `false` |
+| `device_config get_sync_disabled_for_tests` | `none` | `persistent` — 서버 동기화가 값을 되돌리지 못하게 |
+| deviceidle whitelist | `com.termux` · `com.termux.boot` 이미 있음 | 그대로 |
+
+```text
+[OK]     phantom process limit disabled (max_phantom_processes=2147483647)
+[OK]     battery optimization exempt: com.termux
+[OK]     battery optimization exempt: com.termux.boot
+```
+
+`make doctor`는 처음에 adb를 못 알아봤다. WSL에서 Windows `adb.exe`는 **환경 변수(`ANDROID_SERIAL`)를 받지 않고 출력이 CRLF**다. 무선 디버깅은 같은 기기를 IP와 mDNS 이름으로 두 번 보여 serial 지정이 필요했다 — `doctor`가 serial을 `-s` 인자로 넘기고 `\r`을 지우게 고쳤다.
