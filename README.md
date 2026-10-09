@@ -20,7 +20,7 @@ Phase 1 (`nimwake-android v0.1.0`) 진행 중. Core `v0.1.0`은 이 레포의 **
 
 ```text
 Install ✓   Boot recovery ✓   Cold start ✓   Scale-to-zero ✓
-Daemon recovery ✓   Network recovery ✓   24h soak (진행 중)   72h soak
+Daemon recovery ✓   Network recovery ✓   24h · 72h soak (진행 중, 10-12 종료)
 ```
 
 → [마일스톤 현황](.docs/phases/phase-1/02-milestones.md) · [검증 리포트](.docs/validation/)
@@ -29,7 +29,8 @@ Daemon recovery ✓   Network recovery ✓   24h soak (진행 중)   72h soak
 
 | nimwake-android | Core | 검증 |
 | --------------- | ---- | ---- |
-| `main` | `v0.1.0-rc1` (`17975b1`) | [03](.docs/validation/03-core-v0.1.0-rc1.md) · [04](.docs/validation/04-a2-recovery.md) · [05](.docs/validation/05-a5-network.md) |
+| `main` | main `d7c5590` (`nimwaked 0.1.0`, release.yml run artifact) | [08](.docs/validation/08-core-d7c5590-bench.md) · 72h soak 진행 중 |
+| #16 이전 | `v0.1.0-rc1` (`17975b1`) | [03](.docs/validation/03-core-v0.1.0-rc1.md) · [04](.docs/validation/04-a2-recovery.md) · [05](.docs/validation/05-a5-network.md) · [06](.docs/validation/06-a1-experiments.md) · [07](.docs/validation/07-soak-rc1-12h.md) |
 
 `core.lock`이 Core를 commit SHA로 고정한다. `make fetch-core`는 그 release asset을 받아 `BUILD_INFO`의 commit을 확인한다.
 
