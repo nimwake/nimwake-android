@@ -55,6 +55,10 @@ ssh "$device" 'rm -rf $HOME/.nimwake-host/bench && mkdir -p $HOME/.nimwake-host/
 ssh "$device" 'cat > $HOME/.nimwake-host/bench/ci-baseline.txt' <"$out/ci/baseline.txt"
 
 echo "bench: running on the device (several minutes)"
+# nimwake-bench는 correctness gate(예: cold-start storm 실패)에 걸리면 0이 아닌 코드로 끝나지만
+# 리포트는 이미 썼다. 기기에서는 그 gate에 걸리는 것이 측정 결과다 (validation/08) — 리포트를 먼저 가져오고
+# 종료 코드는 마지막에 돌려준다.
+status=0
 # shellcheck disable=SC2086 # BENCH_ARGS는 단어로 나눈다
 ssh "$device" "proot-distro login ubuntu --user nimwake --bind \$HOME/.nimwake-host/bench:/mnt/bench -- \
 	/opt/nimwake/bin/nimwake-bench \
@@ -62,9 +66,13 @@ ssh "$device" "proot-distro login ubuntu --user nimwake --bind \$HOME/.nimwake-h
 	--commit android-$(printf '%s' "$rev" | cut -c1-7) \
 	--baseline /mnt/bench/ci-baseline.txt \
 	--out /mnt/bench/device-report.md --baseline-out /mnt/bench/device-baseline.txt \
-	${BENCH_ARGS:-}" </dev/null
+	${BENCH_ARGS:-}" </dev/null || status=$?
 
 ssh "$device" 'cat $HOME/.nimwake-host/bench/device-report.md' >"$out/device-report.md"
 ssh "$device" 'cat $HOME/.nimwake-host/bench/device-baseline.txt' >"$out/device-baseline.txt"
 echo "bench: dist/bench/device-report.md (vs CI dist/bench/ci/performance-report.md)"
 cat "$out/device-report.md"
+if [ "$status" -ne 0 ]; then
+	echo "bench: nimwake-bench exited $status (correctness gate) — the report above is complete" >&2
+fi
+exit "$status"
