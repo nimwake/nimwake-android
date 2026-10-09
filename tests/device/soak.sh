@@ -39,6 +39,8 @@ EOF
 cmd_stop() {
 	ssh "$device" sh -s <<'EOF'
 pid_file="$HOME/.nimwake-host/run/soak.pid"
+# 일부러 멈춘 soak이 재부팅 때 20-soak로 되살아나지 않게 한다
+rm -f "$HOME/.nimwake-host/run/soak.active"
 if [ -f "$pid_file" ] && kill "$(cat "$pid_file")" 2>/dev/null; then
 	echo "soak: stopped"
 else

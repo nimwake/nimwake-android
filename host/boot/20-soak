@@ -1,0 +1,17 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Termux:Boot 진입점 — 재부팅 전에 돌던 soak이 있으면 끝 시각까지 이어서 돌린다. (A5 · A6)
+# soak이 없으면(run/soak.active 없음) 아무것도 하지 않는다. make deploy가 ~/.termux/boot/ 에 설치한다.
+#
+# 공백(재부팅부터 여기까지)은 soak.csv의 표본 간격으로 드러난다. nimwaked는 10-nimwake가 따로 띄우므로
+# 첫 표본이 daemon보다 먼저 찍혀 http 000일 수 있다 — 그것도 기록으로 남긴다.
+
+host="$HOME/.nimwake-host"
+[ -f "$host/run/soak.active" ] || exit 0
+
+mkdir -p "$host/logs"
+termux-wake-lock
+nohup "$host/bin/nimwake-soak" --resume >/dev/null 2>&1 &
+# 기기 전용 스크립트다 — Termux의 date는 GNU라 `-d @EPOCH`를 쓴다 (`-r`은 파일 시각이다)
+end="$(cut -d' ' -f1 "$host/run/soak.active")"
+printf '%s soak: resumed (until %s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" \
+	"$(date -d "@$end" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$end")" >>"$host/logs/boot.log"
