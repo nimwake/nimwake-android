@@ -1,7 +1,11 @@
 #!/bin/sh
 # 기기에서 도는 soak sampler. (A5 · A6, Core PRD §51 Android Soak Test)
 #
-#   nimwake-soak INTERVAL_SECONDS HOURS
+#   nimwake-soak INTERVAL_SECONDS HOURS   새로 시작 — 끝 시각과 간격을 run/soak.active에 남긴다
+#   nimwake-soak --resume                 run/soak.active의 끝 시각까지 이어서 돈다 (부팅 때 20-soak가 부른다)
+#
+# 재부팅으로 sampler가 죽어도 soak.active가 남아 있으면 Termux:Boot가 이어서 돌린다. 재부팅 동안의
+# 공백은 soak.csv의 표본 간격(max gap)으로 드러난다. soak.active는 끝 시각에 닿거나 soak.sh stop일 때만 지운다.
 #
 # INTERVAL마다 한 줄을 ~/.nimwake-host/logs/soak.csv에 붙인다. 개발 머신이 꺼져 있어도 돈다.
 # 요청은 echo app 하나에 보낸다. idle timeout(5s)보다 간격이 훨씬 길어 매 표본이 cold start → sleep 한 바퀴다.
@@ -11,14 +15,34 @@
 #   daemon_pid   바뀌면 supervisor가 재기동했다는 뜻이다
 set -u
 
-interval="${1:-300}"
-hours="${2:-24}"
 host="$HOME/.nimwake-host"
 out="$host/logs/soak.csv"
 tmp="$host/run/soak.body"
+active="$host/run/soak.active"
 gateway='http://127.0.0.1:8080/'
 
 mkdir -p "$host/logs" "$host/run"
+
+# 이미 도는 sampler가 있으면 하나만 둔다
+if [ -f "$host/run/soak.pid" ] && kill -0 "$(cat "$host/run/soak.pid")" 2>/dev/null; then
+	echo "nimwake-soak: already running (pid $(cat "$host/run/soak.pid"))" >&2
+	exit 0
+fi
+
+if [ "${1:-}" = --resume ]; then
+	[ -f "$active" ] || exit 0
+	read -r end interval <"$active"
+	if [ "$(date +%s)" -ge "$end" ]; then
+		rm -f "$active"
+		exit 0
+	fi
+else
+	interval="${1:-300}"
+	hours="${2:-24}"
+	end=$(($(date +%s) + hours * 3600))
+	echo "$end $interval" >"$active"
+fi
+
 echo "$$" >"$host/run/soak.pid"
 trap 'rm -f "$host/run/soak.pid" "$tmp"' EXIT
 
@@ -58,7 +82,6 @@ battery_status() {
 # 테스트용: 표본 수를 제한한다 (0이면 시간으로만 끝난다)
 samples_left="${NIMWAKE_SOAK_SAMPLES:-0}"
 
-end=$(($(date +%s) + hours * 3600))
 while [ "$(date +%s)" -lt "$end" ]; do
 	apps_before="$(pgrep -f '^/opt/nimwake/bin/.*-server' 2>/dev/null | wc -l | tr -d ' ')"
 
@@ -92,3 +115,8 @@ while [ "$(date +%s)" -lt "$end" ]; do
 	fi
 	sleep "$interval"
 done
+
+# 끝 시각에 닿았을 때만 soak이 끝난 것이다 (표본 수 제한으로 멈춘 테스트는 이어서 돌 수 있게 둔다)
+if [ "$(date +%s)" -ge "$end" ]; then
+	rm -f "$active"
+fi

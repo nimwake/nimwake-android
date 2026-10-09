@@ -23,6 +23,68 @@ header='epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,sta
 	[ ! -f "$HOME/.nimwake-host/run/soak.pid" ]
 }
 
+# 재부팅 대응: 새로 시작하면 끝 시각을 남기고, --resume(20-soak)은 그 시각까지 이어서 돈다
+
+@test "a fresh soak records its end time and interval in soak.active" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME"
+	before="$(date +%s)"
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" 1 2
+	[ "$status" -eq 0 ]
+
+	read -r end interval <"$HOME/.nimwake-host/run/soak.active"
+	[ "$interval" -eq 1 ]
+	[ "$end" -ge $((before + 7200)) ]
+	[ "$end" -le $((before + 7205)) ]
+}
+
+@test "--resume continues the same soak.csv until the recorded end" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/run" "$HOME/.nimwake-host/logs"
+	echo "$header" >"$HOME/.nimwake-host/logs/soak.csv"
+	echo "1000,earlier,200,0.040,1,0,1,1,RUNNING,80,30.0,1" >>"$HOME/.nimwake-host/logs/soak.csv"
+	echo "$(($(date +%s) + 3600)) 1" >"$HOME/.nimwake-host/run/soak.active"
+
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" --resume
+	[ "$status" -eq 0 ]
+	[ "$(wc -l <"$HOME/.nimwake-host/logs/soak.csv" | tr -d ' ')" -eq 3 ]
+	[ -f "$HOME/.nimwake-host/run/soak.active" ]
+}
+
+@test "--resume after the end time clears soak.active and samples nothing" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/run"
+	echo "$(($(date +%s) - 10)) 1" >"$HOME/.nimwake-host/run/soak.active"
+
+	run "$root/host/bin/nimwake-soak" --resume
+	[ "$status" -eq 0 ]
+	[ ! -f "$HOME/.nimwake-host/run/soak.active" ]
+	[ ! -f "$HOME/.nimwake-host/logs/soak.csv" ]
+}
+
+@test "--resume without an active soak does nothing" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME"
+	run "$root/host/bin/nimwake-soak" --resume
+	[ "$status" -eq 0 ]
+	[ ! -f "$HOME/.nimwake-host/logs/soak.csv" ]
+}
+
+@test "a second sampler does not start while one is running" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/run"
+	sleep 30 &
+	running=$!
+	echo "$running" >"$HOME/.nimwake-host/run/soak.pid"
+	echo "$(($(date +%s) + 3600)) 1" >"$HOME/.nimwake-host/run/soak.active"
+
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" --resume
+	kill "$running"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"already running"* ]]
+	[ ! -f "$HOME/.nimwake-host/logs/soak.csv" ]
+}
+
 sample_csv() {
 	cat <<EOF
 $header
