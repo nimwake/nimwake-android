@@ -3,8 +3,10 @@
 #
 #   soak.sh start [HOURS] [INTERVAL]   sampler를 기기에서 백그라운드로 띄운다 (기본 24h · 300s)
 #   soak.sh stop                       sampler를 멈춘다
-#   soak.sh report                     soak.csv를 가져와 요약한다 — 실행 중에도 된다
-#   soak.sh summarize < soak.csv       요약만 한다 (기기 없이)
+#   soak.sh report [OPTS]              soak.csv를 가져와 요약한다 — 실행 중에도 된다
+#   soak.sh summarize [OPTS] < soak.csv  요약만 한다 (기기 없이)
+#     --md        검증 리포트에 붙일 마크다운 표로
+#     --hours N   첫 표본부터 N시간까지만 (72h soak에서 24h 판정)
 #
 # sampler는 기기에서 돈다. 개발 머신은 72시간 켜 둘 필요가 없다.
 # 새 soak을 시작하면 이전 soak.csv는 soak-<시각>.csv로 옮긴다.
@@ -57,22 +59,51 @@ cmd_report() {
 		exit 1
 	fi
 
-	echo "sampler running: $running"
+	if [ "$md" = 1 ]; then
+		echo "<!-- sampler running: $running -->"
+	else
+		echo "sampler running: $running"
+	fi
 	printf '%s\n' "$csv" | summarize
 }
 
 # soak.csv(표준 입력)를 요약한다. 기기 없이 tests/unit/soak.bats가 검증한다.
 summarize() {
-	awk -F, -f "$here/soak-summary.awk"
+	awk -F, -v md="$md" -v hours="$hours" -f "$here/soak-summary.awk"
 }
 
-case "${1:-}" in
-start) shift; cmd_start "$@" ;;
+usage() {
+	echo "usage: soak.sh start [HOURS] [INTERVAL] | stop | report [--md] [--hours N] | summarize [--md] [--hours N] < soak.csv" >&2
+	exit 2
+}
+
+md=0
+hours=0
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+report | summarize)
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		--md) md=1 ;;
+		--hours)
+			[ $# -ge 2 ] || usage
+			hours="$2"
+			shift
+			;;
+		*) usage ;;
+		esac
+		shift
+	done
+	;;
+esac
+
+case "$cmd" in
+start) cmd_start "$@" ;;
 stop) cmd_stop ;;
 report) cmd_report ;;
 summarize) summarize ;;
 *)
-	echo "usage: soak.sh start [HOURS] [INTERVAL] | stop | report | summarize < soak.csv" >&2
-	exit 2
+	usage
 	;;
 esac

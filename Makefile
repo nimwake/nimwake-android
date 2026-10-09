@@ -70,5 +70,6 @@ soak-start:
 soak-stop:
 	tests/device/soak.sh stop
 
+# make soak-report ARGS="--md --hours 24" — 리포트용 표, 72h 중 처음 24h만
 soak-report:
-	tests/device/soak.sh report
+	tests/device/soak.sh report $(ARGS)
