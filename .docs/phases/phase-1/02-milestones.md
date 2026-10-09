@@ -39,7 +39,7 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 | A1 | 완료. 실험은 E1 · E5만 정식 수행, E2–E4 남음 | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) |
 | A2 | **완료** — 완료 조건 4개 충족. crash 뒤 orphan 정리(E4)는 남음 | [validation/04](../../validation/04-a2-recovery.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
-| A4 | 미착수 | — |
+| A4 | `make install` 작성 · 설치된 기기에서 멱등 확인. **초기화한 기기 검증 남음** (72h soak 뒤) | #14 |
 | A5 | LAN · 동시 cold start · Wi-Fi 복구 완료. **24h soak 진행 중** (10-09 01:25 시작). Core workload 비교 남음 | [validation/05](../../validation/05-a5-network.md) |
 | A6 | 미착수 (24h soak 다음) | — |
 
@@ -157,14 +157,15 @@ PRD §10–§12, §25.
 
 PRD §35–§36.
 
-- [ ] `install/install-android.sh`: 의존성 → proot-distro → Ubuntu → `guest/setup-ubuntu.sh` → host 배치 → boot script → `doctor`
-- [ ] **멱등**: 두 번 실행해도 결과가 같고, 기존 `host.conf`와 app manifest를 덮지 않는다
-- [ ] binary 배치는 `deploy.sh`와 같은 경로를 쓴다 (설치와 업데이트가 갈라지지 않게)
-- [ ] secret · key를 생성하거나 업로드하지 않는다 (PRD §36)
+- [x] `make install` (개발 머신) → `install/install-android.sh`(기기, ssh로 보냄: 앱 출처 확인 · 패키지 · proot Ubuntu 26.04 · 키 로그인 sshd · boot 디렉터리) → `fetch-core` → `deploy` → `nimwake-host start` → `doctor`.
+  ssh가 열리기 전(Termux에서 `openssh` · `passwd` · `sshd`, `ssh-copy-id`)은 사람이 한다 — ssh 없이는 개발 머신이 기기에 닿을 수 없다. `make install`이 그 단계를 안내한다
+- [x] **멱등**: 설치된 기기에서 기기 단계 `0 change(s)` (2026-10-09). 패키지가 있으면 `pkg`를 부르지 않는다(업그레이드 방지). `host.conf` · manifest는 deploy가 보존
+- [x] binary 배치는 `deploy.sh`와 같은 경로를 쓴다 (설치와 업데이트가 갈라지지 않게)
+- [x] secret · key를 생성하거나 업로드하지 않는다 (PRD §36). 키가 등록된 뒤에만 비밀번호 로그인을 끈다
 
 **완료 조건**
 
-- 초기화한 기기(또는 Termux 데이터 삭제)에서 `install-android.sh` 한 번 + checklist 수동 항목만으로 A3 완료 조건을 다시 통과한다.
+- [ ] 초기화한 기기(또는 Termux 데이터 삭제)에서 `make install` 한 번 + checklist 수동 항목만으로 A3 완료 조건을 다시 통과한다 — 72h soak 뒤에 한다
 
 ---
 
