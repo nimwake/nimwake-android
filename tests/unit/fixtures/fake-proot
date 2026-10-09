@@ -1,0 +1,8 @@
+#!/bin/sh
+# supervisor 테스트용 가짜 proot. 가짜 nimwaked를 자식으로 띄우고 기다린다.
+# 진짜 proot와 달리 자신이 SIGKILL로 죽어도 자식을 죽이지 않는다 — 실기기에서 proot가 죽었을 때와 같다 (validation/06 E4).
+set -u
+
+"$(dirname "$0")/fake-nimwaked" &
+echo "$!" >>"$FAKE_DIR/daemons"
+wait

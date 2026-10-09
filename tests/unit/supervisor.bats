@@ -26,7 +26,15 @@ setup() {
 
 teardown() {
 	"$host" stop >/dev/null 2>&1 || true
-	pkill -f "fake-nimwaked" 2>/dev/null || true
+	# orphan 모드의 가짜 daemon은 TERM을 무시한다
+	pkill -9 -f "fake-(nimwaked|proot)" 2>/dev/null || true
+	if [ -f "$FAKE_DIR/apps" ]; then
+		xargs kill -9 <"$FAKE_DIR/apps" 2>/dev/null || true
+	fi
+}
+
+alive() {
+	kill -0 "$1" 2>/dev/null
 }
 
 state() {
@@ -129,4 +137,40 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 	run "$host" stop
 	[ "$status" -eq 0 ]
 	state_is STOPPED
+}
+
+# validation/06 E4: proot가 SIGKILL로 죽으면 nimwaked · application이 고아로 남고 TERM에 반응하지 않는다.
+# 그대로 두면 새 daemon이 port를 못 잡는다. supervisor는 재기동 전에 고아를 정리해야 한다.
+@test "an orphaned daemon left by a dead wrapper is killed with its applications before relaunch" {
+	echo orphan >"$FAKE_DIR/mode"
+	export NIMWAKE_LAUNCH="$BATS_TEST_DIRNAME/fixtures/fake-proot"
+	"$host" start
+	wait_for 5 state_is RUNNING
+	old_daemon="$(head -n 1 "$FAKE_DIR/daemons")"
+	old_app="$(head -n 1 "$FAKE_DIR/apps")"
+	alive "$old_daemon"
+	alive "$old_app"
+
+	pkill -9 -f "fake-proot"
+	wait_for 15 launched_at_least 2
+	wait_for 10 state_is RUNNING
+
+	! alive "$old_daemon"
+	! alive "$old_app"
+	grep -q "orphan nimwaked $old_daemon" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	[ "$(pgrep -f "fake-nimwaked" | wc -l | tr -d ' ')" -eq 1 ]
+}
+
+@test "stop kills a daemon that ignores TERM, and its applications" {
+	echo orphan >"$FAKE_DIR/mode"
+	export NIMWAKE_LAUNCH="$BATS_TEST_DIRNAME/fixtures/fake-proot"
+	export NIMWAKE_STOP_TIMEOUT=2
+	"$host" start
+	wait_for 5 state_is RUNNING
+	app="$(head -n 1 "$FAKE_DIR/apps")"
+
+	run "$host" stop
+	[ "$status" -eq 0 ]
+	! pgrep -f "fake-nimwaked"
+	! alive "$app"
 }
