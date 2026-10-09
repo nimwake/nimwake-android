@@ -47,7 +47,10 @@ else
 	source_desc="run $run_id"
 fi
 
-chmod +x "$out"/nimwaked "$out"/*-server
+# BUILD_INFO 말고는 모두 실행 파일이다. 이름을 나열하면 Core가 더한 binary(nimwake-bench)가 빠진다 (nimwake#25).
+for f in "$out"/*; do
+	[ "$(basename "$f")" = BUILD_INFO ] || chmod +x "$f"
+done
 
 built="$(sed -n 's/^commit=//p' "$out/BUILD_INFO")"
 if [ "$built" != "$rev" ]; then
