@@ -13,17 +13,12 @@
 | -------------------------- | -------------------------- | --------------------------------------------------------------- |
 | `v0.0.5` merge 이후        | A1                         | `core.lock` = Core SHA, 그 SHA의 aarch64 artifact (`release.yml`) — 완료 |
 | `v0.1.0-rc1` (2026-10-08)  | A1–A3 · A5 재검증          | `core.lock` = `tag=v0.1.0-rc1`, release asset (#7). boot · lifecycle · recovery · LAN 통과 — 완료 |
-| `v0.1.0` 준비 중           | A1 결과                    | 실험 E2–E4 결과 → 기존 이슈에 코멘트 또는 새 Core 이슈 — 남음 |
-| `v0.1.0` 준비 중           | A5                         | Core E2E workload · `RequestTrace`/`StartupTrace` 지표를 기기에서 재실행 → CI Linux와 비교 — `nimwake-bench`가 aarch64 artifact에 없어 막힘 |
-| `v0.1.0` 준비 중           | A5 24h soak                | soak 리포트 → Core stress · leak 판정의 참고 자료 — **진행 중** |
+| `v0.1.0` 준비 중           | A1 결과                    | 실험 E2–E4 — Core 결함 없음. proot가 죽은 뒤의 고아는 supervisor가 정리 (#15) — 완료 → [validation/06](../../validation/06-a1-experiments.md) |
+| main `d7c5590` (2026-10-09) | A1–A3 · A5 재검증 · A5 bench | `core.lock` = rev `d7c5590`(`tag=` 없음, release.yml run artifact, #16). `nimwaked 0.1.0` · `nimwake-bench`. lifecycle · recovery · LAN 통과, bench 비교를 nimwake#25에 전달 — 완료 → [validation/08](../../validation/08-core-d7c5590-bench.md) |
+| `v0.1.0` 준비 중           | A5 24h · A6 72h soak       | Core `d7c5590`으로 72h — 10-09 13:44 → 10-12 13:44 (24h 시점 10-10 13:44). rc1 12h는 참고 → [validation/07](../../validation/07-soak-rc1-12h.md) — **진행 중** |
 | `v0.1.0` 직전              | A6 72h soak                | Android 체크리스트 → Core acceptance ([Core PRD §65](https://github.com/nimwake/nimwake/blob/main/.docs/prd/03-delivery/08-definition-of-done.md)) |
 
-### Core에 알릴 것 (아직 이슈로 올리지 않음)
-
-| 내용 | 근거 |
-| ---- | ---- |
-| `v0.1.0-rc1` binary가 기동 로그에서 자기 버전을 `nimwaked 0.0.1`로 알린다. Cargo 패키지 버전이 release 태그와 맞지 않아 운영 로그로 release를 구분할 수 없다 | [validation/03](../../validation/03-core-v0.1.0-rc1.md) |
-| aarch64 artifact에 `nimwake-bench`가 없다. Core PRD §50의 "CI Linux와 같은 workload로 기기 비교"를 할 수 없다 | A5 |
+`v0.1.0` 태그가 `d7c5590`과 다른 commit을 가리키면, 태그 binary로 lifecycle · recovery를 다시 돌리고 72h 결과와의 관계를 리포트에 적는다.
 
 `core.lock`을 올릴 때마다 A1 lifecycle · A2 recovery 시나리오를 다시 돌리고 리포트를 남긴다.
 
@@ -46,6 +41,8 @@ Core `v0.0.3` 코드(PR #2)를 읽고 실기기 없이 확정된 간극과, 이 
 | [nimwake#5](https://github.com/nimwake/nimwake/issues/5) | gateway listen address 설정 | LAN 접근 (A5) | 해결 — nimwake#9 (`--listen`, `NIMWAKE_LISTEN`) |
 | [nimwake#6](https://github.com/nimwake/nimwake/issues/6) | 종료 코드로 실패 원인 구분 | supervisor의 crash-loop 판정 (PRD §24) | 해결 — nimwake#9 |
 | [nimwake#7](https://github.com/nimwake/nimwake/issues/7) | host interface 계약 — health probe가 app을 깨우지 않음, 인자 · 신호 명시 | supervisor health probe (D-A5) | 해결 — nimwake#9 |
+| [nimwake#24](https://github.com/nimwake/nimwake/issues/24) | `v0.1.0-rc1` binary가 버전을 `0.0.1`로 알림 (workspace 버전 미갱신) | 운영 로그로 release를 구분 못 함 | 해결 — nimwake#27 (`nimwaked 0.1.0`, 태그 gate) |
+| [nimwake#25](https://github.com/nimwake/nimwake/issues/25) | aarch64 asset에 `nimwake-bench` | PRD §50 기기 비교 (A5) | 해결 — nimwake#26. Core가 이 레포의 `chmod` 누락을 짚어 #16에서 고침. CPU 지표도 추가됨 |
 
 ### 이 레포가 쓰는 Core 계약
 
