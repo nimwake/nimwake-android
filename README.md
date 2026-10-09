@@ -66,6 +66,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 
 | 명령 | 하는 일 |
 | ---- | ------- |
+| `make doctor-dev` | 개발 머신 점검 — 도구 · ShellCheck 버전 · WSL 경로 · 실행 비트 · ssh 설정 (처음에 한 번) |
 | `make install` | 기기 설치 (멱등) — 패키지 · proot Ubuntu · 키 로그인 sshd → deploy → supervisor → doctor. soak 중에는 돌리지 않는다 |
 | `make fetch-core` | `core.lock`의 Core aarch64 binary → `dist/aarch64/` |
 | `make deploy` | binary · manifest(proot Ubuntu), `nimwake-host`, Termux:Boot 스크립트 설치. `host.conf`는 있으면 보존 |

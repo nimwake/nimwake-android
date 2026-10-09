@@ -35,7 +35,7 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 
 | 마일스톤 | 상태 | 근거 |
 | -------- | ---- | ---- |
-| A0 | 완료 — `make doctor-dev`(개발 머신 도구 점검)만 남음 | #2 · #4 · #9 · #11 |
+| A0 | **완료** — macOS에서 `make doctor-dev`를 돌려 본 적은 없다 (CI macOS는 lint · test만) | #2 · #4 · #9 · #11 · #13 |
 | A1 | 완료. 실험은 E1 · E5만 정식 수행, E2–E4 남음 | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) |
 | A2 | **완료** — 완료 조건 4개 충족. crash 뒤 orphan 정리(E4)는 남음 | [validation/04](../../validation/04-a2-recovery.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
@@ -51,7 +51,7 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 
 - [x] `.gitattributes`, `.gitignore`(`dist/`), `.editorconfig` (#11)
 - [x] `PRD.md` 이름 정리: `Ember` → `Nimwake`, `emberd` → `nimwaked` — 20곳 (#11)
-- [x] `Makefile`: `lint` · `test` · `fetch-core` · `deploy` (+ `run` · `stop` · `doctor` · `test-*` · `soak-*`) · [ ] `doctor-dev`
+- [x] `Makefile`: `doctor-dev` · `lint` · `test` · `fetch-core` · `deploy` (+ `run` · `stop` · `doctor` · `test-*` · `soak-*`). `doctor-dev`는 도구 · ShellCheck 버전 · WSL의 `/mnt/c` 사용 · `core.autocrlf` · 실행 비트 · ssh 설정을 본다 (#13)
 - [x] `core.lock` + `scripts/fetch-core.sh` — release asset(`tag=`) 또는 run artifact, `BUILD_INFO` commit 검사 (#7)
 - [x] CI — ubuntu 항상, macOS는 개발 머신 코드가 바뀔 때만 (#4 · #9)
 - [x] `host/lib` + `tests/unit` — policy · supervisor(가짜 daemon) · soak, bats 22개 (#4 · #5)
@@ -60,8 +60,8 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 
 **완료 조건**
 
-- macOS와 WSL 각각에서 `make doctor-dev lint test`가 성공한다.
-- `ci.yml`이 ubuntu · macos 양쪽에서 통과한다.
+- [x] WSL에서 `make doctor-dev lint test`가 성공한다 · [ ] macOS에서 `make doctor-dev` (macOS 개발 머신에서 처음 쓸 때)
+- [x] CI가 ubuntu · macOS 양쪽에서 통과한다 (`ci.yml` · `ci-macos.yml`)
 
 ---
 
