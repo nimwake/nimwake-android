@@ -1,0 +1,16 @@
+# 줄바꿈은 LF — CRLF가 섞인 shell은 Termux에서 `$'\r': command not found`로 죽는다. (.gitattributes와 같이)
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# shell은 탭. 확장자 없는 기기 스크립트(host/bin, host/boot, fixture)도 포함한다
+[{*.sh,*.bats,*.awk,Makefile,host/bin/*,host/boot/*,tests/unit/fixtures/*}]
+indent_style = tab
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
