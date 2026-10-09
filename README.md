@@ -77,6 +77,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 | `make test-boot` | 재부팅 후: 마지막 부팅 READY · SLEEPING · lifecycle |
 | `make test-recovery` | `kill -9` → 재기동 · exit 78 → UNHEALTHY · stop 잔존 0 |
 | `make test-lan` · `make test-wifi` | LAN lifecycle · 동시 cold start · Wi-Fi 복구 (`NIMWAKE_LISTEN=0.0.0.0:8080` 필요) |
+| `make test-experiments` | 실패 경로 실험 E2–E4 + 고아 정리 — 별도 경로 · 포트의 실험 daemon이라 운영 daemon · soak과 섞이지 않는다 |
 | `make soak-start HOURS=24` · `soak-report` · `soak-stop` | 기기에서 도는 장시간 soak |
 
 기기에서는 `nimwake-host start | stop | status | logs`.

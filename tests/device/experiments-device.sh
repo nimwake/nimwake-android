@@ -170,6 +170,55 @@ e4-term)
 	done
 	;;
 
+e4-supervised)
+	# 고아 정리(reap_orphan_daemon)를 실기기에서: 실험 daemon을 맡는 별도 supervisor를 띄우고 proot를 죽인다.
+	# $2 = 이번 레포의 host/ 를 올려 둔 디렉터리 (운영 중인 ~/.nimwake-host와 섞지 않는다)
+	stage="$2"
+	termux-fix-shebang "$stage"/bin/* >/dev/null 2>&1 || true
+	pkill -TERM -f "$daemon" 2>/dev/null || true
+	sleep 2
+	export NIMWAKE_HOST_HOME="$HOME/.nimwake-exp-host"
+	export NIMWAKE_HOST_LIB="$stage/lib"
+	export NIMWAKE_DAEMON=/opt/nimwake-exp/bin/nimwaked
+	export NIMWAKE_APPS=/home/nimwake/.nimwake-exp/apps
+	export NIMWAKE_LAUNCH="proot-distro login ubuntu --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS --port 8090"
+	export NIMWAKE_DAEMON_MATCH="$daemon"
+	export NIMWAKE_GATEWAY="$gateway"
+	export NIMWAKE_HEALTH_INTERVAL=5
+	rm -rf "$NIMWAKE_HOST_HOME"
+	host="$stage/bin/nimwake-host"
+	state() { cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/state" 2>/dev/null; }
+
+	"$host" start
+	i=0
+	until [ "$(state)" = RUNNING ]; do i=$((i + 1)); [ "$i" -ge 60 ] && { "$host" status; exit 1; }; sleep 1; done
+	echo "e4-supervised wake: $(request group.local)"
+	server="$(pgrep -f '^/opt/nimwake-exp/bin/group-server' | head -n 1)"
+	gc="$(grandchild)"
+	d="$(pgrep -f "$daemon" | head -n 1)"
+	w="$(pgrep -f "$wrapper" | head -n 1)"
+	echo "e4-supervised before: wrapper=$w daemon=$d server=$server grandchild=$gc"
+	killed_at="$(date +%s)"
+	kill -9 "$w"
+
+	# 새 daemon(다른 pid)으로 RUNNING이 될 때까지
+	i=0
+	while :; do
+		nd="$(pgrep -f "$daemon" | head -n 1)"
+		if [ -n "$nd" ] && [ "$nd" != "$d" ] && [ "$(state)" = RUNNING ]; then
+			break
+		fi
+		i=$((i + 1))
+		[ "$i" -ge 60 ] && { echo "FAIL: not recovered"; "$host" status; tail -n 8 "$NIMWAKE_HOST_HOME/logs/supervisor.log"; exit 1; }
+		sleep 1
+	done
+	echo "e4-supervised recovered in $(($(date +%s) - killed_at))s: new daemon=$nd"
+	echo "e4-supervised old: daemon=$(alive "$d" && echo alive || echo gone) server=$(alive "$server" && echo alive || echo gone) grandchild=$(alive "$gc" && echo alive || echo gone)"
+	echo "e4-supervised after: $(request group.local) (new server $(pgrep -f '^/opt/nimwake-exp/bin/group-server' | head -n 1))"
+	grep -E 'orphan|state (BACKOFF|RUNNING)' "$NIMWAKE_HOST_HOME/logs/supervisor.log" | tail -n 4
+	"$host" stop
+	;;
+
 teardown)
 	pkill -TERM -f "$daemon" 2>/dev/null || true
 	sleep 2

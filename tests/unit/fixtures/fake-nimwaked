@@ -4,6 +4,8 @@
 #   config  즉시 78로 끝난다 (설정 오류)
 #   crash   READY 후 1초 뒤 1로 끝난다
 #   hung    READY 후 1초 뒤 probe에 응답하지 않는다($FAKE_DIR/up 삭제). TERM이면 0
+#   orphan  application 역할의 자식(sleep 600)을 두고 TERM을 무시한다 — proot를 잃은 nimwaked처럼 (validation/06 E4)
+#           자식 pid는 $FAKE_DIR/apps에 남긴다
 # 기동할 때마다 $FAKE_DIR/launches에 한 줄을 남긴다.
 set -u
 
@@ -26,6 +28,12 @@ hung)
 	: >"$FAKE_DIR/up"
 	sleep 1
 	rm -f "$FAKE_DIR/up"
+	;;
+orphan)
+	trap '' TERM
+	sleep 600 &
+	echo "$!" >>"$FAKE_DIR/apps"
+	: >"$FAKE_DIR/up"
 	;;
 *)
 	: >"$FAKE_DIR/up"

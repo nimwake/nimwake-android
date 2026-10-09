@@ -39,6 +39,25 @@ stop_requested() {
 	[ -f "$NIMWAKE_RUN/stop" ]
 }
 
+# 래퍼(proot)가 SIGKILL로 죽으면 nimwaked와 application이 고아로 남는다 (validation/06 E4).
+# 고아 nimwaked는 proot의 syscall 변환을 잃어 I/O driver가 멈추고(ENOSYS) SIGTERM에도 반응하지 않는다.
+# graceful을 기대하지 않고 정리한다. 그대로 두면 새 daemon이 port를 못 잡아 69 → crash loop가 된다.
+# application은 각자 process group의 leader다(Core process_group(0)) — group 단위로 보내야 손자까지 간다.
+reap_orphan_daemon() {
+	_orphan="$(daemon_pid)"
+	[ -n "$_orphan" ] || return 0
+	_apps="$(pgrep -P "$_orphan" 2>/dev/null | tr '\n' ' ')"
+	host_log "orphan nimwaked $_orphan (its wrapper is gone), application(s): ${_apps:-none} — killing them"
+	for _app in $_apps; do
+		kill -s TERM -- "-$_app" 2>/dev/null || kill -s TERM "$_app" 2>/dev/null || true
+	done
+	[ -n "$_apps" ] && sleep 3
+	for _app in $_apps; do
+		kill -s KILL -- "-$_app" 2>/dev/null || kill -s KILL "$_app" 2>/dev/null || true
+	done
+	kill -s KILL "$_orphan" 2>/dev/null || true
+}
+
 # 기동 직후부터 daemon이 끝날 때까지 health를 본다. 별도 subshell로 돈다.
 # READY가 오지 않거나 probe가 연달아 실패하면 run/hung을 남기고 daemon을 내린다
 # — 이 경우 종료 코드가 0이어도 재기동 대상이다.
@@ -92,6 +111,8 @@ supervise() {
 	while :; do
 		rm -f "$NIMWAKE_RUN/hung"
 		set_state STARTING ""
+		# 이전 daemon은 끝났는데 nimwaked가 남아 있다면 래퍼만 죽은 것이다
+		reap_orphan_daemon
 		host_log "launch: $NIMWAKE_LAUNCH"
 		# exec로 sh를 대체한다. wait가 받는 종료 코드는 기동 명령의 것이다.
 		sh -c "exec $NIMWAKE_LAUNCH" >>"$NIMWAKE_LOGS/nimwaked.log" 2>&1 &

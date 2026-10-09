@@ -36,8 +36,8 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 | 마일스톤 | 상태 | 근거 |
 | -------- | ---- | ---- |
 | A0 | **완료** — macOS에서 `make doctor-dev`를 돌려 본 적은 없다 (CI macOS는 lint · test만) | #2 · #4 · #9 · #11 · #13 |
-| A1 | 완료. 실험은 E1 · E5만 정식 수행, E2–E4 남음 | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) |
-| A2 | **완료** — 완료 조건 4개 충족. crash 뒤 orphan 정리(E4)는 남음 | [validation/04](../../validation/04-a2-recovery.md) |
+| A1 | **완료** — 실험 E1–E5 정식 수행 (E6 · E7은 간접 확인) | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) · [06](../../validation/06-a1-experiments.md) |
+| A2 | **완료** — 완료 조건 4개 + proot가 죽은 뒤의 고아 정리 (E4) | [validation/04](../../validation/04-a2-recovery.md) · [06](../../validation/06-a1-experiments.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
 | A4 | `make install` 작성 · 설치된 기기에서 멱등 확인. **초기화한 기기 검증 남음** (72h soak 뒤) | #14 |
 | A5 | LAN · 동시 cold start · Wi-Fi 복구 완료. **24h soak 진행 중** (10-09 01:25 시작). Core workload 비교 남음 | [validation/05](../../validation/05-a5-network.md) |
@@ -79,7 +79,7 @@ PRD §43 Phase 0. 자동화 전에 **손으로** 전 경로를 한 번 통과시
 - [x] `scripts/deploy.sh`로 `dist/` + `guest/apps/echo` 배치
 - [x] proot 안에서 `nimwaked` 수동 실행, Termux 쪽에서 `curl -H 'Host: echo.local' 127.0.0.1:8080`
 - [x] `tests/device/lifecycle.sh` 초판: cold → same PID → idle → sleep → new PID
-- [ ] [03. Core 동기화 — 실기기 실험](03-core-sync.md#실기기-실험) E1–E7 수행 — 정식으로는 E1(`/proc` 가시성) · E5(SIGTERM 경로)만. E6(빠른 재기동 bind)은 recovery에서, E7(화면 꺼짐 idle)은 A3 1시간 확인에서 간접 확인. **E2 · E3 · E4 남음**
+- [x] [03. Core 동기화 — 실기기 실험](03-core-sync.md#실기기-실험) E1–E7 — E1(`/proc` 가시성) · E5(SIGTERM 경로)는 validation/01, **E2(기동 중 crash → 30ms에 502) · E3(idle stop이 손자까지 정리) · E4(SIGKILL)는 validation/06** (`make test-experiments`, 별도 경로 · 포트의 실험 daemon). E6(빠른 재기동 bind)은 recovery에서, E7(화면 꺼짐 idle)은 A3 1시간 확인에서 간접 확인. Core에 올릴 결함 없음
 - [x] 첫 검증 리포트 `validation/01-*.md`
 
 **완료 조건**
@@ -108,7 +108,7 @@ nimwake-host start
 - [x] restart backoff `0s → 5s → 15s → 60s`, `max_restarts` / `restart_window_seconds` (PRD §23)
 - [x] crash-loop 판정 → `UNHEALTHY`로 두고 멈춤 (PRD §24)
 - [x] `stop`: nimwaked에 SIGTERM → Core의 graceful shutdown 완료 대기 → 잔존 process 확인
-- [ ] crash 후 orphan 정리 (E4 결과에 따라) — E4 미수행
+- [x] crash 후 orphan 정리 (E4 결과에 따라) — nimwaked가 죽으면 proot가 정리하지만, **proot가 죽으면 nimwaked · app이 고아로 남고 SIGTERM에 반응하지 않는다**(I/O driver ENOSYS). supervisor가 재기동 전 · stop 때 고아 daemon과 app process group을 정리한다. 실기기에서 proot SIGKILL → 5초 복구 → [validation/06](../../validation/06-a1-experiments.md)
 - [x] `tests/unit`: backoff 계산, window 판정, 가짜 daemon 감시 루프 — bats
 - [x] `tests/device/recovery.sh` — 실기기 PASS: `kill -9` → 1초 안에 재기동, exit 78 → UNHEALTHY (proot-distro가 종료 코드를 전달함), stop 후 잔존 0 → [validation/04](../../validation/04-a2-recovery.md)
 

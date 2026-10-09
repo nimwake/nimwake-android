@@ -13,15 +13,22 @@ set -eu
 here="$(cd "$(dirname "$0")" && pwd -P)"
 device="${NIMWAKE_DEVICE:-nimwake-phone}"
 
+stage='.nimwake-exp-stage'
+
 on_device() {
-	ssh "$device" sh -s "$1" <"$here/experiments-device.sh"
+	ssh "$device" sh -s "$@" <"$here/experiments-device.sh"
 }
 
-trap 'on_device teardown' EXIT
+trap 'on_device teardown; ssh "$device" "rm -rf \$HOME/$stage \$HOME/.nimwake-exp-host"' EXIT
 
 on_device setup
-for step in e2 e3 e4; do
+for step in e2 e3 e4 e4-term; do
 	echo "== $step"
 	on_device "$step"
 done
+
+# 이 레포의 supervisor로 고아 정리를 본다. 운영 중인 ~/.nimwake-host는 건드리지 않는다.
+echo "== e4-supervised"
+(cd "$here/../.." && tar -cf - host) | ssh "$device" "rm -rf \$HOME/$stage && mkdir -p \$HOME/$stage && tar -xf - -C \$HOME/$stage"
+on_device e4-supervised "\$HOME/$stage/host"
 echo "== teardown"

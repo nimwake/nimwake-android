@@ -64,8 +64,9 @@ cmd_stop() {
 	# daemon이 아직 기동 중일 수 있으므로 끝날 때까지 TERM을 다시 보낸다.
 	while supervisor_pid >/dev/null || [ -n "$(daemon_pid)" ]; do
 		if [ "$_waited" -ge "$NIMWAKE_STOP_TIMEOUT" ]; then
-			echo "nimwake-host: still running after ${NIMWAKE_STOP_TIMEOUT}s — sending KILL" >&2
-			daemon_signal KILL
+			# SIGTERM에 반응하지 않는 daemon은 래퍼를 잃은 고아일 수 있다 — application까지 정리한다
+			echo "nimwake-host: still running after ${NIMWAKE_STOP_TIMEOUT}s — killing nimwaked and its applications" >&2
+			reap_orphan_daemon
 			break
 		fi
 		daemon_signal TERM
