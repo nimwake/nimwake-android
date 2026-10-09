@@ -38,7 +38,7 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 | A0 | 대부분 완료. `.editorconfig` · PRD 이름 정리 · README · 리포트 템플릿 남음 | #2 · #4 · #9 |
 | A1 | 완료. 실험은 E1 · E5만 정식 수행, E2–E4 남음 | [validation/01](../../validation/01-a1-manual-baseline.md) · [03](../../validation/03-core-v0.1.0-rc1.md) |
 | A2 | **완료** — 완료 조건 4개 충족. crash 뒤 orphan 정리(E4)는 남음 | [validation/04](../../validation/04-a2-recovery.md) |
-| A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start. phantom process 해제 남음 | [validation/02](../../validation/02-a3-boot.md) |
+| A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
 | A4 | 미착수 | — |
 | A5 | LAN · 동시 cold start · Wi-Fi 복구 완료. **24h soak 진행 중** (10-09 01:25 시작). Core workload 비교 남음 | [validation/05](../../validation/05-a5-network.md) |
 | A6 | 미착수 (24h soak 다음) | — |
@@ -137,7 +137,7 @@ PRD §10–§12, §25.
 
 - [x] `host/boot/10-nimwake`: `termux-wake-lock` → storage 확인 → `nimwake-host start` → RUNNING 대기 (network 확인은 하지 않는다 — gateway는 loopback · LAN과 무관하게 뜬다). `00-sshd`가 따로 sshd를 띄운다
 - [x] boot 로그 `logs/boot.log`: 각 단계 시각 기록. `/proc/uptime`은 Android가 막아 시작 줄에 `uptime -s`(부팅 시각)를 적는다
-- [ ] 설치 checklist (자동 판별 불가 항목 수동 확인, PRD §12) — Termux:Boot 1회 실행만 확인. 배터리 최적화 예외 · phantom process는 adb 페어링 뒤 `make doctor`로 확인:
+- [x] 설치 checklist (자동 판별 불가 항목 수동 확인, PRD §12) — Termux:Boot 1회 실행, 배터리 최적화 예외 · phantom process 해제를 adb로 적용하고 `make doctor`로 확인 (2026-10-09):
   - Termux battery optimization 제외, background 활동 · 데이터 허용
   - 제조사 battery killer (Samsung "절전 예외 앱", Xiaomi autostart 등)
   - **Android 12+ phantom process killer** — child process 제한 해제
