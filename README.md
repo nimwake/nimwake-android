@@ -47,13 +47,16 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 
 → 자세히: [01. 레포지토리 셋업 §3](.docs/phases/phase-1/01-repository-setup.md#3-개발환경--macos와-wsl) (이식성 규칙 포함)
 
-## 기기 준비 (수동, A4 자동화 전)
+## 기기 준비
+
+사람이 하는 것은 ssh가 열릴 때까지다. 나머지는 `make install`이 한다 (멱등).
 
 1. **Termux · Termux:Boot · Termux:API를 같은 출처(F-Droid)에서** 설치한다. 서명이 달라 출처를 섞으면 애드온이 동작하지 않는다. Termux:Boot는 한 번 연다.
-2. Termux: `pkg install openssh proot-distro termux-api` → `proot-distro install ubuntu:26.04`
-3. sshd에 개발 머신의 공개키를 등록하고(`ssh-copy-id -p 8022 …`), 비밀번호 로그인을 끈다 (`$PREFIX/etc/ssh/sshd_config.d/`).
-4. 개발 머신 `~/.ssh/config`에 `Host nimwake-phone` (Port 8022, IdentityFile).
-5. 배터리 최적화 예외 · Android 12–13 phantom process 제한 해제 — `make doctor`가 점검한다.
+2. Termux: `pkg install -y openssh && passwd && sshd && whoami`
+3. 개발 머신 `~/.ssh/config`에 `Host nimwake-phone` (HostName, Port 8022, User, IdentityFile) → `ssh-copy-id -i <키>.pub nimwake-phone`
+4. `make install` — 패키지 · proot Ubuntu 26.04 · **키 로그인만 허용하는 sshd** · deploy · supervisor · doctor.
+   ssh가 아직 안 되면 위 단계를 안내하고 멈춘다.
+5. 배터리 최적화 예외 · Android 12–13 phantom process 제한 해제는 adb가 필요하다 — `make doctor`가 점검한다.
 
 비밀번호 잠금이 있는 기기는 재부팅 후 **잠금을 한 번 풀어야** Termux:Boot가 돈다. 패키지 설치 중에는 재부팅하지 않는다.
 
@@ -63,6 +66,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 
 | 명령 | 하는 일 |
 | ---- | ------- |
+| `make install` | 기기 설치 (멱등) — 패키지 · proot Ubuntu · 키 로그인 sshd → deploy → supervisor → doctor. soak 중에는 돌리지 않는다 |
 | `make fetch-core` | `core.lock`의 Core aarch64 binary → `dist/aarch64/` |
 | `make deploy` | binary · manifest(proot Ubuntu), `nimwake-host`, Termux:Boot 스크립트 설치. `host.conf`는 있으면 보존 |
 | `make doctor` | 설치 · 운영 상태 `[OK]/[WARN]/[FAIL]/[MANUAL]` |

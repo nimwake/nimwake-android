@@ -3,7 +3,7 @@ SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fi
 HOURS ?= 24
 INTERVAL ?= 300
 
-.PHONY: lint test fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi soak-start soak-stop soak-report
+.PHONY: lint test install fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -13,6 +13,11 @@ lint:
 # 기기 없이 도는 테스트 (bats-core). host/lib 판단 로직 + 가짜 daemon으로 감시 루프
 test:
 	bats tests/unit
+
+# 기기 설치: 패키지 · proot Ubuntu · 키 로그인 sshd → deploy → supervisor → doctor. 멱등 (A4)
+# deploy가 binary를 다시 놓으므로 soak 중에는 돌리지 않는다
+install:
+	scripts/install.sh
 
 fetch-core:
 	scripts/fetch-core.sh
