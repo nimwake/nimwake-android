@@ -4,6 +4,8 @@
 #   printf 인자 안에 삼항 연산자를 쓰지 않는다 — 값을 먼저 만든다
 #   `}` 뒤에 같은 줄로 문장을 잇지 않는다
 #
+# 변수: -v md=1 이면 검증 리포트에 붙일 마크다운 표, -v hours=N 이면 첫 표본부터 N시간까지만 (72h에서 24h 판정)
+#
 # 열: epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb
 
 # nearest-rank 백분위: ceil(n * p)번째 (1부터)
@@ -22,7 +24,17 @@ function or_na(v) {
 	return v
 }
 
+function verdict(count) {
+	if (count > 0)
+		return "✗"
+	return "✓"
+}
+
 NR == 1 {
+	next
+}
+
+hours > 0 && n > 0 && $1 - first > hours * 3600 {
 	next
 }
 
@@ -83,10 +95,6 @@ NR == 1 {
 }
 
 END {
-	printf "samples          %d  (%s → %s, %.1fh)\n", n, first_time, last_time, (last - first) / 3600
-	printf "max gap          %ds  (> 2x interval means the sampler or Termux was stopped)\n", max_gap
-	printf "non-200          %d%s\n", bad, bad_list
-
 	if (m > 0) {
 		# 삽입 정렬 — 표본은 수백 개 수준이다
 		for (i = 2; i <= m; i++) {
@@ -98,16 +106,47 @@ END {
 			}
 			lat[j + 1] = v
 		}
-		printf "cold start       p50 %.3fs  p95 %.3fs  max %.3fs\n", lat[rank(m, 0.5)], lat[rank(m, 0.95)], lat[m]
+		p50 = lat[rank(m, 0.5)]
+		p95 = lat[rank(m, 0.95)]
+		pmax = lat[m]
 	}
-
-	printf "apps left awake  %d samples  (should be 0 — scale-to-zero / orphans)\n", orphan
-	printf "daemon restarts  %d\n", restarts
-	printf "daemon RSS       %s → %s KB  (max %d)\n", or_na(rss_first), or_na(rss_last), rss_max
-
+	span = (last - first) / 3600
 	battery_min = or_na(bmin)
 	battery_max = or_na(bmax)
 	temp_max = or_na(tmax)
+
+	if (md) {
+		markdown()
+		exit
+	}
+
+	printf "samples          %d  (%s → %s, %.1fh)\n", n, first_time, last_time, span
+	printf "max gap          %ds  (> 2x interval means the sampler or Termux was stopped)\n", max_gap
+	printf "non-200          %d%s\n", bad, bad_list
+	if (m > 0)
+		printf "cold start       p50 %.3fs  p95 %.3fs  max %.3fs\n", p50, p95, pmax
+	printf "apps left awake  %d samples  (should be 0 — scale-to-zero / orphans)\n", orphan
+	printf "daemon restarts  %d\n", restarts
+	printf "daemon RSS       %s → %s KB  (max %d)\n", or_na(rss_first), or_na(rss_last), rss_max
 	printf "battery          %s–%s%%  max temp %s°C\n", battery_min, battery_max, temp_max
 	printf "free storage     %s → %s MB\n", free_first, free_last
+}
+
+# 검증 리포트에 그대로 붙이는 표. 판정 열은 기계적으로 정할 수 있는 것만 채운다
+function markdown(    v_bad, v_orphan, v_restarts) {
+	v_bad = verdict(bad)
+	v_orphan = verdict(orphan)
+	v_restarts = verdict(restarts)
+	print "| 관찰 | 값 | 판정 |"
+	print "| ---- | -- | ---- |"
+	printf "| 기간 | %s → %s (%.1fh), 표본 %d | |\n", first_time, last_time, span, n
+	printf "| 최대 표본 간격 | %ds | |\n", max_gap
+	printf "| non-200 | %d | %s |\n", bad, v_bad
+	if (m > 0)
+		printf "| cold start | p50 %.3fs · p95 %.3fs · max %.3fs | |\n", p50, p95, pmax
+	printf "| 요청 직전 깨어 있는 app | %d 표본 | %s |\n", orphan, v_orphan
+	printf "| daemon 재시작 | %d | %s |\n", restarts, v_restarts
+	printf "| daemon RSS | %s → %s KB (max %d) | |\n", or_na(rss_first), or_na(rss_last), rss_max
+	printf "| 배터리 · 최고 온도 | %s–%s%% · %s°C | |\n", battery_min, battery_max, temp_max
+	printf "| 남은 저장공간 | %s → %s MB | |\n", free_first, free_last
 }

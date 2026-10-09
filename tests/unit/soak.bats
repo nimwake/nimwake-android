@@ -133,15 +133,52 @@ EOF
 # macOS(one-true-awk) · Linux(mawk · gawk)에서 요약이 같아야 한다. 이 머신에 있는 구현을 모두 돌린다.
 @test "summary is identical across the awk implementations on this machine" {
 	summary="$root/tests/device/soak-summary.awk"
-	expected="$(sample_csv | awk -F, -f "$summary")"
-	for impl in mawk "gawk --posix" original-awk nawk "busybox awk"; do
-		command -v "${impl%% *}" >/dev/null 2>&1 || continue
-		got="$(sample_csv | $impl -F, -f "$summary" 2>&1)"
-		if [ "$got" != "$expected" ]; then
-			echo "== $impl differs:"
-			echo "$got"
-			return 1
-		fi
-		echo "ok  $impl"
+	for mode in "-v md=0" "-v md=1 -v hours=0.25"; do
+		# shellcheck disable=SC2086 # mode는 일부러 나눈다
+		expected="$(sample_csv | awk -F, $mode -f "$summary")"
+		for impl in mawk "gawk --posix" original-awk nawk "busybox awk"; do
+			command -v "${impl%% *}" >/dev/null 2>&1 || continue
+			# shellcheck disable=SC2086
+			got="$(sample_csv | $impl -F, $mode -f "$summary" 2>&1)"
+			if [ "$got" != "$expected" ]; then
+				echo "== $impl ($mode) differs:"
+				echo "$got"
+				return 1
+			fi
+			echo "ok  $impl ($mode)"
+		done
 	done
+}
+
+@test "summarize --md prints a report table with verdicts" {
+	run sh -c "\"$soak\" summarize --md" < <(sample_csv)
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[ "${lines[0]}" = "| 관찰 | 값 | 판정 |" ]
+	[[ "$output" == *"| non-200 | 1 | ✗ |"* ]]
+	[[ "$output" == *"| cold start | p50 0.040s · p95 0.060s · max 0.060s | |"* ]]
+	[[ "$output" == *"| 요청 직전 깨어 있는 app | 1 표본 | ✗ |"* ]]
+	[[ "$output" == *"| daemon 재시작 | 1 | ✗ |"* ]]
+	# 모든 줄이 표 행이다
+	[ -z "$(printf '%s\n' "$output" | grep -v '^|')" ]
+}
+
+@test "summarize --hours keeps only the first N hours" {
+	# 표본 epoch 1000 … 2800 — 0.25h(900s)까지는 1000 · 1300 · 1600 · 1900
+	run sh -c "\"$soak\" summarize --hours 0.25" < <(sample_csv)
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"samples          4"* ]]
+	[[ "$output" == *"apps left awake  1 samples"* ]]
+
+	# 0.1h(360s)까지는 1000 · 1300 — 둘 다 정상
+	run sh -c "\"$soak\" summarize --md --hours 0.1" < <(sample_csv)
+	echo "$output"
+	[[ "$output" == *"| non-200 | 0 | ✓ |"* ]]
+	[[ "$output" == *"| daemon 재시작 | 0 | ✓ |"* ]]
+}
+
+@test "summarize rejects unknown options" {
+	run sh -c "\"$soak\" summarize --bogus" < <(sample_csv)
+	[ "$status" -eq 2 ]
 }
