@@ -94,6 +94,58 @@ EOF
 
 	IFCONFIG_OUT="$data/ifconfig-android.txt"
 	check_network
-	grep -q "network OFFLINE → ONLINE" "$log"
-	[ "$(grep -c "network " "$log")" -eq 3 ]
+	grep -q "network OFFLINE → RECOVERING" "$log"
+	grep -q "network RECOVERING → ONLINE" "$log"
+	[ "$(state)" = ONLINE ]
+}
+
+# 복구 (PRD §13 "Network returns → Ingress integration reconnect")
+
+@test "the recover hook runs only when coming back from OFFLINE or DEGRADED" {
+	export NIMWAKE_NET_ON_RECOVER="echo reconnected >>\"$BATS_TEST_TMPDIR/hook\""
+	# 처음 본 ONLINE은 복구가 아니다
+	check_network
+	[ ! -f "$BATS_TEST_TMPDIR/hook" ]
+	! grep -q RECOVERING "$log"
+
+	NIMWAKE_NET_GATEWAY=192.168.0.1
+	GATEWAY_UP=0
+	check_network
+	[ "$(state)" = DEGRADED ]
+	[ ! -f "$BATS_TEST_TMPDIR/hook" ]
+
+	GATEWAY_UP=1
+	check_network
+	[ "$(state)" = ONLINE ]
+	[ "$(cat "$BATS_TEST_TMPDIR/hook")" = reconnected ]
+	grep -q "network DEGRADED → RECOVERING" "$log"
+	grep -q "network: on-recover hook ok" "$log"
+	# 순서: RECOVERING → hook → ONLINE
+	recovering="$(grep -n "→ RECOVERING" "$log" | cut -d: -f1)"
+	hook="$(grep -n "hook ok" "$log" | cut -d: -f1)"
+	online="$(grep -n "RECOVERING → ONLINE" "$log" | cut -d: -f1)"
+	[ "$recovering" -lt "$hook" ] && [ "$hook" -lt "$online" ]
+
+	# 이미 ONLINE이면 다시 돌리지 않는다
+	check_network
+	[ "$(wc -l <"$BATS_TEST_TMPDIR/hook" | tr -d ' ')" -eq 1 ]
+}
+
+@test "a failing or hanging recover hook is logged and the state still becomes ONLINE" {
+	command -v timeout >/dev/null || skip "no timeout(1) on this machine"
+	export NIMWAKE_NET_HOOK_TIMEOUT=1
+	echo "OFFLINE 2026-10-11 00:00:00 no interface with an address" >"$NIMWAKE_RUN/network"
+
+	export NIMWAKE_NET_ON_RECOVER="exit 7"
+	check_network
+	grep -q "network: on-recover hook failed (exit 7)" "$log"
+	[ "$(state)" = ONLINE ]
+
+	echo "OFFLINE 2026-10-11 00:00:00 no interface with an address" >"$NIMWAKE_RUN/network"
+	export NIMWAKE_NET_ON_RECOVER="sleep 30"
+	start="$(date +%s)"
+	check_network
+	[ $(($(date +%s) - start)) -lt 10 ]
+	grep -q "network: on-recover hook timed out after 1s" "$log"
+	[ "$(state)" = ONLINE ]
 }

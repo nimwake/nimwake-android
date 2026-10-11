@@ -97,6 +97,8 @@ cmd_wifi() {
 	[ -n "$before" ] || fail "cannot read the nimwaked pid over ssh"
 	echo "nimwaked pid=$before. Now turn Wi-Fi OFF on the phone, wait ~30s, then turn it back ON."
 	echo "watching $gateway (up to 10 minutes)..."
+	# supervisor.log의 시각과 비교하므로 기기 시계로 받아 둔다
+	device_start="$(ssh "$device" "date '+%Y-%m-%d %H:%M:%S'")"
 
 	start="$(date +%s)"
 	down_at=""
@@ -123,6 +125,25 @@ cmd_wifi() {
 	set -- $(lan_get echo.local)
 	[ "$1" = 200 ] || fail "request after reconnect: http $1"
 	echo "ok  request after reconnect → 200 (pid $2)"
+
+	# supervisor도 끊김과 복구를 보았는가 (host/lib/network.sh). 30초마다 보므로 짧은 끊김은 놓칠 수 있다 —
+	# 그래서 실패가 아니라 경고다. 판정은 위의 LAN 복구 · daemon 생존이다
+	# shellcheck disable=SC2016 # $HOME은 기기에서 푼다
+	sup_log='$HOME/.nimwake-host/logs/supervisor.log'
+	seen=""
+	i=0
+	while [ "$i" -lt 45 ]; do
+		seen="$(ssh "$device" "grep -E 'network .* → ' $sup_log 2>/dev/null | awk -v t='$device_start' '\$1 \" \" \$2 >= t'" || true)"
+		printf '%s\n' "$seen" | grep -q '→ ONLINE' && break
+		sleep 2
+		i=$((i + 2))
+	done
+	if printf '%s\n' "$seen" | grep -q '→ ONLINE'; then
+		printf '%s\n' "$seen" | sed 's/^/    /'
+		echo "ok  supervisor recorded the outage and the recovery"
+	else
+		echo "WARN supervisor recorded no network change since the test began (outage shorter than NIMWAKE_NET_INTERVAL, or an older nimwake-host)"
+	fi
 	echo "PASS wifi"
 }
 

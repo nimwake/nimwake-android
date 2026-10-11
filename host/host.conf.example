@@ -32,3 +32,6 @@
 #NIMWAKE_NET_INTERVAL=30
 #NIMWAKE_NET_GATEWAY=192.168.0.1
 #NIMWAKE_NET_INTERNET_URL=http://connectivitycheck.gstatic.com/generate_204
+# OFFLINE · DEGRADED에서 돌아올 때 돌릴 명령 — tunnel · VPN 재연결 등 (PRD §15). 출력은 supervisor.log로 간다
+#NIMWAKE_NET_ON_RECOVER="$HOME/bin/reconnect-ingress"
+#NIMWAKE_NET_HOOK_TIMEOUT=60

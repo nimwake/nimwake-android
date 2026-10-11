@@ -54,6 +54,9 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 : "${NIMWAKE_NET_INTERVAL:=30}"
 : "${NIMWAKE_NET_GATEWAY:=}"
 : "${NIMWAKE_NET_INTERNET_URL:=}"
+# OFFLINE · DEGRADED에서 돌아올 때 돌릴 명령 (ingress 재연결 등, PRD §15). 비우면 상태만 바뀐다
+: "${NIMWAKE_NET_ON_RECOVER:=}"
+: "${NIMWAKE_NET_HOOK_TIMEOUT:=60}"
 
 # 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
