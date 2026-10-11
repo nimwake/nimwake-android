@@ -4,7 +4,9 @@
 
 setup() {
 	root="$(cd "$BATS_TEST_DIRNAME/../.." && pwd -P)"
-	host="$root/host/bin/nimwake-host"
+	# 바깥에서 돌리는 테스트는 구현을 모른다 — Phase 2의 nimwake-hostd도 이것으로 검사한다
+	# (.docs/phases/phase-2/01-nimwake-hostd.md "행동 계약")
+	host="${NIMWAKE_HOST_BIN:-$root/host/bin/nimwake-host}"
 
 	export FAKE_DIR="$BATS_TEST_TMPDIR/fake"
 	mkdir -p "$FAKE_DIR"
