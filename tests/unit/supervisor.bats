@@ -217,7 +217,7 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 
 @test "the running supervisor warns once about low storage and status shows it" {
 	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
-	export NIMWAKE_STORAGE_INTERVAL=1
+	export NIMWAKE_HOUSEKEEPING_INTERVAL=1
 	export NIMWAKE_MIN_FREE_MB=999999999
 	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
 	"$host" start
@@ -230,4 +230,20 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 
 	run "$host" status
 	[[ "$output" == *"storage     LOW "*"MB free (< 999999999MB)"* ]]
+}
+
+# 로그 순환 (PRD §20) — 실제 supervisor가 기동 직전과 RUNNING 동안 돌린다
+
+@test "the supervisor rotates a large log before launch and keeps logging" {
+	export NIMWAKE_LOG_MAX_KB=1
+	mkdir -p "$NIMWAKE_HOST_HOME/logs"
+	head -c 4096 /dev/zero | tr '\0' 'x' >"$NIMWAKE_HOST_HOME/logs/nimwaked.log"
+	"$host" start
+	wait_for 5 state_is RUNNING
+
+	logs="$NIMWAKE_HOST_HOME/logs"
+	[ "$(wc -c <"$logs/nimwaked.log.1" | tr -d ' ')" -eq 4096 ]
+	grep -q "log: rotated nimwaked.log (4KB, keep 3)" "$logs/supervisor.log"
+	# 순환 뒤에도 supervisor는 같은 파일에 계속 쓴다
+	grep -q "state RUNNING" "$logs/supervisor.log"
 }
