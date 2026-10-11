@@ -3,7 +3,7 @@
 #
 #   nimwake-host start      supervisor를 백그라운드로 띄운다 (이미 떠 있으면 그대로)
 #   nimwake-host stop       nimwaked를 graceful하게 내리고 supervisor를 끝낸다
-#   nimwake-host status     상태 · supervisor · nimwaked · health · 남은 저장공간
+#   nimwake-host status     상태 · supervisor · nimwaked · health · 네트워크 · 남은 저장공간
 #   nimwake-host logs [N]   supervisor.log와 nimwaked.log의 마지막 N줄 (기본 40)
 #
 # 기기에서는 make deploy가 ~/.nimwake-host/{bin,lib}에 설치하고 $PREFIX/bin에 링크한다.
@@ -19,6 +19,8 @@ lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
 . "$lib/supervisor.sh"
 # shellcheck source=../lib/logs.sh
 . "$lib/logs.sh"
+# shellcheck source=../lib/network.sh
+. "$lib/network.sh"
 
 pid_file="$NIMWAKE_RUN/supervisor.pid"
 
@@ -104,6 +106,13 @@ cmd_status() {
 		echo "health      OK (404)"
 	else
 		echo "health      FAIL"
+	fi
+	# supervisor가 마지막으로 바뀐 상태를 남긴다 ("STATE 바뀐시각 이유"). 지금 값은 supervisor가 30초마다 갱신한다
+	if [ -f "$NIMWAKE_RUN/network" ]; then
+		read -r _net_state _net_day _net_time _net_why <"$NIMWAKE_RUN/network"
+		echo "network     $_net_state since $_net_day $_net_time — $_net_why"
+	else
+		echo "network     unknown (supervisor has not checked yet)"
 	fi
 	_free="$(storage_free_mb)"
 	if [ -z "$_free" ]; then

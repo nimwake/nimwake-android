@@ -27,6 +27,7 @@
 - **soak**: 기기에서 도는 sampler와 `make soak-start | soak-stop | soak-report` (#5). 재부팅 뒤 이어서 돈다 (#19, #20). `--md` · `--hours N`로 리포트용 표와 구간 판정 (#23)
 - **저장공간 감시**: supervisor가 운영 중 10분마다 보고 1 GB 아래면 `supervisor.log`와 Android 알림, `status`에 표시. 부족하면 알리기 전에 순환된 이전 로그를 먼저 지운다 (#26, #29)
 - **로그 순환**: `supervisor.log` · `nimwaked.log` · `boot.log`가 20 MB를 넘으면 `.1`–`.3`으로 민다. daemon이 연 채 쓰는 로그도 잃지 않게 copytruncate. 기동 직전과 RUNNING 동안 10분마다 (#28)
+- **네트워크 상태 감시** (PRD §13–§14): supervisor가 30초마다 인터페이스 · 게이트웨이(설정 시) · 외부(설정 시)를 보고 `ONLINE` · `DEGRADED` · `OFFLINE`을 바뀔 때만 `supervisor.log`에 남긴다. `status`에 표시. 끊겨도 Nimwake는 내리지 않는다. Android가 netlink · `/proc/net`을 막아 인터페이스는 `ifconfig`로 본다 — `make install`이 `net-tools`를 설치한다 (#30)
 - **CI**: shellcheck(버전 고정) · 이식성 금지 패턴 검사 · bats, ubuntu는 항상 · macOS는 개발 머신 코드가 바뀔 때 (#9)
 
 ### Fixed
@@ -46,4 +47,4 @@
 
 - 비밀번호 잠금 기기는 재부팅 뒤 잠금을 한 번 풀어야 Termux:Boot가 돈다 (Android 정책)
 - 동시 연결 수십부터 무너진다 — 커널 `somaxconn 128`과 proot(ptrace) 비용. 홈서버 규모에서는 문제 없다 ([validation/08](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/08-core-d7c5590-bench.md))
-- 네트워크 상태 머신은 Phase 2. 앱 release 정리(PRD §19)는 Core에 release 구조가 생긴 뒤
+- 네트워크 복구 동작(RECOVERING · ingress 재연결 hook)은 다음 PR. 앱 release 정리(PRD §19)는 Core에 release 구조가 생긴 뒤

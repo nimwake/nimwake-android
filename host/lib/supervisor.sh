@@ -128,9 +128,16 @@ monitor_daemon() {
 
 	housekeeping
 	_housekeeping_next=$(($(date +%s) + NIMWAKE_HOUSEKEEPING_INTERVAL))
+	# 네트워크는 상태만 기록한다 — 끊겨도 daemon을 내리지 않는다 (PRD §13, network.sh)
+	check_network
+	_network_next=$(($(date +%s) + NIMWAKE_NET_INTERVAL))
 	_failures=0
 	while :; do
 		sleep "$NIMWAKE_HEALTH_INTERVAL"
+		if [ "$(date +%s)" -ge "$_network_next" ]; then
+			check_network
+			_network_next=$(($(date +%s) + NIMWAKE_NET_INTERVAL))
+		fi
 		if [ "$(date +%s)" -ge "$_housekeeping_next" ]; then
 			housekeeping
 			_housekeeping_next=$(($(date +%s) + NIMWAKE_HOUSEKEEPING_INTERVAL))
