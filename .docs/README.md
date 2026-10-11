@@ -2,14 +2,14 @@
 
 ```text
 .docs/
-├── PRD.md       ← 원장 (Android Host Layer 요구사항)
+├── prd/         ← 원장 (Android Host Layer 요구사항)
 ├── phases/      ← 실행 계획
 └── validation/  ← 실기기 검증 리포트 (NN-마일스톤-주제.md, 00-template)
 ```
 
 | 문서                                | 성격                                                             |
 | ----------------------------------- | ---------------------------------------------------------------- |
-| [**PRD**](PRD.md)                   | **원장.** Android Host Layer가 무엇을 왜 책임지는가              |
+| [**PRD**](prd/README.md)             | **원장.** Android Host Layer가 무엇을 왜 책임지는가              |
 | [**Phase 1**](phases/phase-1/README.md) | 실행 계획. Android MVP를 언제 어떤 순서로 만드는가           |
 | [**Validation**](validation/)       | 실기기에서 본 것. CI로 재현할 수 없는 결과는 여기에만 있다. Core `v0.1.0` 판정 근거는 [09](validation/09-android-acceptance.md) |
 
@@ -37,4 +37,4 @@ Core 레포의 규칙을 그대로 따른다. → [nimwake/.docs/README.md](http
 
 ## 알려진 정리 작업
 
-- `PRD.md`가 1,200라인이다(규칙 4 위반). Core처럼 `prd/NN-*/` 로 쪼개는 것은 필요해질 때 한다.
+- 없음.

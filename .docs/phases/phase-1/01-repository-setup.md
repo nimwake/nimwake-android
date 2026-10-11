@@ -2,7 +2,7 @@
 
 > **Phase 1 — Android MVP** › 레포지토리 셋업
 >
-> 요구사항 원장: [PRD §3, §7–§9, §16–§17, §35–§36](../../PRD.md), Core [PRD §49](https://github.com/nimwake/nimwake/blob/main/.docs/prd/04-platform/02-android.md)
+> 요구사항 원장: [PRD §3, §7–§9, §16–§17, §35–§36](../../prd/README.md), Core [PRD §49](https://github.com/nimwake/nimwake/blob/main/.docs/prd/04-platform/02-android.md)
 
 ---
 
@@ -70,7 +70,7 @@ nimwake-android/
 │       └── soak.sh           # 주기 요청 + RSS / 온도 / orphan 기록
 │
 ├── .docs/
-│   ├── PRD.md
+│   ├── prd/                  # 요구사항 원장 — NN-그룹/NN-주제.md, §N은 고정
 │   ├── phases/
 │   └── validation/           # 실기기 검증 리포트 (기기 · OS · Core SHA · 결과)
 │

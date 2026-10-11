@@ -98,6 +98,6 @@ tests/device/  실기기 시나리오 — CI에 넣지 않고 결과는 .docs/va
 
 ## 문서
 
-- [PRD](.docs/PRD.md) — Android Host Layer 요구사항
+- [PRD](.docs/prd/README.md) — Android Host Layer 요구사항
 - [Phase 1](.docs/phases/phase-1/README.md) — 레포 셋업 · 마일스톤 · Core 동기화
 - [검증 리포트](.docs/validation/) — 새 리포트는 [00-template](.docs/validation/00-template.md)에서
