@@ -43,6 +43,8 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 # 남은 저장공간 감시 (PRD §18, §44-6). 기준은 10-nimwake의 부팅 검사와 같다
 : "${NIMWAKE_MIN_FREE_MB:=1024}"
 : "${NIMWAKE_STORAGE_PATH:=$HOME}"
+# 1이면 부족할 때 알리기 전에 순환된 이전 로그를 지운다. 0이면 알리기만 한다
+: "${NIMWAKE_STORAGE_CLEANUP:=1}"
 
 # 로그 순환 (PRD §20) — 파일당 상한(KB)과 남길 이전 파일 수. 기본은 PRD의 20 MB × 3
 : "${NIMWAKE_LOG_MAX_KB:=20480}"

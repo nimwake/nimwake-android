@@ -46,3 +46,6 @@ EOF
 # 다음 재부팅부터 10-nimwake가 supervisor를 띄운다.
 ssh "$device" "mkdir -p \$HOME/.termux/boot && install -m 700 $stage/host/boot/* \$HOME/.termux/boot/ \
 	&& echo 'deploy: boot scripts installed' && ls \$HOME/.termux/boot"
+
+# stage는 설치가 끝나면 쓰지 않는다. 남겨 두면 이전 binary가 쌓이고 공간을 쓴다 (PRD §18)
+ssh "$device" "rm -rf \$HOME/$stage" && echo "deploy: stage removed"

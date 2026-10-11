@@ -65,7 +65,7 @@ Core binary 빌드는 Core CI가 소유한다. 이 레포는 빌드하지 않는
 - Cloudflare Tunnel · Tailscale · Caddy (PRD §15, §37–§39) — LAN `curl`로 충분하다
 - `nimwake-hostd` Rust binary (PRD §8) — MVP는 shell. 필요가 드러나면 Phase 2
 - Host CLI 전체 (PRD §33) — `start` / `stop` / `status` / `logs` / `doctor` 최소 집합만
-- Network 상태 머신 · storage 자동 정리 (PRD §13, §18–§19) — Phase 2. log rotation(§20)은 Phase 1에서 했다 (#28)
+- Network 상태 머신 (PRD §13) — Phase 2. 앱 release 정리(§19)는 Core에 release 구조가 생긴 뒤 — 지금은 지울 release가 없다. log rotation(§20)과 부족 시 순환 로그 정리(§18)는 Phase 1에서 했다 (#28 · #29)
 - Thermal · battery 자동 정책 (PRD §26–§28) — soak 관찰 항목으로만
 - binary rollback · backup (PRD §31, §41)
 

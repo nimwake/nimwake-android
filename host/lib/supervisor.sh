@@ -65,12 +65,23 @@ storage_free_mb() {
 # 남은 저장공간을 보고 상태가 바뀔 때만 남긴다 (PRD §18, §44-6).
 # 부팅 때 한 번(10-nimwake)으로는 운영 중의 감소를 놓친다 — 72h soak에서 하룻밤에 1.1 GB가 빠졌다 (validation/10).
 # 상태는 run/storage 한 줄 "ok|low FREE_MB YYYY-MM-DD HH:MM:SS"에 둔다.
+#
+# 부족하면 알리기 전에 Nimwake가 지워도 되는 것을 먼저 지운다 (NIMWAKE_STORAGE_CLEANUP=1, logs.sh drop_rotated_logs).
+# 그것으로 기준 위로 돌아오면 알리지 않는다. 지울 수 있는 것은 순환된 로그뿐이다 — 최대 약 180 MB.
+# 그 밖(Android 앱 · 사진 · app 데이터)은 Host Layer가 판단할 수 없다. 알림이 그 몫이다.
 check_storage() {
 	_free="$(storage_free_mb)"
 	[ -n "$_free" ] || return 0
 	_was=""
 	if [ -f "$NIMWAKE_RUN/storage" ]; then
 		_was="$(cut -d' ' -f1 "$NIMWAKE_RUN/storage")"
+	fi
+	if [ "$_free" -lt "$NIMWAKE_MIN_FREE_MB" ] && [ "$NIMWAKE_STORAGE_CLEANUP" = 1 ]; then
+		_dropped="$(drop_rotated_logs)"
+		if [ -n "$_dropped" ]; then
+			host_log "storage: ${_free}MB free — removed ${_dropped% *} rotated log(s), ${_dropped#* }KB"
+			_free="$(storage_free_mb)"
+		fi
 	fi
 	_level=ok
 	if [ "$_free" -lt "$NIMWAKE_MIN_FREE_MB" ]; then

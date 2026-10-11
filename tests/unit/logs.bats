@@ -93,3 +93,30 @@ fill() {
 	[ "$status" -eq 0 ]
 	[ -z "$output" ]
 }
+
+@test "drop_rotated_logs removes only rotated copies of host logs and reports them" {
+	echo live >"$log"
+	fill "$log.1" 2 a
+	fill "$log.2" 1 b
+	fill "$NIMWAKE_LOGS/boot.log.1" 1 c
+	echo csv >"$NIMWAKE_LOGS/soak-20261009.csv"
+	echo other >"$NIMWAKE_LOGS/exp-nimwaked.log.1"
+
+	run drop_rotated_logs
+	[ "$status" -eq 0 ]
+	# 3개, 약 4 KB (각 파일에 머리 줄이 붙는다)
+	[ "${output% *}" = 3 ]
+	[ "${output#* }" -ge 4 ]
+	[ "$(cat "$log")" = live ]
+	[ ! -f "$log.1" ] && [ ! -f "$log.2" ] && [ ! -f "$NIMWAKE_LOGS/boot.log.1" ]
+	# Host 로그가 아닌 것과 soak 데이터는 건드리지 않는다
+	[ -f "$NIMWAKE_LOGS/soak-20261009.csv" ]
+	[ -f "$NIMWAKE_LOGS/exp-nimwaked.log.1" ]
+}
+
+@test "drop_rotated_logs prints nothing when there is nothing to drop" {
+	echo live >"$log"
+	run drop_rotated_logs
+	[ "$status" -eq 0 ]
+	[ -z "$output" ]
+}
