@@ -105,6 +105,20 @@ else
 	warn "storage ${free_mb}MB free (< 10GB, PRD §18)"
 fi
 
+# 네트워크 상태는 supervisor가 기록한다 (host/lib/network.sh, PRD §13–§14)
+net="$HOME/.nimwake-host/run/network"
+if [ ! -f "$net" ]; then
+	warn "network state unknown — the running supervisor does not record it yet (make deploy, then nimwake-host stop · start)"
+elif grep -q '^ONLINE ' "$net"; then
+	ok "network $(cat "$net")"
+else
+	warn "network $(cat "$net")"
+fi
+# Android는 앱이 게이트웨이 주소를 읽지 못하게 막는다 — 적어 주어야 게이트웨이 검사가 켜진다
+if ! grep -q '^NIMWAKE_NET_GATEWAY=.' "$HOME/.nimwake-host/host.conf" 2>/dev/null; then
+	warn "gateway check is off — set NIMWAKE_NET_GATEWAY=<router IP> in ~/.nimwake-host/host.conf (PRD §14)"
+fi
+
 log="$HOME/.nimwake-host/logs/boot.log"
 if [ ! -f "$log" ]; then
 	warn "no boot.log — Termux:Boot has not run 10-nimwake yet"
