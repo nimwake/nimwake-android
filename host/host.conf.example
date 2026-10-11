@@ -12,8 +12,14 @@
 #NIMWAKE_MAX_RESTARTS=5
 #NIMWAKE_RESTART_WINDOW=300
 
-# 남은 저장공간 감시 (PRD §18, §44-6): supervisor가 INTERVAL초마다 보고, MIN_FREE_MB 아래로 내려가면
+# 정리 작업(저장공간 검사 · 로그 순환) 간격(초)
+#NIMWAKE_HOUSEKEEPING_INTERVAL=600
+
+# 남은 저장공간 감시 (PRD §18, §44-6): MIN_FREE_MB 아래로 내려가면
 # supervisor.log에 남기고 Android 알림을 띄운다 (상태가 바뀔 때 한 번). 알림 명령은 메시지를 $1로 받는다
 #NIMWAKE_MIN_FREE_MB=1024
-#NIMWAKE_STORAGE_INTERVAL=600
 #NIMWAKE_NOTIFY='termux-notification --id nimwake-storage --title Nimwake --content "$1"'
+
+# 로그 순환 (PRD §20): supervisor.log · nimwaked.log · boot.log가 MAX_KB를 넘으면 .1 … .KEEP로 민다
+#NIMWAKE_LOG_MAX_KB=20480
+#NIMWAKE_LOG_KEEP=3

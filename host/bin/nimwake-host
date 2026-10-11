@@ -17,6 +17,8 @@ lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
 . "$lib/policy.sh"
 # shellcheck source=../lib/supervisor.sh
 . "$lib/supervisor.sh"
+# shellcheck source=../lib/logs.sh
+. "$lib/logs.sh"
 
 pid_file="$NIMWAKE_RUN/supervisor.pid"
 

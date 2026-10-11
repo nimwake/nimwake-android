@@ -92,6 +92,12 @@ check_storage() {
 	fi
 }
 
+# RUNNING 동안 NIMWAKE_HOUSEKEEPING_INTERVAL마다 (logs.sh의 rotate_logs)
+housekeeping() {
+	check_storage
+	rotate_logs
+}
+
 # 기동 직후부터 daemon이 끝날 때까지 health를 본다. 별도 subshell로 돈다.
 # READY가 오지 않거나 probe가 연달아 실패하면 run/hung을 남기고 daemon을 내린다
 # — 이 경우 종료 코드가 0이어도 재기동 대상이다.
@@ -109,14 +115,14 @@ monitor_daemon() {
 	done
 	set_state RUNNING "nimwaked pid $(daemon_pid), ready after ${_waited}s"
 
-	check_storage
-	_storage_next=$(($(date +%s) + NIMWAKE_STORAGE_INTERVAL))
+	housekeeping
+	_housekeeping_next=$(($(date +%s) + NIMWAKE_HOUSEKEEPING_INTERVAL))
 	_failures=0
 	while :; do
 		sleep "$NIMWAKE_HEALTH_INTERVAL"
-		if [ "$(date +%s)" -ge "$_storage_next" ]; then
-			check_storage
-			_storage_next=$(($(date +%s) + NIMWAKE_STORAGE_INTERVAL))
+		if [ "$(date +%s)" -ge "$_housekeeping_next" ]; then
+			housekeeping
+			_housekeeping_next=$(($(date +%s) + NIMWAKE_HOUSEKEEPING_INTERVAL))
 		fi
 		if health_probe; then
 			_failures=0
@@ -153,6 +159,8 @@ supervise() {
 		set_state STARTING ""
 		# 이전 daemon은 끝났는데 nimwaked가 남아 있다면 래퍼만 죽은 것이다
 		reap_orphan_daemon
+		# daemon이 없는 지금 돌리면 복사와 비우기 사이에 잃는 줄이 없다
+		rotate_logs
 		host_log "launch: $NIMWAKE_LAUNCH"
 		# exec로 sh를 대체한다. wait가 받는 종료 코드는 기동 명령의 것이다.
 		sh -c "exec $NIMWAKE_LAUNCH" >>"$NIMWAKE_LOGS/nimwaked.log" 2>&1 &
