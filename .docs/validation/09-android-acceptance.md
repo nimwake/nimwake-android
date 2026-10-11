@@ -48,7 +48,7 @@
 | 3 | Wi-Fi 재연결 후 자동 복구 | ✓ ([05](05-a5-network.md)) |
 | 4 | crash 후 자동 재시작 | ✓ — daemon crash · proot 죽음 모두 ([04](04-a2-recovery.md) · [06](06-a1-experiments.md)) |
 | 5 | reboot 후 app은 sleeping | ✓ ([02](02-a3-boot.md)) |
-| 6 | 저장공간 부족을 사전 감지 | 부분 — 부팅 때 `boot.log`에 WARN(<1 GB), `make doctor` WARN(<10 GB), soak가 `free_mb`를 기록. 알림 · 자동 정리는 Phase 2 |
+| 6 | 저장공간 부족을 사전 감지 | 구현 — 부팅 때 `boot.log` WARN, **운영 중 supervisor가 10분마다 보고 1 GB 아래로 내려가면 `supervisor.log` + Android 알림** (#26, 기기 반영은 72h 뒤 `make deploy`), `make doctor` WARN(<10 GB). 자동 정리(PRD §18–§19)는 Phase 2 |
 | 7 | Core에 Android 전용 코드 없음 | ✓ — Core에 요청한 변경은 모두 플랫폼 중립이다 (listen 주소 · 종료 코드 · health 계약 · 버전 · bench 패키징) |
 | 8 | Host Layer 없이 Core는 Linux에서 그대로 | ✓ — Core CI(ubuntu)가 Host Layer 없이 돈다 |
 

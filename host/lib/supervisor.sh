@@ -58,6 +58,40 @@ reap_orphan_daemon() {
 	kill -s KILL "$_orphan" 2>/dev/null || true
 }
 
+storage_free_mb() {
+	df -Pk "$NIMWAKE_STORAGE_PATH" 2>/dev/null | awk 'NR == 2 { print int($4 / 1024) }'
+}
+
+# 남은 저장공간을 보고 상태가 바뀔 때만 남긴다 (PRD §18, §44-6).
+# 부팅 때 한 번(10-nimwake)으로는 운영 중의 감소를 놓친다 — 72h soak에서 하룻밤에 1.1 GB가 빠졌다 (validation/10).
+# 상태는 run/storage 한 줄 "ok|low FREE_MB YYYY-MM-DD HH:MM:SS"에 둔다.
+check_storage() {
+	_free="$(storage_free_mb)"
+	[ -n "$_free" ] || return 0
+	_was=""
+	if [ -f "$NIMWAKE_RUN/storage" ]; then
+		_was="$(cut -d' ' -f1 "$NIMWAKE_RUN/storage")"
+	fi
+	_level=ok
+	if [ "$_free" -lt "$NIMWAKE_MIN_FREE_MB" ]; then
+		_level=low
+	fi
+	printf '%s %s %s\n' "$_level" "$_free" "$(date '+%Y-%m-%d %H:%M:%S')" >"$NIMWAKE_RUN/storage"
+	[ "$_level" = "$_was" ] && return 0
+
+	if [ "$_level" = low ]; then
+		host_log "storage: LOW ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
+		if [ -n "$NIMWAKE_NOTIFY" ]; then
+			sh -c "$NIMWAKE_NOTIFY" -- "storage low: ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)" >/dev/null 2>&1 ||
+				host_log "storage: notify failed"
+		fi
+	elif [ -n "$_was" ]; then
+		host_log "storage: ok again ${_free}MB free"
+	else
+		host_log "storage: ok ${_free}MB free"
+	fi
+}
+
 # 기동 직후부터 daemon이 끝날 때까지 health를 본다. 별도 subshell로 돈다.
 # READY가 오지 않거나 probe가 연달아 실패하면 run/hung을 남기고 daemon을 내린다
 # — 이 경우 종료 코드가 0이어도 재기동 대상이다.
@@ -75,9 +109,15 @@ monitor_daemon() {
 	done
 	set_state RUNNING "nimwaked pid $(daemon_pid), ready after ${_waited}s"
 
+	check_storage
+	_storage_next=$(($(date +%s) + NIMWAKE_STORAGE_INTERVAL))
 	_failures=0
 	while :; do
 		sleep "$NIMWAKE_HEALTH_INTERVAL"
+		if [ "$(date +%s)" -ge "$_storage_next" ]; then
+			check_storage
+			_storage_next=$(($(date +%s) + NIMWAKE_STORAGE_INTERVAL))
+		fi
 		if health_probe; then
 			_failures=0
 			continue

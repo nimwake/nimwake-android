@@ -174,3 +174,60 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 	! pgrep -f "fake-nimwaked"
 	! alive "$app"
 }
+
+# 남은 저장공간 감시 (PRD §18, §44-6) — 상태가 바뀔 때만 남기고 알린다
+
+@test "check_storage logs and notifies only when the level changes" {
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	. "$root/host/lib/config.sh"
+	. "$root/host/lib/policy.sh"
+	. "$root/host/lib/supervisor.sh"
+	log="$NIMWAKE_HOST_HOME/logs/supervisor.log"
+
+	NIMWAKE_MIN_FREE_MB=1
+	check_storage
+	grep -q "storage: ok [0-9]*MB free" "$log"
+	[ ! -f "$FAKE_DIR/notified" ]
+
+	NIMWAKE_MIN_FREE_MB=999999999
+	check_storage
+	check_storage
+	[ "$(grep -c "storage: LOW" "$log")" -eq 1 ]
+	[ "$(wc -l <"$FAKE_DIR/notified" | tr -d ' ')" -eq 1 ]
+	grep -q "^storage low: [0-9]*MB free (< 999999999MB)$" "$FAKE_DIR/notified"
+	[ "$(cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/storage")" = low ]
+
+	NIMWAKE_MIN_FREE_MB=1
+	check_storage
+	grep -q "storage: ok again" "$log"
+	[ "$(wc -l <"$FAKE_DIR/notified" | tr -d ' ')" -eq 1 ]
+}
+
+@test "a failing notify command is logged, not fatal" {
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_NOTIFY="exit 3"
+	export NIMWAKE_MIN_FREE_MB=999999999
+	. "$root/host/lib/config.sh"
+	. "$root/host/lib/policy.sh"
+	. "$root/host/lib/supervisor.sh"
+	check_storage
+	grep -q "storage: notify failed" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+}
+
+@test "the running supervisor warns once about low storage and status shows it" {
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_STORAGE_INTERVAL=1
+	export NIMWAKE_MIN_FREE_MB=999999999
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	"$host" start
+	wait_for 5 state_is RUNNING
+	wait_for 5 test -f "$FAKE_DIR/notified"
+	# 간격 1초로 여러 번 검사해도 알림은 한 번
+	sleep 3
+	[ "$(wc -l <"$FAKE_DIR/notified" | tr -d ' ')" -eq 1 ]
+	[ "$(grep -c "storage: LOW" "$NIMWAKE_HOST_HOME/logs/supervisor.log")" -eq 1 ]
+
+	run "$host" status
+	[[ "$output" == *"storage     LOW "*"MB free (< 999999999MB)"* ]]
+}
