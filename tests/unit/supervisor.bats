@@ -183,6 +183,7 @@ load_libs() {
 	. "$root/host/lib/policy.sh"
 	. "$root/host/lib/supervisor.sh"
 	. "$root/host/lib/logs.sh"
+	. "$root/host/lib/network.sh"
 }
 
 @test "check_storage logs and notifies only when the level changes" {
@@ -291,4 +292,23 @@ load_libs() {
 	grep -q "log: rotated nimwaked.log (4KB, keep 3)" "$logs/supervisor.log"
 	# 순환 뒤에도 supervisor는 같은 파일에 계속 쓴다
 	grep -q "state RUNNING" "$logs/supervisor.log"
+}
+
+# 네트워크 (PRD §13) — 판정은 network.bats가 본다. 여기서는 루프에 붙어 있고 daemon을 건드리지 않는지만
+@test "the running supervisor records the network state without touching the daemon" {
+	# 닿지 않는 게이트웨이(TEST-NET-1) — 이 머신의 네트워크와 상관없이 ONLINE은 아니다
+	export NIMWAKE_NET_GATEWAY=192.0.2.1
+	"$host" start
+	wait_for 5 state_is RUNNING
+	wait_for 10 test -f "$NIMWAKE_HOST_HOME/run/network"
+	pid="$(cut -d' ' -f6 "$NIMWAKE_HOST_HOME/run/state")"
+
+	run "$host" status
+	echo "$output"
+	[[ "$output" == *"network     DEGRADED since "* || "$output" == *"network     OFFLINE since "* ]]
+	grep -q "network ? → " "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	# 네트워크가 나빠도 daemon은 그대로다
+	state_is RUNNING
+	[ "$(cut -d' ' -f6 "$NIMWAKE_HOST_HOME/run/state")" = "$pid" ]
+	[ "$(launches)" -eq 1 ]
 }

@@ -49,7 +49,8 @@ done
 # --- Termux 패키지 ------------------------------------------------------
 # 이미 있으면 pkg를 부르지 않는다 — pkg install은 그 패키지를 업그레이드할 수 있다.
 missing=""
-for p in openssh proot-distro termux-api; do
+# net-tools: ifconfig — Android가 netlink · /proc/net을 막아 인터페이스는 이것으로만 본다 (host/lib/network.sh)
+for p in openssh proot-distro termux-api net-tools; do
 	if dpkg -s "$p" >/dev/null 2>&1; then
 		done_ "package $p"
 	else

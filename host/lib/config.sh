@@ -49,6 +49,12 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 # 로그 순환 (PRD §20) — 파일당 상한(KB)과 남길 이전 파일 수. 기본은 PRD의 20 MB × 3
 : "${NIMWAKE_LOG_MAX_KB:=20480}"
 : "${NIMWAKE_LOG_KEEP:=3}"
+
+# 네트워크 상태 감시 (PRD §13–§14, host/lib/network.sh). 게이트웨이 · 외부 검사는 비우면 건너뛴다
+: "${NIMWAKE_NET_INTERVAL:=30}"
+: "${NIMWAKE_NET_GATEWAY:=}"
+: "${NIMWAKE_NET_INTERNET_URL:=}"
+
 # 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
 	if command -v termux-notification >/dev/null 2>&1; then

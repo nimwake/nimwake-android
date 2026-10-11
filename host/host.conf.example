@@ -25,3 +25,10 @@
 # 로그 순환 (PRD §20): supervisor.log · nimwaked.log · boot.log가 MAX_KB를 넘으면 .1 … .KEEP로 민다
 #NIMWAKE_LOG_MAX_KB=20480
 #NIMWAKE_LOG_KEEP=3
+
+# 네트워크 상태 감시 (PRD §13–§14): ONLINE · DEGRADED · OFFLINE을 supervisor.log와 status에 남긴다.
+# 끊겨도 Nimwake는 내리지 않는다. Android는 앱이 기본 경로 · 게이트웨이를 읽지 못하게 막으므로
+# 게이트웨이 검사는 주소를 적어야 켜진다. 외부 검사는 기본으로 끈다 (외부 서비스에 기대지 않는다)
+#NIMWAKE_NET_INTERVAL=30
+#NIMWAKE_NET_GATEWAY=192.168.0.1
+#NIMWAKE_NET_INTERNET_URL=http://connectivitycheck.gstatic.com/generate_204
