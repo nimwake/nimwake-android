@@ -37,6 +37,20 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 : "${NIMWAKE_MAX_RESTARTS:=5}"
 : "${NIMWAKE_RESTART_WINDOW:=300}"
 
+# 남은 저장공간 감시 (PRD §18, §44-6). 기준은 10-nimwake의 부팅 검사와 같다
+: "${NIMWAKE_MIN_FREE_MB:=1024}"
+: "${NIMWAKE_STORAGE_INTERVAL:=600}"
+: "${NIMWAKE_STORAGE_PATH:=$HOME}"
+# 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
+if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
+	if command -v termux-notification >/dev/null 2>&1; then
+		# shellcheck disable=SC2016 # $1은 알릴 때 sh -c가 푼다
+		NIMWAKE_NOTIFY='termux-notification --id nimwake-storage --title Nimwake --content "$1"'
+	else
+		NIMWAKE_NOTIFY=''
+	fi
+fi
+
 NIMWAKE_RUN="$NIMWAKE_HOST_HOME/run"
 NIMWAKE_LOGS="$NIMWAKE_HOST_HOME/logs"
 mkdir -p "$NIMWAKE_RUN" "$NIMWAKE_LOGS"

@@ -3,7 +3,7 @@
 #
 #   nimwake-host start      supervisor를 백그라운드로 띄운다 (이미 떠 있으면 그대로)
 #   nimwake-host stop       nimwaked를 graceful하게 내리고 supervisor를 끝낸다
-#   nimwake-host status     상태 · supervisor · nimwaked · health
+#   nimwake-host status     상태 · supervisor · nimwaked · health · 남은 저장공간
 #   nimwake-host logs [N]   supervisor.log와 nimwaked.log의 마지막 N줄 (기본 40)
 #
 # 기기에서는 make deploy가 ~/.nimwake-host/{bin,lib}에 설치하고 $PREFIX/bin에 링크한다.
@@ -102,6 +102,14 @@ cmd_status() {
 		echo "health      OK (404)"
 	else
 		echo "health      FAIL"
+	fi
+	_free="$(storage_free_mb)"
+	if [ -z "$_free" ]; then
+		echo "storage     unknown"
+	elif [ "$_free" -lt "$NIMWAKE_MIN_FREE_MB" ]; then
+		echo "storage     LOW ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
+	else
+		echo "storage     ok ${_free}MB free"
 	fi
 }
 
