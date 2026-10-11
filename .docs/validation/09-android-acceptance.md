@@ -2,7 +2,7 @@
 
 > Core [`04-acceptance.md` "Android Device"](https://github.com/nimwake/nimwake/blob/main/.docs/phases/phase-1/04-acceptance.md)는 이 레포의 리포트로 판정한다. 이 문서는 그 **근거 색인**이다 — 수치와 원본은 각 리포트에 있다.
 >
-> **상태 (2026-10-09 15:30):** 6/8 충족. 24h · 72h soak은 Core `d7c5590`으로 진행 중 (10-09 13:44 → 10-12 13:44).
+> **상태 (2026-10-11):** 7/8 충족. 24h soak 결함 없음 ([10](10-soak-d7c5590-24h.md)). 72h soak은 같은 실행으로 진행 중 (10-09 13:44 → 10-12 13:44).
 
 ---
 
@@ -24,7 +24,7 @@
 | **Scale-to-zero** | ✓ | idle → sleep → 새 PID (lifecycle 전 회차) · 동시 cold start 20 → process 1 (LAN) · storm 1000 → spawn 1 ([05](05-a5-network.md) · [08](08-core-d7c5590-bench.md)) · soak 표본마다 요청 직전 app 0 | rc1 · **d7c5590** |
 | **Daemon recovery** | ✓ | `kill -9` → 1–2초 재기동 · exit 78 → UNHEALTHY · stop 잔존 0 ([04](04-a2-recovery.md) · [08](08-core-d7c5590-bench.md)) · proot가 죽은 뒤 고아 정리 → 5초 복구 ([06](06-a1-experiments.md)) | rc1 · **d7c5590** |
 | **Network recovery** | ✓ | Wi-Fi 끊김 → 41초 뒤 복구, daemon 재시작 없음 ([05](05-a5-network.md)) | rc1 |
-| **24h soak** | 진행 중 | `d7c5590` 72h 실행의 24h 시점 (10-10 13:44). 참고: rc1 12h 결함 없음 ([07](07-soak-rc1-12h.md)) | d7c5590 |
+| **24h soak** | ✓ | `d7c5590` 72h 실행의 첫 24h — 표본 288, non-200 0 · 잔존 app 0 · daemon 재기동 0 ([10](10-soak-d7c5590-24h.md)). 참고: rc1 12h ([07](07-soak-rc1-12h.md)) | **d7c5590** |
 | **72h soak** | 진행 중 | 10-09 13:44 → 10-12 13:44. 재부팅되어도 sampler가 이어서 돈다 (#19 · #20) | d7c5590 |
 
 ### 72h 뒤 `d7c5590`으로 다시 돌릴 것
@@ -44,7 +44,7 @@
 | # | 기준 | 상태 |
 | - | ---- | ---- |
 | 1 | 재부팅 후 수동 SSH 없이 복구 | ✓ — 단, **비밀번호 잠금 기기는 재부팅 후 잠금 해제 1회**가 필요하다 ([02](02-a3-boot.md)) |
-| 2 | 24시간 이상 안정 | 진행 중 (rc1 12h 결함 없음) |
+| 2 | 24시간 이상 안정 | ✓ ([10](10-soak-d7c5590-24h.md)) — 72h는 진행 중 |
 | 3 | Wi-Fi 재연결 후 자동 복구 | ✓ ([05](05-a5-network.md)) |
 | 4 | crash 후 자동 재시작 | ✓ — daemon crash · proot 죽음 모두 ([04](04-a2-recovery.md) · [06](06-a1-experiments.md)) |
 | 5 | reboot 후 app은 sleeping | ✓ ([02](02-a3-boot.md)) |

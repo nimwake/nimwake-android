@@ -20,7 +20,7 @@ Phase 1 (`nimwake-android v0.1.0`) 진행 중. Core `v0.1.0`은 이 레포의 **
 
 ```text
 Install ✓   Boot recovery ✓   Cold start ✓   Scale-to-zero ✓
-Daemon recovery ✓   Network recovery ✓   24h · 72h soak (진행 중, 10-12 종료)
+Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak (진행 중, 10-12 종료)
 ```
 
 → [Android 8항목 근거](.docs/validation/09-android-acceptance.md) · [마일스톤 현황](.docs/phases/phase-1/02-milestones.md) · [검증 리포트](.docs/validation/)

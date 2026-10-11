@@ -40,8 +40,8 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 | A2 | **완료** — 완료 조건 4개 + proot가 죽은 뒤의 고아 정리 (E4) | [validation/04](../../validation/04-a2-recovery.md) · [06](../../validation/06-a1-experiments.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
 | A4 | `make install` 작성 · 설치된 기기에서 멱등 확인. **초기화한 기기 검증 남음** (72h soak 뒤) | #14 |
-| A5 | LAN · 동시 cold start · Wi-Fi 복구 · Core workload 비교(bench) 완료. rc1 soak 12h(부분), **Core d7c5590으로 72h soak 진행 중** (10-09 13:44 → 10-12 13:44) | [validation/05](../../validation/05-a5-network.md) · [07](../../validation/07-soak-rc1-12h.md) · [08](../../validation/08-core-d7c5590-bench.md) |
-| A6 | 72h soak 진행 중 — 같은 실행에서 24h 시점도 읽는다 | — |
+| A5 | LAN · 동시 cold start · Wi-Fi 복구 · Core workload 비교(bench) 완료. rc1 soak 12h(부분), **Core d7c5590 24h soak 결함 없음** — 같은 실행으로 72h 진행 중 (→ 10-12 13:44) | [validation/05](../../validation/05-a5-network.md) · [07](../../validation/07-soak-rc1-12h.md) · [08](../../validation/08-core-d7c5590-bench.md) · [10](../../validation/10-soak-d7c5590-24h.md) |
+| A6 | 72h soak 진행 중 (24h 시점 통과) | — |
 
 ---
 
@@ -175,7 +175,7 @@ PRD §35–§36.
 - [x] concurrent cold start: LAN에서 동시 요청 20개 → PID 하나
 - [x] Wi-Fi 끊김 → 41초 뒤 복구, daemon 재기동 없이 요청 성공 → [validation/05](../../validation/05-a5-network.md)
 - [x] Core workload를 기기에서 실행해 CI Linux와 같은 지표로 비교 (Core PRD §50) — `make bench` (nimwake#25로 `nimwake-bench`가 artifact에 들어왔다). cold start 8.8ms(CI 51.9) · RSS 2.0MB(CI 5.6). 동시 연결이 늘면 **proot(ptrace) 비용과 커널 `somaxconn 128`**에 먼저 막힌다 — Nimwake 고유 구간이 아니다 → [validation/08](../../validation/08-core-d7c5590-bench.md)
-- [ ] `tests/device/soak.sh` 24h: daemon 생존 · RSS · 온도 · 배터리 · orphan · storage 증가 — rc1로 12h 결함 없음([07](../../validation/07-soak-rc1-12h.md), 판정 근거 아님). **판정용은 Core d7c5590 72h soak의 24h 시점** (10-10 13:44)
+- [x] `tests/device/soak.sh` 24h: daemon 생존 · RSS · 온도 · 배터리 · orphan · storage 증가 — rc1로 12h 결함 없음([07](../../validation/07-soak-rc1-12h.md), 판정 근거 아님). **판정: Core d7c5590 72h soak의 첫 24h — 결함 없음** ([10](../../validation/10-soak-d7c5590-24h.md))
 
 **완료 조건**
 
@@ -201,7 +201,7 @@ Install ✓   Boot recovery ✓   Cold start ✓   Scale-to-zero ✓
 Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 ```
 
-2026-10-09 현재 — 6개 충족, soak 2개 남음:
+2026-10-11 현재 — 7개 충족, 72h soak 남음:
 
 | 항목 | 상태 | 근거 |
 | ---- | ---- | ---- |
@@ -211,7 +211,7 @@ Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 | Scale-to-zero | ✓ | validation/01 · 03 · 05 |
 | Daemon recovery | ✓ | validation/04 |
 | Network recovery | ✓ | validation/05 |
-| 24h soak | 진행 중 — 72h 실행의 24h 시점 (10-10 13:44) | rc1 12h: validation/07 (참고) |
+| 24h soak | ✓ — Core d7c5590, 72h 실행의 첫 24h | validation/10 · rc1 12h: validation/07 (참고) |
 | 72h soak | 진행 중 — Core d7c5590, 10-09 13:44 → 10-12 13:44 | — |
 
 ---
