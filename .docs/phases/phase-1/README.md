@@ -12,7 +12,7 @@
 
 > Android 재부팅과 daemon crash를 사람 손 없이 넘기고, 그 위에서 Core lifecycle이 그대로 동작함을 실기기로 증명한다.
 
-이 레포는 **Host Adapter / Supervisor**다. Core 기능을 다시 구현하지 않는다. → [PRD §3](../../PRD.md)
+이 레포는 **Host Adapter / Supervisor**다. Core 기능을 다시 구현하지 않는다. → [PRD §3](../../prd/01-product/02-principles-and-goals.md)
 
 ---
 
@@ -71,4 +71,4 @@ Core binary 빌드는 Core CI가 소유한다. 이 레포는 빌드하지 않는
 
 ---
 
-[문서 인덱스](../../README.md) · [PRD](../../PRD.md)
+[문서 인덱스](../../README.md) · [PRD](../../prd/README.md)
