@@ -189,6 +189,8 @@ PRD §35–§36.
 - [ ] 72h soak (Core PRD §51 관찰 항목 전부)
 - [ ] PRD §44 성공 기준 1–8 확인
 - [ ] Core `v0.1.0` Android 체크리스트에 결과 링크
+- [x] 릴리스 준비 — `CHANGELOG.md`, `make release-check`, 태그 push → `release.yml`이 GitHub Release (#27)
+- [ ] `core.lock`을 Core `v0.1.0` 태그로 고정 → `[Unreleased]` → `[0.1.0] — 날짜` → `make release-check TAG=v0.1.0` → 태그 `v0.1.0`
 
 **완료 조건**
 
