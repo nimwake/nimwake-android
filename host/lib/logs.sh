@@ -34,6 +34,24 @@ rotate_log() {
 	echo "$_size_kb"
 }
 
+# 저장공간이 부족할 때(supervisor.sh check_storage) 순환된 이전 로그(.1 …)를 지운다.
+# 지금 쓰는 로그와 soak 데이터(soak*.csv)는 남긴다. 지웠으면 "개수 KB"를 출력한다.
+drop_rotated_logs() {
+	_count=0
+	_bytes=0
+	for _name in $NIMWAKE_ROTATED_LOGS; do
+		for _old in "$NIMWAKE_LOGS/$_name".[0-9]*; do
+			[ -f "$_old" ] || continue
+			_bytes=$((_bytes + $(wc -c <"$_old")))
+			rm -f "$_old"
+			_count=$((_count + 1))
+		done
+	done
+	if [ "$_count" -gt 0 ]; then
+		echo "$_count $((_bytes / 1024))"
+	fi
+}
+
 rotate_logs() {
 	for _name in $NIMWAKE_ROTATED_LOGS; do
 		_kb="$(rotate_log "$NIMWAKE_LOGS/$_name")"

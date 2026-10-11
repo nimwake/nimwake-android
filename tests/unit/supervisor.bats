@@ -177,12 +177,18 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 
 # 남은 저장공간 감시 (PRD §18, §44-6) — 상태가 바뀔 때만 남기고 알린다
 
-@test "check_storage logs and notifies only when the level changes" {
-	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
-	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+# nimwake-host와 같은 순서로 lib를 읽는다 — 함수를 직접 부르는 테스트용
+load_libs() {
 	. "$root/host/lib/config.sh"
 	. "$root/host/lib/policy.sh"
 	. "$root/host/lib/supervisor.sh"
+	. "$root/host/lib/logs.sh"
+}
+
+@test "check_storage logs and notifies only when the level changes" {
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	load_libs
 	log="$NIMWAKE_HOST_HOME/logs/supervisor.log"
 
 	NIMWAKE_MIN_FREE_MB=1
@@ -208,11 +214,50 @@ launched_at_least() { [ "$(launches)" -ge "$1" ]; }
 	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
 	export NIMWAKE_NOTIFY="exit 3"
 	export NIMWAKE_MIN_FREE_MB=999999999
-	. "$root/host/lib/config.sh"
-	. "$root/host/lib/policy.sh"
-	. "$root/host/lib/supervisor.sh"
+	load_libs
 	check_storage
 	grep -q "storage: notify failed" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+}
+
+# 정리로 기준 위로 돌아오는 경우는 실제 디스크로 만들 수 없다 — 남은 공간을 순환 로그 유무로 흉내 낸다
+@test "low storage removes rotated logs first, and does not alert if that was enough" {
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	export NIMWAKE_MIN_FREE_MB=1024
+	load_libs
+	logs="$NIMWAKE_HOST_HOME/logs"
+	echo current >"$logs/nimwaked.log"
+	head -c 3072 /dev/zero >"$logs/nimwaked.log.1"
+	head -c 2048 /dev/zero >"$logs/supervisor.log.2"
+	echo keep >"$logs/soak.csv"
+	storage_free_mb() {
+		if [ -f "$logs/nimwaked.log.1" ]; then echo 10; else echo 5000; fi
+	}
+
+	check_storage
+	[ ! -f "$logs/nimwaked.log.1" ]
+	[ ! -f "$logs/supervisor.log.2" ]
+	[ "$(cat "$logs/nimwaked.log")" = current ]
+	[ "$(cat "$logs/soak.csv")" = keep ]
+	grep -q "storage: 10MB free — removed 2 rotated log(s), 5KB" "$logs/supervisor.log"
+	! grep -q "storage: LOW" "$logs/supervisor.log"
+	[ ! -f "$FAKE_DIR/notified" ]
+	[ "$(cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/storage")" = ok ]
+}
+
+@test "low storage still alerts when nothing can be removed, and cleanup can be turned off" {
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_MIN_FREE_MB=999999999
+	export NIMWAKE_STORAGE_CLEANUP=0
+	load_libs
+	logs="$NIMWAKE_HOST_HOME/logs"
+	echo old >"$logs/boot.log.1"
+
+	check_storage
+	# 꺼져 있으면 지우지 않고 알리기만 한다
+	[ -f "$logs/boot.log.1" ]
+	grep -q "storage: LOW" "$logs/supervisor.log"
+	[ "$(wc -l <"$FAKE_DIR/notified" | tr -d ' ')" -eq 1 ]
 }
 
 @test "the running supervisor warns once about low storage and status shows it" {
