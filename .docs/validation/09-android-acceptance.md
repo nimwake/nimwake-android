@@ -2,7 +2,12 @@
 
 > Core [`04-acceptance.md` "Android Device"](https://github.com/nimwake/nimwake/blob/main/.docs/phases/phase-1/04-acceptance.md)는 이 레포의 리포트로 판정한다. 이 문서는 그 **근거 색인**이다 — 수치와 원본은 각 리포트에 있다.
 >
-> **상태 (2026-10-12):** **8/8 충족.** 72h soak 결함 없음 ([11](11-soak-d7c5590-72h.md)). 판정 대상 `d7c5590`으로 다시 돌릴 것 3개는 아래.
+> **상태 (2026-10-12):** `d7c5590`으로 **8/8 충족.** 72h soak 결함 없음 ([11](11-soak-d7c5590-72h.md)).
+> 판정 대상 `d7c5590`으로 다시 돌릴 것 3개는 아래.
+>
+> **판정 대상이 `v0.1.0-rc4`로 바뀐다.** rc3 이후 Core에 들어온 §77 crash-loop backoff와
+> §78 메모리 입장 제어가 **매 `acquire` 경로를 지나므로** `d7c5590`의 증거를 돌려 쓸 수 없다.
+> rc4 기기 측정은 [12](12-core-rc4-bench.md)에 있고 **72h soak은 10-15 13:52에 끝난다.**
 
 ---
 

@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=
-rev=d7c55907ccc7179d0591b155b9f155845cd5c064
-note=Core main d7c5590 — nimwake#24(버전 0.1.0) · #25(nimwake-bench 포함) 반영, release.yml workflow_dispatch artifact. v0.1.0 태그 전 검증용.
+tag=v0.1.0-rc4
+rev=5fab41552d90d2d7ac256b17bf0abbd45de20a6f
+note=Core v0.1.0-rc4 — rc3 이후 §76 manifest 재적재 · §77 crash-loop backoff · §78 메모리 입장 제어 · 로그 ANSI 제거 · overhead 지표 수정이 들어왔다. 72h soak은 d7c5590에서 돌았고 §77·§78이 매 acquire 경로를 지나므로 기기 검증을 이 태그에서 다시 한다.
