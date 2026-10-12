@@ -3,7 +3,7 @@ SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fi
 HOURS ?= 24
 INTERVAL ?= 300
 
-.PHONY: lint test doctor-dev release-check install fetch-core deploy run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install fetch-core deploy device-status run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -23,15 +23,21 @@ release-check:
 	scripts/release-check.sh $(TAG)
 
 # 기기 설치: 패키지 · proot Ubuntu · 키 로그인 sshd → deploy → supervisor → doctor. 멱등 (A4)
-# deploy가 binary를 다시 놓으므로 soak 중에는 돌리지 않는다
+# deploy가 binary를 다시 놓으므로 soak 중에는 거부한다 (FORCE=1로 강행)
 install:
 	scripts/install.sh
 
 fetch-core:
 	scripts/fetch-core.sh
 
+# soak이 진행 중이면 거부한다 — make deploy FORCE=1로 강행
 deploy:
 	scripts/deploy.sh
+
+# 기기에 지금 무엇이 도는가 — Core binary(설치 · 실행 중) · supervisor · soak. 이 기기는 여러 작업이 같이 쓴다.
+# 배포 · bench · 재시작 전에 먼저 본다. 읽기만 한다
+device-status:
+	scripts/device-status.sh
 
 run:
 	scripts/run.sh

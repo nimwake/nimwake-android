@@ -2,6 +2,7 @@
 # dist/ · guest/ · host/ 를 ssh로 기기의 Termux에 올리고,
 # binary와 manifest는 proot Ubuntu 안에, Termux:Boot 스크립트는 ~/.termux/boot/ 에 배치한다.
 #   NIMWAKE_DEVICE  ssh 대상 (기본 nimwake-phone, ~/.ssh/config에 정의)
+#   FORCE=1         soak이 진행 중이어도 배포한다
 set -eu
 
 root="$(cd "$(dirname "$0")/.." && pwd -P)"
@@ -10,6 +11,14 @@ stage='.nimwake-host/stage'
 
 if [ ! -x "$root/dist/aarch64/nimwaked" ]; then
 	echo "deploy: dist/aarch64/nimwaked 가 없다. 먼저 make fetch-core" >&2
+	exit 1
+fi
+
+# soak 중에는 배포하지 않는다 — binary가 바뀌면 그 soak이 무엇을 쟀는지 알 수 없다.
+# 이 기기는 여러 작업이 같이 쓴다. 주석으로만 두었을 때 실제로 겹쳤다 (2026-10-12, validation/09)
+if [ "${FORCE:-}" != 1 ] && why="$("$root/scripts/device-status.sh" --soak-running)"; then
+	echo "deploy: a soak is running on the device ($why) — deploying would change what it measures." >&2
+	echo "        make device-status · make soak-stop, or FORCE=1" >&2
 	exit 1
 fi
 
