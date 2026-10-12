@@ -46,15 +46,17 @@
 
 `v0.1.0` 태그가 `d7c5590`과 다른 commit을 가리키면 태그 binary로 lifecycle · recovery를 다시 돌린다 ([03-core-sync](../phases/phase-1/03-core-sync.md)).
 
-### rc4로 다시 확인한 것
+### rc4 · rc5로 다시 확인한 것
 
-판정 대상이 rc4로 바뀌었으므로 위 표의 재검증은 **rc4로** 한다. 결과가 나오는 대로 적는다.
+판정 대상이 rc4 → rc5로 바뀌었으므로 위 표의 재검증은 그 binary로 한다. **rc5는 런타임이 rc4와 같다** — bench의 `--warm-connections`만 다르다 ([12](12-core-rc5-bench.md), nimwake#54). 그래서 rc4로 한 것도 rc5 런타임의 근거로 쓴다.
 
-| 항목 | 일시 | 결과 |
-| ---- | ---- | ---- |
-| Boot recovery | 10-12 20:46 재부팅 (사람이 잠금 해제) | ✓ — Termux:Boot 20:57:00 → `ready: health 404 after 2s`, 부팅 직후 application 전부 SLEEPING, lifecycle PASS (`make test-boot`). rc4 72h soak 도중이었고 `20-soak`(#19)가 같은 끝 시각으로 이어 받았다 — 표본 공백 약 14분(20:43 → 20:57) |
-| Network recovery | — | 남음 (`make test-wifi`, 사람이 Wi-Fi 조작) |
-| Install (초기화 기기) | — | 남음 — Termux 데이터를 지우므로 **rc4 soak이 끝난 뒤(10-15 18:52)** |
+| 항목 | binary | 일시 | 결과 |
+| ---- | ------ | ---- | ---- |
+| Boot recovery | rc4 | 10-12 20:46 재부팅 (사람이 잠금 해제) | ✓ — Termux:Boot 20:57:00 → `ready: health 404 after 2s`, 부팅 직후 application 전부 SLEEPING, lifecycle PASS (`make test-boot`). rc4 72h soak 도중이었고 `20-soak`(#19)가 같은 끝 시각으로 이어 받았다 — 표본 공백 약 14분(20:43 → 20:57) |
+| Network recovery | **rc5** | 10-13 00:11 Wi-Fi 끔 → 약 30초 뒤 켬 (사람이 조작) | ✓ — LAN 00:11:59 끊김 → **47초 뒤 복구**, nimwaked **같은 pid 12975**로 생존, 재연결 뒤 요청 200 (`make test-wifi`). supervisor가 처음으로 실기기에서 상태 전이를 기록했다 (#30 · #31): `ONLINE → OFFLINE`(00:11:32) → `RECOVERING` → `ONLINE`(00:12:33). rc5 72h soak 도중이었다 — sampler는 loopback으로 요청하므로 표본에 영향 없음(00:10 · 00:15 둘 다 200) |
+| Install (초기화 기기) | — | — | 남음 — Termux 데이터를 지우므로 **rc5 soak이 끝난 뒤(10-15 21:14)** |
+
+첫 `make test-wifi`(10-12 23:0x)는 10분 동안 Wi-Fi가 꺼지지 않아 시간 초과였다 — 조작 안내와 감시 시작이 어긋났다. supervisor 기록에도 변화가 없어 감지 실패가 아님을 확인했다.
 
 같은 날 17:56–17:58에는 `d7c5590` + 새 supervisor(#19–#31)로 lifecycle · recovery(`kill -9` · exit 78 · stop 잔존 0) · LAN(동시 20 → process 1)이 PASS했다 — rc4 배포 전이다.
 
