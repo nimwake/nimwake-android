@@ -10,11 +10,13 @@
 #   4. lifecycle 시나리오가 통과한다
 #   NIMWAKE_DEVICE     ssh 대상 (기본 nimwake-phone)
 #   NIMWAKE_BOOT_WAIT  부팅이 아직 진행 중이면 끝날 때까지 기다릴 초 (기본 100 — 10-nimwake의 READY 대기 90초보다 길게)
+#   NIMWAKE_BOOT_FRESH READY 뒤 몇 초까지를 "부팅 직후"로 보는지 (기본 300) — 그 뒤엔 SLEEPING 검사를 건너뛴다
 set -eu
 
 root="$(cd "$(dirname "$0")/../.." && pwd -P)"
 device="${NIMWAKE_DEVICE:-nimwake-phone}"
 boot_wait="${NIMWAKE_BOOT_WAIT:-100}"
+boot_fresh="${NIMWAKE_BOOT_FRESH:-300}"
 
 fail() {
 	echo "FAIL: $*" >&2
@@ -61,10 +63,24 @@ code="$(ssh "$device" "curl -s -o /dev/null -w '%{http_code}' -H 'Host: nimwake-
 echo "ok  health probe 404"
 
 # 부팅 후 application은 SLEEPING이어야 한다. 이 검사는 다른 요청보다 먼저 한다.
-if ssh "$device" "pgrep -f '^/opt/nimwake/bin/.*-server'" >/dev/null; then
+# 부팅 직후에만 뜻이 있다 — soak sampler는 5분마다 app을 깨우고(깨어 있는 창 약 10초), 시간이 지나면
+# 다른 요청도 깨운다. 그때 돌리면 정상인데도 FAIL한다 (10-12 실제로, validation/09). 그 경우는 건너뛰고 알린다.
+since_ready="$(ssh "$device" sh -s <<'EOF'
+{
+ts="$(grep 'ready: health 404' "$HOME/.nimwake-host/logs/boot.log" 2>/dev/null | tail -n 1 | cut -c1-19)"
+[ -n "$ts" ] && echo $(($(date +%s) - $(date -d "$ts" +%s))) # portable-ok: 기기(Termux, GNU)에서 돈다
+} </dev/null
+EOF
+)"
+if soak="$("$root/scripts/device-status.sh" --soak-running)"; then
+	echo "--  skip 'asleep after boot': a soak is running ($soak) — its sampler wakes the application"
+elif [ -n "$since_ready" ] && [ "$since_ready" -gt "$boot_fresh" ]; then
+	echo "--  skip 'asleep after boot': READY was ${since_ready}s ago (> ${boot_fresh}s) — not right after boot"
+elif ssh "$device" "pgrep -f '^/opt/nimwake/bin/.*-server'" >/dev/null; then
 	fail "an application is running right after boot — it should be SLEEPING"
+else
+	echo "ok  every application is asleep after boot"
 fi
-echo "ok  every application is asleep after boot"
 
 "$root/tests/device/lifecycle.sh"
 echo "PASS boot"
