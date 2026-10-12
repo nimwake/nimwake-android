@@ -40,8 +40,8 @@ Core `v0.1.0-rc1`, 기기 Galaxy A51 5G · Android 13 · F-Droid Termux.
 | A2 | **완료** — 완료 조건 4개 + proot가 죽은 뒤의 고아 정리 (E4) | [validation/04](../../validation/04-a2-recovery.md) · [06](../../validation/06-a1-experiments.md) |
 | A3 | **완료** — 재부팅 6회 무인 READY, 1시간 뒤 cold start, phantom process 해제 · 배터리 예외 (adb) | [validation/02](../../validation/02-a3-boot.md) |
 | A4 | `make install` 작성 · 설치된 기기에서 멱등 확인. **초기화한 기기 검증 남음** (72h soak 뒤) | #14 |
-| A5 | LAN · 동시 cold start · Wi-Fi 복구 · Core workload 비교(bench) 완료. rc1 soak 12h(부분), **Core d7c5590 24h soak 결함 없음** — 같은 실행으로 72h 진행 중 (→ 10-12 13:44) | [validation/05](../../validation/05-a5-network.md) · [07](../../validation/07-soak-rc1-12h.md) · [08](../../validation/08-core-d7c5590-bench.md) · [10](../../validation/10-soak-d7c5590-24h.md) |
-| A6 | 72h soak 진행 중 (24h 시점 통과) | — |
+| A5 | LAN · 동시 cold start · Wi-Fi 복구 · Core workload 비교(bench) 완료. rc1 soak 12h(부분), **Core d7c5590 24h soak 결함 없음** · **72h 결함 없음** | [validation/05](../../validation/05-a5-network.md) · [07](../../validation/07-soak-rc1-12h.md) · [08](../../validation/08-core-d7c5590-bench.md) · [10](../../validation/10-soak-d7c5590-24h.md) · [11](../../validation/11-soak-d7c5590-72h.md) |
+| A6 | 72h soak 결함 없음. 남은 것: Core `v0.1.0` 체크리스트 연결 · 태그 | [validation/11](../../validation/11-soak-d7c5590-72h.md) |
 
 ---
 
@@ -186,7 +186,7 @@ PRD §35–§36.
 
 ## A6 — 72h soak → `nimwake-android v0.1.0`
 
-- [ ] 72h soak (Core PRD §51 관찰 항목 전부)
+- [x] 72h soak (Core PRD §51 관찰 항목 전부) — 결함 없음 ([11](../../validation/11-soak-d7c5590-72h.md))
 - [ ] PRD §44 성공 기준 1–8 확인
 - [ ] Core `v0.1.0` Android 체크리스트에 결과 링크
 - [x] 릴리스 준비 — `CHANGELOG.md`, `make release-check`, 태그 push → `release.yml`이 GitHub Release (#27)
@@ -203,7 +203,7 @@ Install ✓   Boot recovery ✓   Cold start ✓   Scale-to-zero ✓
 Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 ```
 
-2026-10-11 현재 — 7개 충족, 72h soak 남음:
+2026-10-12 — 8개 모두 충족:
 
 | 항목 | 상태 | 근거 |
 | ---- | ---- | ---- |
@@ -214,7 +214,7 @@ Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 | Daemon recovery | ✓ | validation/04 |
 | Network recovery | ✓ | validation/05 |
 | 24h soak | ✓ — Core d7c5590, 72h 실행의 첫 24h | validation/10 · rc1 12h: validation/07 (참고) |
-| 72h soak | 진행 중 — Core d7c5590, 10-09 13:44 → 10-12 13:44 | — |
+| 72h soak | ✓ — Core d7c5590, 10-09 13:44 → 10-12 13:42, 표본 862 | validation/11 |
 
 ---
 
