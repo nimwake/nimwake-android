@@ -22,8 +22,9 @@ repo="$(sed -n 's/^repo=//p' "$lock")"
 rev="$(sed -n 's/^rev=//p' "$lock")"
 tag="$(sed -n 's/^tag=//p' "$lock")"
 
-if [ "${FORCE:-}" != 1 ] && ssh "$device" 'p=$HOME/.nimwake-host/run/soak.pid; [ -f "$p" ] && kill -0 "$(cat "$p")" 2>/dev/null'; then
-	echo "bench: a soak is running on the device — bench would load the CPU and skew it. make soak-stop, or FORCE=1" >&2
+# pid만 보면 재사용된 pid를 sampler로 본다(#20). 재부팅으로 sampler가 잠시 없어도 soak은 진행 중이다(#19)
+if [ "${FORCE:-}" != 1 ] && why="$("$root/scripts/device-status.sh" --soak-running)"; then
+	echo "bench: a soak is running on the device ($why) — bench would load the CPU and skew it. make soak-stop, or FORCE=1" >&2
 	exit 1
 fi
 
