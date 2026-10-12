@@ -31,7 +31,7 @@ Core 레포의 규칙을 그대로 따른다. → [nimwake/.docs/README.md](http
 
 | 페이즈                              | 버전     | 주제                                               | 상태      |
 | ----------------------------------- | -------- | -------------------------------------------------- | --------- |
-| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 진행 중 — 72h soak (10-12 종료) |
+| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 8항목 충족 — 재검증 · `v0.1.0` 태그 남음 |
 | [Phase 2](phases/phase-2/README.md) | `v0.2.0` | Host Layer를 Rust로 — `nimwake-hostd`             | 설계 |
 
 ---

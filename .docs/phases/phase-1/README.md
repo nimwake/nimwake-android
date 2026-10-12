@@ -3,8 +3,8 @@
 > **목표 버전:** `nimwake-android v0.1.0`
 > **주제:** Install · Start · Recovery · Boot · Power · Real lifecycle
 > **시작 조건:** Core `v0.0.3 — HTTP + Scale-to-Zero` merge
-> **상태:** 진행 중 — A0 · A1 · A2 · A3 · A5 완료, A4는 초기화 기기 검증 남음, **72h soak 진행 중** (Core `d7c5590`, 2026-10-09 13:44 → 10-12 13:44)
-> Core `v0.1.0`은 이 레포의 Android 8항목을 기다린다 — 7개 충족 (24h soak ✓), 72h soak 남음. → [Android 8항목 근거](../../validation/09-android-acceptance.md) · [02 현황](02-milestones.md#현황--2026-10-09)
+> **상태:** 진행 중 — A0 · A1 · A2 · A3 · A5 완료, A4는 초기화 기기 검증 남음, A6 72h soak 결함 없음 (Core `d7c5590`, 10-09 → 10-12) — 남은 것은 재검증 3개와 Core 태그
+> Core `v0.1.0`은 이 레포의 Android 8항목을 기다린다 — **8개 모두 충족.** → [Android 8항목 근거](../../validation/09-android-acceptance.md) · [02 현황](02-milestones.md#현황--2026-10-09)
 
 ---
 

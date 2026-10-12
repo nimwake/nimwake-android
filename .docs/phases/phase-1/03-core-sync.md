@@ -15,7 +15,7 @@
 | `v0.1.0-rc1` (2026-10-08)  | A1–A3 · A5 재검증          | `core.lock` = `tag=v0.1.0-rc1`, release asset (#7). boot · lifecycle · recovery · LAN 통과 — 완료 |
 | `v0.1.0` 준비 중           | A1 결과                    | 실험 E2–E4 — Core 결함 없음. proot가 죽은 뒤의 고아는 supervisor가 정리 (#15) — 완료 → [validation/06](../../validation/06-a1-experiments.md) |
 | main `d7c5590` (2026-10-09) | A1–A3 · A5 재검증 · A5 bench | `core.lock` = rev `d7c5590`(`tag=` 없음, release.yml run artifact, #16). `nimwaked 0.1.0` · `nimwake-bench`. lifecycle · recovery · LAN 통과, bench 비교를 nimwake#25에 전달 — 완료 → [validation/08](../../validation/08-core-d7c5590-bench.md) |
-| `v0.1.0` 준비 중           | A5 24h · A6 72h soak       | Core `d7c5590`으로 72h — 10-09 13:44 → 10-12 13:44 — **24h 결함 없음** → [validation/10](../../validation/10-soak-d7c5590-24h.md), 72h **진행 중**. rc1 12h는 참고 → [validation/07](../../validation/07-soak-rc1-12h.md) |
+| `v0.1.0` 준비 중           | A5 24h · A6 72h soak       | Core `d7c5590`으로 72h — 10-09 13:44 → 10-12 13:44 — **24h 결함 없음** → [validation/10](../../validation/10-soak-d7c5590-24h.md), **72h 결함 없음** → [validation/11](../../validation/11-soak-d7c5590-72h.md). rc1 12h는 참고 → [validation/07](../../validation/07-soak-rc1-12h.md) |
 | `v0.1.0` 직전              | A6 72h soak                | Android 체크리스트 → Core acceptance ([Core PRD §65](https://github.com/nimwake/nimwake/blob/main/.docs/prd/03-delivery/08-definition-of-done.md)) |
 
 `v0.1.0` 태그가 `d7c5590`과 다른 commit을 가리키면, 태그 binary로 lifecycle · recovery를 다시 돌리고 72h 결과와의 관계를 리포트에 적는다.
