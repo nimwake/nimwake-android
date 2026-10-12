@@ -8,19 +8,21 @@
 #   2. 지금 health probe가 404다
 #   3. 부팅 직후 application은 하나도 떠 있지 않다 (모두 SLEEPING)
 #   4. lifecycle 시나리오가 통과한다
-#   NIMWAKE_DEVICE  ssh 대상 (기본 nimwake-phone)
+#   NIMWAKE_DEVICE     ssh 대상 (기본 nimwake-phone)
+#   NIMWAKE_BOOT_WAIT  부팅이 아직 진행 중이면 끝날 때까지 기다릴 초 (기본 100 — 10-nimwake의 READY 대기 90초보다 길게)
 set -eu
 
 root="$(cd "$(dirname "$0")/../.." && pwd -P)"
 device="${NIMWAKE_DEVICE:-nimwake-phone}"
+boot_wait="${NIMWAKE_BOOT_WAIT:-100}"
 
 fail() {
 	echo "FAIL: $*" >&2
 	exit 1
 }
 
-echo "== last boot (~/.nimwake-host/logs/boot.log)"
-last_boot="$(ssh "$device" sh -s <<'EOF'
+read_last_boot() {
+	ssh "$device" sh -s <<'EOF'
 log="$HOME/.nimwake-host/logs/boot.log"
 [ -f "$log" ] || exit 0
 # 마지막 "boot: start" 이후만 출력한다. 바로 앞 줄이 같은 부팅의 sshd 줄이면 함께 보여 준다.
@@ -29,7 +31,24 @@ awk '/boot: start/ { buf = (prev ~ /sshd: started/) ? prev : "" }
 	{ buf = buf $0 "\n"; prev = $0 "\n" }
 	END { printf "%s", buf }' "$log"
 EOF
-)"
+}
+
+# 10-nimwake가 끝났다는 줄 — READY · 이미 실행 중 · UNHEALTHY · TIMEOUT · 미설치
+boot_finished() {
+	printf '%s\n' "$1" | grep -qE 'ready: (health 404|TIMEOUT)|already running|UNHEALTHY|not installed'
+}
+
+echo "== last boot (~/.nimwake-host/logs/boot.log)"
+# sshd(00-sshd)는 10-nimwake와 거의 같이 뜬다. ssh가 붙자마자 돌리면 READY 2초 전에 판정할 수 있다 —
+# 2026-10-12 재부팅에서 실제로 그렇게 FAIL했다. 부팅이 진행 중이면 끝날 때까지 기다린다.
+waited=0
+last_boot="$(read_last_boot)"
+while [ -n "$last_boot" ] && ! boot_finished "$last_boot" && [ "$waited" -lt "$boot_wait" ]; do
+	[ "$waited" -eq 0 ] && echo "..  boot still in progress — waiting up to ${boot_wait}s"
+	sleep 2
+	waited=$((waited + 2))
+	last_boot="$(read_last_boot)"
+done
 [ -n "$last_boot" ] || fail "boot.log is missing — 10-nimwake did not run (Termux:Boot opened once? battery restrictions?)"
 printf '%s\n' "$last_boot" | sed 's/^/   /'
 
