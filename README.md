@@ -29,7 +29,7 @@ Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 
 | nimwake-android | Core | 검증 |
 | --------------- | ---- | ---- |
-| `main` | **`v0.1.0-rc4`** (`5fab4155`, release asset) | [12](.docs/validation/12-core-rc4-bench.md) · §50 네 항목 채움 · 72h soak 2026-10-12 18:52 시작 |
+| `main` | **`v0.1.0-rc5`** (`f75b6d2`, release asset) | [12](.docs/validation/12-core-rc5-bench.md) · §50 **다섯 항목 모두** · 재부팅 ✓ · 72h soak 2026-10-12 21:14 시작 |
 | #34 이전 | main `d7c5590` (`nimwaked 0.1.0`, release.yml run artifact) | [08](.docs/validation/08-core-d7c5590-bench.md) · [10](.docs/validation/10-soak-d7c5590-24h.md) · [11](.docs/validation/11-soak-d7c5590-72h.md) — 24h · 72h soak ✓ |
 | #16 이전 | `v0.1.0-rc1` (`17975b1`) | [03](.docs/validation/03-core-v0.1.0-rc1.md) · [04](.docs/validation/04-a2-recovery.md) · [05](.docs/validation/05-a5-network.md) · [06](.docs/validation/06-a1-experiments.md) · [07](.docs/validation/07-soak-rc1-12h.md) |
 

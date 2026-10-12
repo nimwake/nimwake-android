@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=v0.1.0-rc4
-rev=5fab41552d90d2d7ac256b17bf0abbd45de20a6f
-note=Core v0.1.0-rc4 — rc3 이후 §76 manifest 재적재 · §77 crash-loop backoff · §78 메모리 입장 제어 · 로그 ANSI 제거 · overhead 지표 수정이 들어왔다. 72h soak은 d7c5590에서 돌았고 §77·§78이 매 acquire 경로를 지나므로 기기 검증을 이 태그에서 다시 한다.
+tag=v0.1.0-rc5
+rev=f75b6d273f2bc6b04487fbaf668c556502a31793
+note=Core v0.1.0-rc5 — 런타임은 rc4와 같다. bench의 --warm-connections만 다르다(nimwake#54). rc4로는 기기 무릎(동시성 1)보다 높은 농도로 재서 proxy overhead가 음수가 나왔다. §50의 마지막 항목을 채우려고 올린다.
