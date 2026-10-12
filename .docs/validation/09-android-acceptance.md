@@ -7,7 +7,7 @@
 >
 > **판정 대상이 `v0.1.0-rc4`로 바뀐다.** rc3 이후 Core에 들어온 §77 crash-loop backoff와
 > §78 메모리 입장 제어가 **매 `acquire` 경로를 지나므로** `d7c5590`의 증거를 돌려 쓸 수 없다.
-> rc4 기기 측정은 [12](12-core-rc4-bench.md)에 있고 **72h soak은 10-15 13:52에 끝난다.**
+> rc4 기기 측정은 [12](12-core-rc4-bench.md)에 있고 **72h soak은 10-15 18:52에 끝난다** (`soak.active` 기준 — 10-12 18:52 시작).
 
 ---
 
@@ -43,6 +43,21 @@
 | Install | Termux 데이터 삭제 → `make install` | 초기화 기기 미검증 (A4 완료 조건) |
 
 `v0.1.0` 태그가 `d7c5590`과 다른 commit을 가리키면 태그 binary로 lifecycle · recovery를 다시 돌린다 ([03-core-sync](../phases/phase-1/03-core-sync.md)).
+
+### rc4로 다시 확인한 것
+
+판정 대상이 rc4로 바뀌었으므로 위 표의 재검증은 **rc4로** 한다. 결과가 나오는 대로 적는다.
+
+| 항목 | 일시 | 결과 |
+| ---- | ---- | ---- |
+| Boot recovery | 10-12 20:46 재부팅 (사람이 잠금 해제) | ✓ — Termux:Boot 20:57:00 → `ready: health 404 after 2s`, 부팅 직후 application 전부 SLEEPING, lifecycle PASS (`make test-boot`). rc4 72h soak 도중이었고 `20-soak`(#19)가 같은 끝 시각으로 이어 받았다 — 표본 공백 약 14분(20:43 → 20:57) |
+| Network recovery | — | 남음 (`make test-wifi`, 사람이 Wi-Fi 조작) |
+| Install (초기화 기기) | — | 남음 — Termux 데이터를 지우므로 **rc4 soak이 끝난 뒤(10-15 18:52)** |
+
+같은 날 17:56–17:58에는 `d7c5590` + 새 supervisor(#19–#31)로 lifecycle · recovery(`kill -9` · exit 78 · stop 잔존 0) · LAN(동시 20 → process 1)이 PASS했다 — rc4 배포 전이다.
+
+첫 `make test-boot`는 sshd가 뜨자마자 돌아 READY 2초 전에 판정해 FAIL했다. 부팅이 진행 중이면 끝날 때까지 기다리도록 고쳤다 (#35).
+`make test-boot`의 "부팅 직후 SLEEPING" 검사는 부팅 직후에만 뜻이 있다 — soak sampler가 5분마다 app을 깨우므로 한참 뒤에 다시 돌리면 그 10초 창에 걸릴 수 있다.
 
 ## Android PRD §44 성공 기준
 
