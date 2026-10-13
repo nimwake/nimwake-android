@@ -23,7 +23,11 @@ if [ "${FORCE:-}" != 1 ] && why="$("$root/scripts/device-status.sh" --soak-runni
 fi
 
 # rsync는 쓰지 않는다 (macOS openrsync와 옵션이 다르다).
-(cd "$root" && tar -cf - dist/aarch64 guest host) |
+# dist/apps: 예시 앱 묶음(make app-blog). 없으면 그 앱의 manifest는 setup-ubuntu.sh가 건너뛴다
+apps_dir=""
+[ -d "$root/dist/apps" ] && apps_dir="dist/apps"
+# shellcheck disable=SC2086 # apps_dir은 비어 있으면 인자가 아니다
+(cd "$root" && tar -cf - dist/aarch64 $apps_dir guest host) |
 	ssh "$device" "rm -rf $stage && mkdir -p $stage && tar -xf - -C $stage"
 
 # Termux $HOME은 proot 안에서 보이지 않으므로 stage를 bind한다.

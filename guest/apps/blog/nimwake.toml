@@ -1,0 +1,27 @@
+# 예시 앱 — Next.js 블로그 (examples/blog, #45). 묶음은 make app-blog → dist/apps/blog, deploy가 working_dir에 놓는다.
+# 묶음이 없으면 setup-ubuntu.sh가 이 manifest를 설치하지 않는다 — working_dir이 없으면 Core가 기동을 거부한다.
+name = "blog"
+
+[server]
+host = "blog.local"
+port = 3102
+
+[runtime]
+command = ["/opt/node/bin/node", "server.js"]
+working_dir = "/home/nimwake/apps/blog"
+
+# app은 loopback에만 연다. 밖에서는 Nimwake gateway를 거쳐서만 닿는다 (Core PRD §61)
+[runtime.env]
+PORT = "3102"
+HOSTNAME = "127.0.0.1"
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
+
+[lifecycle]
+# 개인 블로그 — 2분 동안 아무도 안 오면 내려 메모리(약 100 MB)를 돌려준다
+idle_timeout_seconds = 120
+# 폰에서 Next.js cold start는 수 초다 — echo(5초)보다 넉넉히
+startup_timeout_seconds = 30
+shutdown_timeout_seconds = 10
+response_header_timeout_seconds = 60
+max_pending_requests = 256
