@@ -92,6 +92,25 @@ hours > 0 && n > 0 && $1 - first > hours * 3600 {
 		if (tmax == "" || t > tmax)
 			tmax = t
 	}
+
+	# 13번째 열 mem_avail_mb는 #42부터 있다. 옛 CSV(12열)에는 없다
+	if (NF >= 13 && $13 != "NA") {
+		k++
+		mem[k] = $13 + 0
+		mem_last = $13 + 0
+	}
+}
+
+function sort_mem(    i, j, v) {
+	for (i = 2; i <= k; i++) {
+		v = mem[i]
+		j = i - 1
+		while (j > 0 && mem[j] > v) {
+			mem[j + 1] = mem[j]
+			j--
+		}
+		mem[j + 1] = v
+	}
 }
 
 END {
@@ -109,6 +128,11 @@ END {
 		p50 = lat[rank(m, 0.5)]
 		p95 = lat[rank(m, 0.95)]
 		pmax = lat[m]
+	}
+	if (k > 0) {
+		sort_mem()
+		mem_min = mem[1]
+		mem_p50 = mem[rank(k, 0.5)]
 	}
 	span = (last - first) / 3600
 	battery_min = or_na(bmin)
@@ -130,6 +154,8 @@ END {
 	printf "daemon RSS       %s → %s KB  (max %d)\n", or_na(rss_first), or_na(rss_last), rss_max
 	printf "battery          %s–%s%%  max temp %s°C\n", battery_min, battery_max, temp_max
 	printf "free storage     %s → %s MB\n", free_first, free_last
+	if (k > 0)
+		printf "memory available min %d MB  p50 %d MB  last %d MB  (MemAvailable — --min-free-memory-mb, #42)\n", mem_min, mem_p50, mem_last
 }
 
 # 검증 리포트에 그대로 붙이는 표. 판정 열은 기계적으로 정할 수 있는 것만 채운다
@@ -149,4 +175,6 @@ function markdown(    v_bad, v_orphan, v_restarts) {
 	printf "| daemon RSS | %s → %s KB (max %d) | |\n", or_na(rss_first), or_na(rss_last), rss_max
 	printf "| 배터리 · 최고 온도 | %s–%s%% · %s°C | |\n", battery_min, battery_max, temp_max
 	printf "| 남은 저장공간 | %s → %s MB | |\n", free_first, free_last
+	if (k > 0)
+		printf "| 가용 메모리 (MemAvailable) | min %d · p50 %d · 마지막 %d MB | |\n", mem_min, mem_p50, mem_last
 }
