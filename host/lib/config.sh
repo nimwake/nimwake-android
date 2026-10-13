@@ -16,8 +16,12 @@ fi
 : "${NIMWAKE_APPS:=/home/nimwake/.nimwake/apps}"
 # 비우면 Core 기본값(127.0.0.1:8080). LAN에 열려면 0.0.0.0:8080 — opt-in이다 (Core PRD §74)
 : "${NIMWAKE_LISTEN:=}"
+# 가용 메모리(MB)가 이보다 적으면 Core가 app을 깨우지 않는다(503) · 유휴 app을 내린다 (Core PRD §78 · §80).
+# 비우면 넘기지 않는다 — Core 기본값 0(꺼짐). 이 flag는 Core v0.1.0-rc4부터 있다: 그 전 binary는 모르는 인자로
+# 설정 오류(78)를 낸다. 이 기기에 맞는 값은 측정으로 정한다 (#42, soak.csv의 mem_avail_mb)
+: "${NIMWAKE_MIN_FREE_MEMORY_MB:=}"
 
-: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}}"
+: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}${NIMWAKE_MIN_FREE_MEMORY_MB:+ --min-free-memory-mb $NIMWAKE_MIN_FREE_MEMORY_MB}}"
 # proot 아래에서 comm이 잘리므로 전체 경로로 찾는다. `^`는 래퍼(proot, sh -c)를 제외한다 (validation/01)
 : "${NIMWAKE_DAEMON_MATCH:=^$NIMWAKE_DAEMON}"
 

@@ -13,6 +13,8 @@
 # 측정할 수 없는 값은 NA로 남긴다 (기기마다 /sys 접근이 다르다).
 #   apps_before  요청 직전에 떠 있던 application 수. scale-to-zero면 0이어야 한다 — 0이 아니면 잔존(orphan)
 #   daemon_pid   바뀌면 supervisor가 재기동했다는 뜻이다
+#   mem_avail_mb /proc/meminfo의 MemAvailable — Core --min-free-memory-mb 임계값을 정할 근거 (#42).
+#                이 열이 없는 옛 soak.csv에 --resume으로 이어 쓸 때는 옛 형식(12열)을 지킨다
 set -u
 
 host="$HOME/.nimwake-host"
@@ -50,8 +52,11 @@ echo "$$" >"$host/run/soak.pid"
 trap 'rm -f "$host/run/soak.pid" "$tmp"' EXIT
 
 if [ ! -f "$out" ]; then
-	echo "epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb" >"$out"
+	echo "epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb,mem_avail_mb" >"$out"
 fi
+# 한 파일 안에서 열 수가 섞이지 않게 한다
+with_mem=0
+head -n 1 "$out" | grep -q ',mem_avail_mb$' && with_mem=1
 
 read_or_na() {
 	cat "$1" 2>/dev/null || echo NA
@@ -107,10 +112,15 @@ while [ "$(date +%s)" -lt "$end" ]; do
 
 	free_mb=$(($(df -Pk "$HOME" | awk 'NR == 2 { print $4 }') / 1024))
 
-	printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+	row="$(printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s' \
 		"$(date +%s)" "$(date '+%Y-%m-%d %H:%M:%S')" "$http" "$seconds" "${app_pid:-NA}" \
 		"$apps_before" "${daemon_pid:-NA}" "${daemon_rss:-NA}" "${state:-NA}" \
-		"$battery" "$temp" "$free_mb" >>"$out"
+		"$battery" "$temp" "$free_mb")"
+	if [ "$with_mem" = 1 ]; then
+		mem="$(awk '/^MemAvailable:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)"
+		row="$row,${mem:-NA}"
+	fi
+	echo "$row" >>"$out"
 
 	if [ "$samples_left" -gt 0 ]; then
 		samples_left=$((samples_left - 1))
