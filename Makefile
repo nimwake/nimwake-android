@@ -3,7 +3,7 @@ SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fi
 HOURS ?= 24
 INTERVAL ?= 300
 
-.PHONY: lint test doctor-dev release-check install fetch-core deploy device-status run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status run stop doctor test-device test-boot test-recovery test-lan test-wifi test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -29,6 +29,10 @@ install:
 
 fetch-core:
 	scripts/fetch-core.sh
+
+# 예시 앱(Next.js 블로그)을 개발 머신에서 빌드한다 → dist/apps/blog. deploy가 폰에 놓는다 (#45)
+app-blog:
+	scripts/build-app.sh blog
 
 # soak이 진행 중이면 거부한다 — make deploy FORCE=1로 강행
 deploy:

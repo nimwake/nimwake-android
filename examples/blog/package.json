@@ -1,0 +1,19 @@
+{
+  "name": "nimwake-example-blog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nimwake가 폰에서 깨우는 실제 앱의 예시 — Next.js 블로그",
+  "scripts": {
+    "dev": "next dev --port 3102",
+    "build": "next build",
+    "start": "next start --port 3102"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}
