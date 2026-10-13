@@ -1,0 +1,58 @@
+# 예시 앱 — 개발 머신과 같은 Node로 빌드되고, 폰에서 깨질 네이티브 모듈이 묶음에 없는가 (#45)
+#
+# 셸 CI(ci.yml)와 나눈다: Node 프로젝트 빌드는 1분 남짓 더 걸리고, 예시 앱이 바뀔 때만 의미가 있다.
+# Node 버전은 guest/node.lock — 폰(/opt/node)과 개발 머신(mise)이 같은 값을 쓴다.
+
+name: Examples
+
+on:
+  pull_request:
+    paths:
+      - "examples/**"
+      - "scripts/build-app.sh"
+      - "guest/node.lock"
+      - ".github/workflows/examples.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "scripts/build-app.sh"
+      - "guest/node.lock"
+      - ".github/workflows/examples.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  blog:
+    name: build examples/blog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node version from guest/node.lock
+        id: node
+        run: echo "version=$(sed -n 's/^version=//p' guest/node.lock)" >>"$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      # build-app.sh가 네이티브 모듈이 남으면 실패한다
+      - name: Build
+        run: scripts/build-app.sh blog
+
+      - name: Smoke — server.js가 뜨고 경로가 응답한다
+        run: |
+          cd dist/apps/blog
+          PORT=3199 HOSTNAME=127.0.0.1 NODE_ENV=production node server.js >server.log 2>&1 &
+          for i in $(seq 1 50); do curl -s -o /dev/null http://127.0.0.1:3199/ && break; sleep 0.2; done
+          for path in / /posts/phone-as-server /api/whoami; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3199$path")"
+            echo "$path $code"
+            [ "$code" = 200 ] || { cat server.log; exit 1; }
+          done
+          curl -s -H 'X-Forwarded-For: 1.2.3.4' http://127.0.0.1:3199/api/whoami | grep -q '"x_forwarded_for":"1.2.3.4"'
