@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=v0.1.0-rc5
-rev=f75b6d273f2bc6b04487fbaf668c556502a31793
-note=Core v0.1.0-rc5 — 런타임은 rc4와 같다. bench의 --warm-connections만 다르다(nimwake#54). rc4로는 기기 무릎(동시성 1)보다 높은 농도로 재서 proxy overhead가 음수가 나왔다. §50의 마지막 항목을 채우려고 올린다.
+tag=v0.1.0-rc6
+rev=4f7d9918ba0539c678251d9ab9669206007f0c41
+note=Core v0.1.0-rc6 — §79 SIGUSR1 상태 스냅샷 · §80 유휴 eviction · §81 X-Forwarded-For · --version. 런타임 변경은 §80 하나(임계값 0이면 돌지 않는다). 실제 앱 · ingress · 메모리 임계값 soak의 기준 (#45)

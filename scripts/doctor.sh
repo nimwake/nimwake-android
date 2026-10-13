@@ -80,10 +80,16 @@ else
 fi
 
 commit="$(proot-distro login ubuntu -- sed -n 's/^commit=//p' /opt/nimwake/BUILD_INFO 2>/dev/null || true)"
+# --version은 Core v0.1.0-rc6부터 있다. daemon을 띄우지 않고 binary 자신에게 묻는다
+version="$(proot-distro login ubuntu --user nimwake -- /opt/nimwake/bin/nimwaked --version 2>/dev/null || true)"
 if [ -n "$commit" ]; then
-	ok "nimwaked installed in Ubuntu (core $(printf '%s' "$commit" | cut -c1-7))"
+	ok "nimwaked installed in Ubuntu (core $(printf '%s' "$commit" | cut -c1-7), ${version:-version unknown — older than rc6})"
 else
 	fail "nimwaked is not installed in Ubuntu — make deploy"
+fi
+# --min-free-memory-mb는 rc4부터다. 옛 binary에 넘기면 모르는 인자로 설정 오류(78) — host/lib/config.sh
+if [ -z "$version" ] && grep -q '^NIMWAKE_MIN_FREE_MEMORY_MB=.' "$HOME/.nimwake-host/host.conf" 2>/dev/null; then
+	warn "NIMWAKE_MIN_FREE_MEMORY_MB is set but the installed nimwaked is older than rc6 — check it accepts --min-free-memory-mb (rc4+)"
 fi
 
 # proot 아래에서 comm이 잘리므로 전체 경로로 찾는다. 생존 판단은 health probe다. (Core PRD §74)
