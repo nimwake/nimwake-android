@@ -36,10 +36,31 @@ header_mem="$header,mem_avail_mb"
 	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" 1 2
 	[ "$status" -eq 0 ]
 
-	read -r end interval <"$HOME/.nimwake-host/run/soak.active"
+	read -r end interval target_host target_path <"$HOME/.nimwake-host/run/soak.active"
 	[ "$interval" -eq 1 ]
 	[ "$end" -ge $((before + 7200)) ]
 	[ "$end" -le $((before + 7205)) ]
+	# 대상을 주지 않으면 echo.local /
+	[ "$target_host" = echo.local ]
+	[ "$target_path" = / ]
+}
+
+# 실제 앱으로 soak (#45) — 대상이 soak.active에 남아 재부팅 뒤 --resume도 같은 앱을 잰다
+@test "a soak against a real app records its host and path for --resume" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME"
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" 1 2 blog.local /api/whoami
+	[ "$status" -eq 0 ]
+	read -r _ _ target_host target_path <"$HOME/.nimwake-host/run/soak.active"
+	[ "$target_host" = blog.local ]
+	[ "$target_path" = /api/whoami ]
+
+	# --resume은 soak.active를 그대로 둔다 (끝 시각 전)
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" --resume
+	[ "$status" -eq 0 ]
+	read -r _ _ target_host target_path <"$HOME/.nimwake-host/run/soak.active"
+	[ "$target_host" = blog.local ]
+	[ "$(wc -l <"$HOME/.nimwake-host/logs/soak.csv" | tr -d ' ')" -eq 3 ]
 }
 
 @test "--resume continues the same soak.csv until the recorded end" {

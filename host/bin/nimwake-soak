@@ -1,17 +1,20 @@
 #!/bin/sh
 # 기기에서 도는 soak sampler. (A5 · A6, Core PRD §51 Android Soak Test)
 #
-#   nimwake-soak INTERVAL_SECONDS HOURS   새로 시작 — 끝 시각과 간격을 run/soak.active에 남긴다
-#   nimwake-soak --resume                 run/soak.active의 끝 시각까지 이어서 돈다 (부팅 때 20-soak가 부른다)
+#   nimwake-soak INTERVAL_SECONDS HOURS [HOST [PATH]]   새로 시작 — 끝 시각 · 간격 · 대상을 run/soak.active에 남긴다
+#   nimwake-soak --resume                 run/soak.active의 끝 시각까지 같은 대상으로 이어서 돈다 (부팅 때 20-soak가 부른다)
 #
 # 재부팅으로 sampler가 죽어도 soak.active가 남아 있으면 Termux:Boot가 이어서 돌린다. 재부팅 동안의
 # 공백은 soak.csv의 표본 간격(max gap)으로 드러난다. soak.active는 끝 시각에 닿거나 soak.sh stop일 때만 지운다.
 #
 # INTERVAL마다 한 줄을 ~/.nimwake-host/logs/soak.csv에 붙인다. 개발 머신이 꺼져 있어도 돈다.
-# 요청은 echo app 하나에 보낸다. idle timeout(5s)보다 간격이 훨씬 길어 매 표본이 cold start → sleep 한 바퀴다.
+# 요청은 app 하나에 보낸다 — 기본 echo.local의 /. 실제 앱은 HOST · PATH로 (예: blog.local /api/whoami, #45).
+# idle timeout보다 간격이 길면 매 표본이 cold start → sleep 한 바퀴다.
 #
 # 측정할 수 없는 값은 NA로 남긴다 (기기마다 /sys 접근이 다르다).
-#   apps_before  요청 직전에 떠 있던 application 수. scale-to-zero면 0이어야 한다 — 0이 아니면 잔존(orphan)
+#   app_pid      응답이 JSON이면 "pid", 아니면 본문의 숫자 (echo-server는 pid만 돌려준다)
+#   apps_before  요청 직전에 떠 있던 application 수 = nimwaked의 자식 프로세스 수. scale-to-zero면 0 —
+#                0이 아니면 잔존(orphan). 이름으로 세지 않는다: Next.js는 자기 이름을 next-server로 바꾼다 (#48)
 #   daemon_pid   바뀌면 supervisor가 재기동했다는 뜻이다
 #   mem_avail_mb /proc/meminfo의 MemAvailable — Core --min-free-memory-mb 임계값을 정할 근거 (#42).
 #                이 열이 없는 옛 soak.csv에 --resume으로 이어 쓸 때는 옛 형식(12열)을 지킨다
@@ -34,9 +37,12 @@ if [ -n "$running" ] && kill -0 "$running" 2>/dev/null &&
 	exit 0
 fi
 
+# soak.active: "END INTERVAL [HOST [PATH]]" — 옛 soak.active(두 칸)는 echo.local /로 이어 간다
 if [ "${1:-}" = --resume ]; then
 	[ -f "$active" ] || exit 0
-	read -r end interval <"$active"
+	target_host=""
+	target_path=""
+	read -r end interval target_host target_path <"$active"
 	if [ "$(date +%s)" -ge "$end" ]; then
 		rm -f "$active"
 		exit 0
@@ -44,9 +50,13 @@ if [ "${1:-}" = --resume ]; then
 else
 	interval="${1:-300}"
 	hours="${2:-24}"
+	target_host="${3:-}"
+	target_path="${4:-}"
 	end=$(($(date +%s) + hours * 3600))
-	echo "$end $interval" >"$active"
+	echo "$end $interval ${target_host:-echo.local} ${target_path:-/}" >"$active"
 fi
+target_host="${target_host:-echo.local}"
+target_path="${target_path:-/}"
 
 echo "$$" >"$host/run/soak.pid"
 trap 'rm -f "$host/run/soak.pid" "$tmp"' EXIT
@@ -91,15 +101,23 @@ battery_status() {
 samples_left="${NIMWAKE_SOAK_SAMPLES:-0}"
 
 while [ "$(date +%s)" -lt "$end" ]; do
-	apps_before="$(pgrep -f '^/opt/nimwake/bin/.*-server' 2>/dev/null | wc -l | tr -d ' ')"
+	daemon_pid="$(pgrep -f '^/opt/nimwake/bin/nimwaked' 2>/dev/null | head -n 1)"
+	apps_before=0
+	if [ -n "$daemon_pid" ]; then
+		apps_before="$(pgrep -P "$daemon_pid" 2>/dev/null | wc -l | tr -d ' ')"
+	fi
 
 	rm -f "$tmp"
 	# 연결이 거부돼도 curl은 "-w"를 출력하고(000 0.0001) 실패 코드로 끝난다. 출력이 비었을 때만 채운다.
-	result="$(curl -s -m 60 -o "$tmp" -w '%{http_code} %{time_total}' -H 'Host: echo.local' "$gateway" 2>/dev/null)"
+	result="$(curl -s -m 60 -o "$tmp" -w '%{http_code} %{time_total}' -H "Host: $target_host" "${gateway%/}$target_path" 2>/dev/null)"
 	[ -n "$result" ] || result='000 NA'
 	http="${result% *}"
 	seconds="${result#* }"
-	app_pid="$(tr -cd '0-9' <"$tmp" 2>/dev/null)"
+	if grep -q '"pid":' "$tmp" 2>/dev/null; then
+		app_pid="$(sed -n 's/.*"pid":\([0-9][0-9]*\).*/\1/p' "$tmp" | head -n 1)"
+	else
+		app_pid="$(tr -cd '0-9' <"$tmp" 2>/dev/null | cut -c1-10)"
+	fi
 
 	daemon_pid="$(pgrep -f '^/opt/nimwake/bin/nimwaked' 2>/dev/null | head -n 1)"
 	daemon_rss=NA

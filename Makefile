@@ -82,9 +82,9 @@ test-experiments:
 bench:
 	tests/device/bench.sh
 
-# 장시간 soak — sampler는 기기에서 돈다. make soak-start HOURS=72
+# 장시간 soak — sampler는 기기에서 돈다. make soak-start HOURS=72 [SOAK_HOST=blog.local SOAK_PATH=/api/whoami]
 soak-start:
-	tests/device/soak.sh start $(HOURS) $(INTERVAL)
+	tests/device/soak.sh start $(HOURS) $(INTERVAL) $(SOAK_HOST) $(SOAK_PATH)
 
 soak-stop:
 	tests/device/soak.sh stop
