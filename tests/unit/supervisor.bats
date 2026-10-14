@@ -347,6 +347,8 @@ ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
 	# 비밀 디렉터리는 0700
 	[ "$(ls -ld "$NIMWAKE_HOST_HOME/secrets" | cut -c1-10)" = "drwx------" ]
 	pid="$(cat "$NIMWAKE_HOST_HOME/run/ingress.pid")"
+	# 기록한 pid가 provider 자신이어야 한다 — 바깥 셸이면 그것을 죽여도 provider가 고아로 남는다 (10-14 기기)
+	[ "$pid" = "$(head -n 1 "$FAKE_DIR/ingress-runs")" ]
 
 	run "$host" status
 	echo "$output"
@@ -355,6 +357,35 @@ ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
 	"$host" stop
 	! alive "$pid"
 	ingress_state_is STOPPED
+}
+
+@test "a killed provider is replaced, and no orphan provider is left behind" {
+	use_fake_ingress
+	"$host" start
+	wait_for 5 ingress_state_is RUNNING
+	first="$(cat "$NIMWAKE_HOST_HOME/run/ingress.pid")"
+	kill -9 "$first"
+	# 1번째 재기동은 backoff 0초
+	wait_for 5 sh -c "[ \"\$(wc -l <\"$FAKE_DIR/ingress-runs\")\" -ge 2 ]"
+	wait_for 5 ingress_state_is RUNNING
+	second="$(cat "$NIMWAKE_HOST_HOME/run/ingress.pid")"
+	[ "$second" != "$first" ]
+	[ "$second" = "$(tail -n 1 "$FAKE_DIR/ingress-runs")" ]
+
+	"$host" stop
+	# 기록된 모든 provider가 죽었다 — 고아 없음
+	while read -r p; do ! alive "$p"; done <"$FAKE_DIR/ingress-runs"
+}
+
+# host.conf는 셸 변수로만 읽힌다 — provider별 설정이 별도 프로세스인 provider에 넘어가야 한다.
+# 빠뜨렸을 때 cloudflare quick 모드가 token 모드로 돌았다 (10-14 기기)
+@test "provider settings from host.conf (NIMWAKE_INGRESS_*) reach the provider" {
+	use_fake_ingress
+	mkdir -p "$NIMWAKE_HOST_HOME"
+	echo "NIMWAKE_INGRESS_FAKE_SETTING=quick" >"$NIMWAKE_HOST_HOME/host.conf"
+	"$host" start
+	wait_for 5 ingress_state_is RUNNING
+	grep -q "^fake_setting=quick$" "$FAKE_DIR/ingress-env"
 }
 
 @test "a dying ingress is restarted with backoff while the daemon keeps running" {

@@ -53,13 +53,23 @@ reload() {
 EOF
 }
 
+# 원격 셸에 넘길 인자 하나를 작은따옴표로 감싼다. ssh는 인자를 공백으로 이어 붙여 원격 셸이 다시 나누므로,
+# 그대로 넘기면 빈 값("")이 사라져 뒤의 인자가 한 칸씩 당겨진다 — FORCE가 비어 있을 때 실제로 그랬다 (10-14 기기)
+shell_quote() {
+	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 on_device() {
 	_body="$1"
 	shift
+	_args=""
+	for _a in "$@"; do
+		_args="$_args $(shell_quote "$_a")"
+	done
 	{
 		device_lib
 		printf '%s\n' "$_body"
-	} | ssh "$device" sh -s -- "$@"
+	} | ssh "$device" "sh -s --$_args"
 }
 
 cmd_deploy() {
