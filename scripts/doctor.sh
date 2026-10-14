@@ -125,21 +125,50 @@ if ! grep -q '^NIMWAKE_NET_GATEWAY=.' "$HOME/.nimwake-host/host.conf" 2>/dev/nul
 	warn "gateway check is off — set NIMWAKE_NET_GATEWAY=<router IP> in ~/.nimwake-host/host.conf (PRD §14)"
 fi
 
-# ingress provider (Phase 2 03) — 켜져 있으면 감시 상태와 provider의 health
-ingress="$(sed -n 's/^NIMWAKE_INGRESS=//p' "$HOME/.nimwake-host/host.conf" 2>/dev/null | tail -n 1)"
+# 노출 (Phase 2 03 · 04) — ingress, 앱의 노출 선언, 격리, LAN 열림
+conf="$HOME/.nimwake-host/host.conf"
+rootfs="$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs"
+public=""
+lan=""
+for m in "$rootfs"/home/nimwake/.nimwake/apps/*/nimwake.toml; do
+	[ -f "$m" ] || continue
+	a="$(basename "$(dirname "$m")")"
+	h="$(sed -n 's/^host = "\(.*\)"/\1/p' "$m")"
+	if [ "$(cat "$rootfs/home/nimwake/apps/$a/exposure" 2>/dev/null)" = public ]; then
+		public="$public $h"
+	else
+		lan="$lan $h"
+	fi
+done
+lan_open=""
+grep -q '^NIMWAKE_LISTEN=0\.0\.0\.0' "$conf" 2>/dev/null && lan_open=1
+# 실행 중인 daemon이 격리됐는가 — 설정이 아니라 마지막 기동 명령으로 본다 (재시작 전에는 설정과 다를 수 있다)
+launch="$(grep 'launch: ' "$HOME/.nimwake-host/logs/supervisor.log" 2>/dev/null | tail -n 1)"
+ingress="$(sed -n 's/^NIMWAKE_INGRESS=//p' "$conf" 2>/dev/null | tail -n 1)"
+
 if [ -z "$ingress" ]; then
-	if grep -q '^NIMWAKE_LISTEN=0\.0\.0\.0' "$HOME/.nimwake-host/host.conf" 2>/dev/null; then
-		warn "no ingress, and the gateway is open on the LAN without authentication (NIMWAKE_LISTEN=0.0.0.0) — fine at home, see Phase 2 02 · 03"
+	if [ -n "$lan_open" ]; then
+		warn "no ingress, gateway open on the LAN without authentication (NIMWAKE_LISTEN=0.0.0.0) — fine at home (Phase 2 04)"
 	else
 		ok "no ingress — gateway on loopback"
 	fi
 else
-	istate="$(cat "$HOME/.nimwake-host/run/ingress" 2>/dev/null || echo "not started — nimwake-host stop · start")"
+	istate="$(cat "$HOME/.nimwake-host/run/ingress" 2>/dev/null || echo "not started — make restart")"
 	ihealth="$(nimwake-host status 2>/dev/null | sed -n 's/^ingress *//p')"
 	case "$istate" in
 	RUNNING*) ok "ingress $ingress: ${ihealth:-$istate}" ;;
 	*) warn "ingress $ingress: $istate" ;;
 	esac
+	ok "public apps (exposure=public):${public:- none}"
+	case "$launch" in
+	*--isolated*) ok "apps run isolated (proot-distro --isolated) — they cannot see Termux files" ;;
+	*) warn "apps are NOT isolated while the internet can reach them — a compromised app can read and write Termux (SSH keys, boot scripts). NIMWAKE_ISOLATED=1, make restart (Phase 2 04 T1)" ;;
+	esac
+	if [ -n "$lan_open" ] && [ -z "$lan" ]; then
+		warn "gateway is open on the LAN but no app is LAN-only — empty NIMWAKE_LISTEN to close it (Phase 2 04)"
+	elif [ -n "$lan_open" ]; then
+		ok "LAN-only apps:$lan — reachable from the Wi-Fi only because Cloudflare does not route their names (Phase 2 04 T2)"
+	fi
 fi
 
 log="$HOME/.nimwake-host/logs/boot.log"

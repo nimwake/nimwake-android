@@ -34,7 +34,7 @@ EOF
 	run "$m" check "$app"
 	echo "$output"
 	[ "$status" -eq 0 ]
-	[ "$output" = "blog blog.example.com 3102" ]
+	[ "$output" = "blog blog.example.com 3102 lan" ]
 }
 
 @test "working_dir is refused — the deploy fills it with the release directory" {
@@ -94,5 +94,22 @@ EOF
 	run "$m" check "$ex"
 	echo "$output"
 	[ "$status" -eq 0 ]
-	[ "$output" = "blog blog.local 3102" ]
+	[ "$output" = "blog blog.local 3102 lan" ]
+}
+
+# 노출 선언 (Phase 2 04) — nimwake.toml이 아니라 옆 파일. Core는 모르는 키를 거부한다
+@test "exposure defaults to lan, accepts public, refuses anything else" {
+	echo public >"$app/exposure"
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[ "$output" = "blog blog.example.com 3102 public" ]
+
+	printf ' lan \n' >"$app/exposure"
+	run "$m" check "$app"
+	[ "$output" = "blog blog.example.com 3102 lan" ]
+
+	echo internet >"$app/exposure"
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"exposure 'internet' — public | lan"* ]]
 }

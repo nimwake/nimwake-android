@@ -4,6 +4,10 @@
 # LAN에서 접근하려면 연다. 비우면 Core 기본값 127.0.0.1:8080 (Core PRD §74 — 노출은 opt-in)
 #NIMWAKE_LISTEN=0.0.0.0:8080
 
+# daemon과 앱을 proot-distro --isolated로 띄운다 (기본 1). 0이면 앱이 Termux의 SSH 키 · 부팅 스크립트를
+# 읽고 쓴다 — ingress로 인터넷에 열 때는 끄지 않는다 (Phase 2 04 T1)
+#NIMWAKE_ISOLATED=1
+
 # 가용 메모리(MB)가 이보다 적으면 Core가 app을 깨우지 않고(503) 유휴 app을 내린다 (Core PRD §78 · §80, #42).
 # 비우면 넘기지 않는다(Core 기본값 0 = 꺼짐). Core v0.1.0-rc4 이상에서만 — 그 전 binary는 설정 오류(78)로 멈춘다.
 # 값은 이 기기의 MemAvailable 분포로 정한다: make soak-report의 "memory available"

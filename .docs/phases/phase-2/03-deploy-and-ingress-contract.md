@@ -36,8 +36,11 @@ nimwake-android (이 레포)  설치 · 부팅 · supervisor · 감시
 ```text
 <app>/
 ├── nimwake.toml      Core §21 manifest — 단, working_dir은 쓰지 않는다 (배포가 채운다)
-└── bundle/           실행에 필요한 전부. 폰에서 빌드하지 않는다 (npm install · next build 금지)
+├── bundle/           실행에 필요한 전부. 폰에서 빌드하지 않는다 (npm install · next build 금지)
+└── exposure          public | lan — 없으면 lan. ingress provider는 public 앱의 host만 받는다 (04)
 ```
+
+`exposure`를 `nimwake.toml`에 넣지 않는 이유: Core manifest는 모르는 키를 거부한다(`deny_unknown_fields`). 노출은 Host Layer의 관심사다.
 
 | manifest 항목 | 규칙 |
 | ------------- | ---- |

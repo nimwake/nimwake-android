@@ -326,8 +326,12 @@ use_fake_ingress() {
 	export NIMWAKE_INGRESS=fake
 	export NIMWAKE_INGRESS_DIR="$BATS_TEST_DIRNAME/fixtures/ingress"
 	export NIMWAKE_MANIFESTS="$BATS_TEST_TMPDIR/manifests"
-	mkdir -p "$NIMWAKE_MANIFESTS/blog"
+	export NIMWAKE_APP_HOME="$BATS_TEST_TMPDIR/apps"
+	# 공개 앱 하나와 LAN 전용 앱 하나 — provider는 공개 앱의 host만 받아야 한다 (Phase 2 04)
+	mkdir -p "$NIMWAKE_MANIFESTS/blog" "$NIMWAKE_MANIFESTS/notes" "$NIMWAKE_APP_HOME/blog"
 	printf 'name = "blog"\n[server]\nhost = "blog.example.com"\nport = 3102\n' >"$NIMWAKE_MANIFESTS/blog/nimwake.toml"
+	printf 'name = "notes"\n[server]\nhost = "notes.home.arpa"\nport = 3103\n' >"$NIMWAKE_MANIFESTS/notes/nimwake.toml"
+	echo public >"$NIMWAKE_APP_HOME/blog/exposure"
 }
 
 ingress_state() { cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/ingress" 2>/dev/null; }
@@ -396,4 +400,17 @@ ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
 	[ ! -f "$NIMWAKE_HOST_HOME/run/ingress" ]
 	run "$host" status
 	[[ "$output" == *"ingress     none"* ]]
+}
+
+# 노출 선언이 없으면 lan — 공개되는 것이 없다는 것을 남긴다 (Phase 2 04)
+@test "ingress without any public app runs but warns, and warns when apps are not isolated" {
+	use_fake_ingress
+	rm -f "$NIMWAKE_APP_HOME/blog/exposure"
+	export NIMWAKE_ISOLATED=0
+	"$host" start
+	wait_for 5 ingress_state_is RUNNING
+	grep -q "hosts= secrets=" "$FAKE_DIR/ingress-env"
+	grep -q "no app declares exposure=public" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	grep -q "WARNING NIMWAKE_ISOLATED=0" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	grep -q "for no public app" "$NIMWAKE_HOST_HOME/run/ingress"
 }
