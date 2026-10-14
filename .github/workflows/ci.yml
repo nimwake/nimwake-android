@@ -35,7 +35,7 @@ jobs:
       - name: Executable bits
         run: |
           missing=0
-          for f in $(git ls-files '*.sh' 'host/bin/*' 'host/boot/*' 'tests/unit/fixtures/*'); do
+          for f in $(git ls-files '*.sh' 'host/bin/*' 'host/boot/*' 'host/ingress/*' 'tests/unit/fixtures/*'); do
             case "$f" in host/lib/*) continue ;; esac
             if [ ! -x "$f" ]; then
               echo "::error file=$f::not executable"

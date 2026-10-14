@@ -1,0 +1,33 @@
+#!/bin/sh
+# ingress provider: cloudflare — 시작해도 되는가 (계약: .docs/phases/phase-2/03-deploy-and-ingress-contract.md)
+#   NIMWAKE_INGRESS_CF_MODE   token(기본, 실사용) | quick(trycloudflare.com, 계정 없이 시험)
+#   token: $NIMWAKE_SECRETS/cloudflare.token (make ingress-token)
+#   quick: NIMWAKE_INGRESS_CF_QUICK_HOST 또는 manifest의 첫 host — 무작위 hostname 대신 이 이름으로 Host를 맞춘다
+set -eu
+
+command -v cloudflared >/dev/null 2>&1 || {
+	echo "cloudflared is not installed — make ingress-enable INGRESS=cloudflare"
+	exit 1
+}
+
+case "${NIMWAKE_INGRESS_CF_MODE:-token}" in
+token)
+	token="$NIMWAKE_SECRETS/cloudflare.token"
+	[ -s "$token" ] || {
+		echo "no tunnel token at $token — make ingress-token (Cloudflare Zero Trust → Tunnels → token)"
+		exit 1
+	}
+	;;
+quick)
+	host="${NIMWAKE_INGRESS_CF_QUICK_HOST:-${NIMWAKE_INGRESS_HOSTS%% *}}"
+	[ -n "$host" ] || {
+		echo "quick mode needs a host — no manifest, and NIMWAKE_INGRESS_CF_QUICK_HOST is empty"
+		exit 1
+	}
+	;;
+*)
+	echo "NIMWAKE_INGRESS_CF_MODE=${NIMWAKE_INGRESS_CF_MODE} — token | quick"
+	exit 1
+	;;
+esac
+echo "ok"

@@ -21,6 +21,8 @@ lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
 . "$lib/logs.sh"
 # shellcheck source=../lib/network.sh
 . "$lib/network.sh"
+# shellcheck source=../lib/ingress.sh
+. "$lib/ingress.sh"
 
 pid_file="$NIMWAKE_RUN/supervisor.pid"
 
@@ -56,8 +58,18 @@ cmd_supervise() {
 	trap 'rm -f "$pid_file"' EXIT
 	trap '' HUP
 	host_log "supervisor started (pid $$)"
+	# ingress는 daemon과 따로 감시한다 — 어느 쪽이 죽어도 다른 쪽은 그대로 (host/lib/ingress.sh)
+	_ingress_loop=""
+	if ingress_enabled; then
+		supervise_ingress &
+		_ingress_loop=$!
+	fi
 	supervise
 	_result=$?
+	if [ -n "$_ingress_loop" ]; then
+		ingress_stop
+		wait "$_ingress_loop" 2>/dev/null || true
+	fi
 	host_log "supervisor exited ($(cut -d' ' -f1 "$NIMWAKE_RUN/state"))"
 	return "$_result"
 }
@@ -113,6 +125,17 @@ cmd_status() {
 		echo "network     $_net_state since $_net_day $_net_time — $_net_why"
 	else
 		echo "network     unknown (supervisor has not checked yet)"
+	fi
+	# ingress: 감시 상태 + provider의 health (연결 여부, 공개 URL을 알면 그것도)
+	if ingress_enabled; then
+		_ing="$(cut -d' ' -f1 "$NIMWAKE_RUN/ingress" 2>/dev/null || echo unknown)"
+		if [ -x "$NIMWAKE_INGRESS_DIR/$NIMWAKE_INGRESS/health" ] && _health="$(ingress_call health 2>/dev/null)"; then
+			echo "ingress     $NIMWAKE_INGRESS $_ing — $_health"
+		else
+			echo "ingress     $NIMWAKE_INGRESS $_ing — ${_health:-not connected}"
+		fi
+	else
+		echo "ingress     none (NIMWAKE_INGRESS is empty — LAN only)"
 	fi
 	_free="$(storage_free_mb)"
 	if [ -z "$_free" ]; then

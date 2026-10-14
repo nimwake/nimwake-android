@@ -1,0 +1,4 @@
+#!/bin/sh
+# 가짜 ingress provider — tests/unit/supervisor.bats. FAKE_DIR/ingress-check가 "fail"이면 실패한다
+[ "$(cat "$FAKE_DIR/ingress-check" 2>/dev/null)" = fail ] && { echo "fake: no token"; exit 1; }
+echo ok

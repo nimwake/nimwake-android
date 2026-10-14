@@ -1,10 +1,10 @@
-SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'tests/unit/fixtures/*')
+SCRIPTS := $(shell git ls-files '*.sh' 'host/boot/*' 'host/bin/*' 'host/ingress/*' 'tests/unit/fixtures/*')
 
 HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps ingress-enable ingress-token ingress-disable run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -57,6 +57,17 @@ remove-app:
 
 apps:
 	scripts/apps.sh list
+
+# ingress provider (host/ingress/<provider>) — 켠 것은 다음 nimwake-host stop · start부터
+#   make ingress-enable INGRESS=cloudflare [MODE=quick]   ·   make ingress-token < 토큰파일   ·   make ingress-disable
+ingress-enable:
+	scripts/ingress.sh enable $(INGRESS) $(MODE)
+
+ingress-token:
+	scripts/ingress.sh token $(INGRESS)
+
+ingress-disable:
+	scripts/ingress.sh disable
 
 run:
 	scripts/run.sh

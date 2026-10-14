@@ -9,7 +9,7 @@
 # soak.csv는 돌리지 않는다 — soak-report가 처음부터 읽는다.
 # 실측: nimwaked.log는 하루 약 0.45 MB (validation/10). 기본 20 MB면 한 달 반에 한 번 돈다.
 
-NIMWAKE_ROTATED_LOGS="supervisor.log nimwaked.log boot.log"
+NIMWAKE_ROTATED_LOGS="supervisor.log nimwaked.log boot.log ingress.log"
 
 # rotate_log FILE — 돌렸으면 돌리기 전 크기(KB)를 출력한다
 rotate_log() {
