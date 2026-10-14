@@ -92,3 +92,5 @@ make status
 
 - LAN 전용 앱이 있으면 폰의 gateway는 LAN에 열려 있어야 한다 (`NIMWAKE_LISTEN=0.0.0.0:8080`) — 같은 Wi-Fi의 누구나 인증 없이 닿는다
 - LAN 전용 앱을 막는 것은 지금 **'Cloudflare에 그 이름이 없다'뿐**이다 — Core가 앱별 접속 제한을 갖기 전까지는 Cloudflare 설정이 곧 방어선이다
+- 앱마다 **`exposure` 파일**로 의도를 적는다 — `apps/<앱>/exposure`에 `public` 또는 `lan`. **없으면 `lan`**. nimwake-android가 `public` 앱의 이름만 ingress에 넘기고 `make status`에 보인다. 공개 앱인 `apps/blog`에는 `public`이 들어 있다
+- nimwake-android는 daemon과 앱을 **격리 모드**(`proot-distro --isolated`)로 띄운다 — 앱이 Termux의 SSH 키 · 부팅 스크립트를 볼 수 없다. 끄지 않는다 (`NIMWAKE_ISOLATED=1`)

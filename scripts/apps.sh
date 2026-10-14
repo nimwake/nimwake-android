@@ -65,14 +65,15 @@ on_device() {
 cmd_deploy() {
 	dir="${1:?usage: apps.sh deploy APP_DIR}"
 	dir="$(cd "$dir" && pwd -P)"
-	# shellcheck disable=SC2046 # "name host port"를 세 인자로 나눈다
+	# shellcheck disable=SC2046 # "name host port exposure"를 네 인자로 나눈다
 	set -- $("$root/scripts/app-manifest.sh" check "$dir")
 	name="$1"
 	host="$2"
+	exposure="$4"
 	id="$(date -u +%Y%m%dT%H%M%SZ)"
 	workdir="/home/nimwake/apps/$name/releases/$id"
 	stage=".nimwake-host/stage-app-$name"
-	echo "== deploy $name ($host) → release $id"
+	echo "== deploy $name ($host, $exposure) → release $id"
 
 	# 1) 묶음과 manifest를 기기의 stage로 (표준 입력을 tar가 쓴다 — 스크립트는 다음 ssh로)
 	tmp="$(mktemp -d)"
@@ -86,7 +87,7 @@ cmd_deploy() {
 	# 2) 기기에서: soak 대상 확인 → release로 옮김 → manifest 교체 → SIGHUP → 거부면 되돌림 → 정리
 	on_device "$(
 		cat <<'EOF'
-name="$1"; host="$2"; id="$3"; stage="$HOME/$4"; force="$5"; keep=3
+name="$1"; host="$2"; id="$3"; stage="$HOME/$4"; force="$5"; exposure="$6"; keep=3
 trap 'rm -rf "$stage"' EXIT
 s="$HOME/.nimwake-host/run/soak.active"
 if [ -f "$s" ] && [ "$force" != 1 ] && [ "$(cut -d' ' -f3 "$s")" = "$host" ]; then
@@ -115,6 +116,12 @@ if [ -f "$apps/$name/current" ]; then
 	mv "$apps/$name/current" "$apps/$name/previous"
 fi
 echo "$id" >"$apps/$name/current"
+# 노출 선언 — ingress provider는 public 앱의 host만 받는다 (host/lib/ingress.sh, Phase 2 04)
+was="$(cat "$apps/$name/exposure" 2>/dev/null || echo lan)"
+echo "$exposure" >"$apps/$name/exposure"
+if [ "$was" != "$exposure" ]; then
+	echo "  exposure $was → $exposure — the ingress picks it up on the next make restart"
+fi
 # 최근 keep개, 그리고 current · previous는 남긴다 (PRD §19)
 cur_id="$(cat "$apps/$name/current")"
 prev_id="$(cat "$apps/$name/previous" 2>/dev/null || true)"
@@ -126,7 +133,7 @@ ls -1 "$apps/$name/releases" | sort -r | tail -n +$((keep + 1)) | while read -r 
 done
 echo "  ok — the next request to $host starts release $id"
 EOF
-	)" "$name" "$host" "$id" "$stage" "${FORCE:-}"
+	)" "$name" "$host" "$id" "$stage" "${FORCE:-}" "$exposure"
 }
 
 cmd_rollback() {
@@ -186,14 +193,16 @@ n="$(wc -l <"$log")"
 kill -USR1 "$daemon"
 sleep 0.5
 snap="$(tail -n +$((n + 1)) "$log")"
-printf '%-10s %-28s %-6s %-18s %s\n' NAME HOST PORT RELEASE STATE
+printf '%-10s %-28s %-6s %-8s %-18s %s\n' NAME HOST PORT EXPOSURE RELEASE STATE
 for m in "$manifests"/*/nimwake.toml; do
 	name="$(sed -n 's/^name = "\(.*\)"/\1/p' "$m")"
 	host="$(sed -n 's/^host = "\(.*\)"/\1/p' "$m")"
 	port="$(sed -n 's/^port = \([0-9]*\)/\1/p' "$m")"
+	# 없으면 lan — 공개하지 않는 쪽이 기본이다 (Phase 2 04)
+	exposure="$(cat "$apps/$name/exposure" 2>/dev/null || echo lan)"
 	rel="$(cat "$apps/$name/current" 2>/dev/null || echo -)"
 	state="$(printf '%s\n' "$snap" | grep "app app=\"$name\"" | sed -n 's/.* state=\([A-Z]*\) pid="\([^"]*\)".*/\1 pid \2/p' | tail -n 1)"
-	printf '%-10s %-28s %-6s %-18s %s\n' "$name" "$host" "$port" "$rel" "${state:-?}"
+	printf '%-10s %-28s %-6s %-8s %-18s %s\n' "$name" "$host" "$port" "$exposure" "$rel" "${state:-?}"
 done
 EOF
 	)"

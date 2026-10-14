@@ -19,9 +19,22 @@ ingress_set_state() {
 	host_log "ingress $1${2:+ — $2}"
 }
 
-# 공개할 hostname = manifest들의 [server] host (공백 구분)
+# 앱의 노출 선언 — $NIMWAKE_APP_HOME/<name>/exposure. 없거나 모르는 값이면 lan (안전한 쪽, Phase 2 04)
+app_exposure() {
+	case "$(cat "$NIMWAKE_APP_HOME/$1/exposure" 2>/dev/null)" in
+	public) echo public ;;
+	*) echo lan ;;
+	esac
+}
+
+# 공개할 hostname = exposure가 public인 앱들의 [server] host (공백 구분). LAN 앱은 provider에 넘기지 않는다
 ingress_hosts() {
-	sed -n 's/^host = "\(.*\)"/\1/p' "$NIMWAKE_MANIFESTS"/*/nimwake.toml 2>/dev/null | tr '\n' ' ' | sed 's/ $//'
+	for _m in "$NIMWAKE_MANIFESTS"/*/nimwake.toml; do
+		[ -f "$_m" ] || continue
+		_app="$(basename "$(dirname "$_m")")"
+		[ "$(app_exposure "$_app")" = public ] || continue
+		sed -n 's/^host = "\(.*\)"/\1/p' "$_m"
+	done | tr '\n' ' ' | sed 's/ $//'
 }
 
 # provider 스크립트를 계약의 환경으로 부른다
@@ -64,6 +77,13 @@ supervise_ingress() {
 		ingress_set_state UNHEALTHY "provider '$NIMWAKE_INGRESS' is not installed in $NIMWAKE_INGRESS_DIR — make deploy"
 		return 1
 	fi
+	# 인터넷이 닿기 시작한다 — 위험한 구성은 남겨 둔다 (Phase 2 04)
+	if [ "$NIMWAKE_ISOLATED" != 1 ]; then
+		host_log "ingress: WARNING NIMWAKE_ISOLATED=$NIMWAKE_ISOLATED — apps can read and write Termux files (SSH keys, boot scripts). Set 1 (T1)"
+	fi
+	if [ -z "$(ingress_hosts)" ]; then
+		host_log "ingress: WARNING no app declares exposure=public — the provider gets no hosts (a token tunnel still routes whatever the Cloudflare dashboard says)"
+	fi
 	_irestarts=""
 	while :; do
 		[ -f "$NIMWAKE_RUN/ingress-stop" ] && break
@@ -74,7 +94,8 @@ supervise_ingress() {
 		ingress_call run >>"$NIMWAKE_LOGS/ingress.log" 2>&1 &
 		_ichild=$!
 		echo "$_ichild" >"$NIMWAKE_RUN/ingress.pid"
-		ingress_set_state RUNNING "$NIMWAKE_INGRESS pid $_ichild → $NIMWAKE_GATEWAY for $(ingress_hosts)"
+		_ihosts="$(ingress_hosts)"
+		ingress_set_state RUNNING "$NIMWAKE_INGRESS pid $_ichild → $NIMWAKE_GATEWAY for ${_ihosts:-no public app}"
 		_icode=0
 		wait "$_ichild" || _icode=$?
 		rm -f "$NIMWAKE_RUN/ingress.pid"

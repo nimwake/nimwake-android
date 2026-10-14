@@ -2,7 +2,8 @@
 # 소비처 앱의 manifest를 검사하고, 폰에 놓을 manifest를 만든다. 기기 없이 돈다 (bats가 본다).
 # 배포 계약: .docs/phases/phase-2/03-deploy-and-ingress-contract.md "1. 앱 배포 계약"
 #
-#   app-manifest.sh check APP_DIR              통과하면 "name host port" 한 줄, 아니면 이유와 1
+#   app-manifest.sh check APP_DIR              통과하면 "name host port exposure" 한 줄, 아니면 이유와 1
+#                                               exposure: APP_DIR/exposure — public | lan. 없으면 lan (Phase 2 04)
 #   app-manifest.sh render MANIFEST WORKDIR     [runtime]에 working_dir = WORKDIR을 넣어 출력
 #
 # 이 셸은 TOML을 해석하지 않는다 — 배포 계약이 쓰는 줄 모양(key = "value", key = 숫자)만 읽는다.
@@ -48,7 +49,16 @@ cmd_check() {
 	'') fail "[runtime] command 가 없다" ;;
 	*) fail "command '$command' — 이 레포가 제공하는 런타임만: /opt/node/bin/node (guest/node.lock)" ;;
 	esac
-	echo "$name $host $port"
+	# 노출 선언 — 인터넷에 공개할 의도인가. 없으면 lan(안전한 쪽). nimwake.toml에 넣지 않는다: Core가 모르는 키를 거부한다
+	exposure=lan
+	if [ -f "$dir/exposure" ]; then
+		exposure="$(tr -d ' \t\r\n' <"$dir/exposure")"
+		case "$exposure" in
+		public | lan) ;;
+		*) fail "exposure '$exposure' — public | lan" ;;
+		esac
+	fi
+	echo "$name $host $port $exposure"
 }
 
 cmd_render() {

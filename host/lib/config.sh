@@ -20,8 +20,14 @@ fi
 # 비우면 넘기지 않는다 — Core 기본값 0(꺼짐). 이 flag는 Core v0.1.0-rc4부터 있다: 그 전 binary는 모르는 인자로
 # 설정 오류(78)를 낸다. 이 기기에 맞는 값은 측정으로 정한다 (#42, soak.csv의 mem_avail_mb)
 : "${NIMWAKE_MIN_FREE_MEMORY_MB:=}"
+# 1이면 daemon(그리고 그것이 띄우는 앱)을 proot-distro --isolated로 — Termux 파일 시스템을 guest에 붙이지 않는다.
+# 격리하지 않으면 앱이 Termux의 ~/.ssh/authorized_keys · ~/.termux/boot · sshd 호스트 키를 읽고 쓴다 (같은 Android uid,
+# 10-14 기기에서 확인). proot는 보안 sandbox가 아니지만 이것이 root 없이 할 수 있는 격리다 (Phase 2 04, T1)
+: "${NIMWAKE_ISOLATED:=1}"
+_nimwake_isolated=""
+[ "$NIMWAKE_ISOLATED" = 1 ] && _nimwake_isolated=" --isolated"
 
-: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}${NIMWAKE_MIN_FREE_MEMORY_MB:+ --min-free-memory-mb $NIMWAKE_MIN_FREE_MEMORY_MB}}"
+: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu${_nimwake_isolated} --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}${NIMWAKE_MIN_FREE_MEMORY_MB:+ --min-free-memory-mb $NIMWAKE_MIN_FREE_MEMORY_MB}}"
 # proot 아래에서 comm이 잘리므로 전체 경로로 찾는다. `^`는 래퍼(proot, sh -c)를 제외한다 (validation/01)
 : "${NIMWAKE_DAEMON_MATCH:=^$NIMWAKE_DAEMON}"
 
@@ -69,6 +75,8 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 : "${NIMWAKE_SECRETS:=$NIMWAKE_HOST_HOME/secrets}"
 # 공개할 hostname을 여기의 manifest들에서 읽는다 (proot Ubuntu 안의 ~/.nimwake/apps — Termux에서 본 경로)
 : "${NIMWAKE_MANIFESTS:=${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/.nimwake/apps}"
+# 앱 묶음 · release · 노출 선언(exposure: public | lan — 없으면 lan)이 있는 곳 (make deploy-app이 쓴다)
+: "${NIMWAKE_APP_HOME:=${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/apps}"
 
 # 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
