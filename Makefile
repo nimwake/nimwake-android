@@ -4,7 +4,7 @@ HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps ingress-enable ingress-token ingress-disable run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -68,6 +68,10 @@ ingress-token:
 
 ingress-disable:
 	scripts/ingress.sh disable
+
+# 기기의 supervisor를 다시 띄운다 — host.conf 변경이 반영된다. daemon · 앱도 다시 뜬다. soak 중이면 거부 (FORCE=1)
+restart:
+	scripts/restart.sh
 
 run:
 	scripts/run.sh

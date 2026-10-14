@@ -56,3 +56,35 @@ jobs:
             [ "$code" = 200 ] || { cat server.log; exit 1; }
           done
           curl -s -H 'X-Forwarded-For: 1.2.3.4' http://127.0.0.1:3199/api/whoami | grep -q '"x_forwarded_for":"1.2.3.4"'
+
+  # 소비처 템플릿 — 개인 레포가 복사해 쓰는 모양 그대로 빌드되고 배포 계약을 통과하는가
+  consumer-template:
+    name: build examples/consumer-template
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node version from guest/node.lock
+        id: node
+        run: echo "version=$(sed -n 's/^version=//p' guest/node.lock)" >>"$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      - name: Build into bundle/ and check the deploy contract
+        working-directory: examples/consumer-template
+        run: |
+          ../../scripts/build-app.sh apps/blog/app apps/blog/bundle
+          ../../scripts/app-manifest.sh check apps/blog
+
+      - name: Smoke
+        working-directory: examples/consumer-template/apps/blog/bundle
+        run: |
+          PORT=3199 HOSTNAME=127.0.0.1 NODE_ENV=production node server.js >server.log 2>&1 &
+          for i in $(seq 1 50); do curl -s -o /dev/null http://127.0.0.1:3199/ && break; sleep 0.2; done
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3199/)"
+          echo "/ $code"
+          [ "$code" = 200 ] || { cat server.log; exit 1; }

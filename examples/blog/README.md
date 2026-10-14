@@ -23,6 +23,19 @@ env          PORT=3102 · HOSTNAME=127.0.0.1 · NODE_ENV=production
 
 `HOSTNAME=127.0.0.1` — app은 loopback에만 연다. 밖에서는 Nimwake gateway를 거쳐서만 닿는다 (Core PRD §61).
 
+## 내 도메인으로 공개하기 (Cloudflare)
+
+이 블로그는 이 레포의 측정 · 검증용 예시다. **내 앱을 내 도메인으로 공개하는 것은 개인 레포에서 한다** — [`examples/consumer-template`](../consumer-template/README.md)을 복사해 시작한다. 그 README에 순서가 있다:
+
+```text
+도메인 → Cloudflare · Tunnel 만들기 · Public Hostname blog.example.com → http://localhost:8080
+make ingress · make token · make restart          (폰에 cloudflared, supervisor가 감시)
+make deploy APP=blog                              (빌드 → 폰 → SIGHUP 재적재)
+```
+
+계정 없이 먼저 보려면 quick tunnel: `make ingress MODE=quick` → `https://<무작위>.trycloudflare.com`.
+계약: [Phase 2 03 — 배포 · ingress 계약](../../.docs/phases/phase-2/03-deploy-and-ingress-contract.md)
+
 ## 글 쓰기
 
 `content/*.md` — 맨 위에 `title` · `date` front matter. 지원하는 문법은 `#`, `##`, `- ` 목록, ```` ``` ```` 코드 블록, 문단뿐이다 (`lib/posts.js`).
