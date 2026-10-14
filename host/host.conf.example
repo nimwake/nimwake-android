@@ -44,7 +44,8 @@
 # ingress provider — 집 밖에서 닿게 한다 (Phase 2 03, host/ingress/<provider>). 비우면 LAN만.
 # make ingress-enable INGRESS=cloudflare [MODE=quick] 가 적는다. 토큰은 make ingress-token < 파일 → secrets/
 # provider가 supervisor 아래에서 돌고 끊기면 재기동된다. 네트워크가 돌아오면 다시 붙는다
-# ingress를 켜면 위의 NIMWAKE_LISTEN을 비워 gateway를 loopback으로 닫는 것을 권한다 (LAN 무인증 노출이 사라진다)
+# ingress를 켜고 LAN 전용 앱이 없으면 위의 NIMWAKE_LISTEN을 비워 gateway를 loopback으로 닫는다 (LAN 무인증 노출이 사라진다).
+# LAN 전용 앱이 있으면 0.0.0.0을 유지한다 — 그 앱은 Cloudflare에 이름을 등록하지 않는 것으로만 막힌다 (Phase 2 04)
 #NIMWAKE_INGRESS=cloudflare
 # cloudflare: token(실사용, 대시보드 Public Hostname → http://localhost:8080) | quick(trycloudflare.com, 시험)
 #NIMWAKE_INGRESS_CF_MODE=token

@@ -22,6 +22,7 @@
 | [01. nimwake-hostd](01-nimwake-hostd.md) | 왜 지금인가 · 범위 · 바뀌지 않는 계약 · 구조 · 빌드와 배포 · 마일스톤 H0–H5 · 열린 질문 |
 | [02. Ingress](02-ingress.md) | 집 밖에서 닿기 — Tailscale 먼저, 공개는 Cloudflare Tunnel, Caddy 제외 · `X-Forwarded-For` 읽는 법 · I0–I3 ([#41](https://github.com/nimwake/nimwake-android/issues/41)) |
 | [03. 배포 · ingress 계약](03-deploy-and-ingress-contract.md) | 소비처(개인 레포)가 이 레포로 폰에 배포한다 — `deploy-app`(release 디렉터리 + SIGHUP 재적재) · ingress provider 플러그인(`check` · `install` · `run` · `health`, 첫 provider `cloudflare`) · 소비처 템플릿 |
+| [04. 노출 보안](04-exposure-security.md) | 공개 앱과 LAN 전용 앱을 함께 · 위협(T1 proot는 경계가 아니다 — 앱이 Termux의 SSH 키 · 부팅 스크립트를 읽고 쓴다, T2 LAN 앱 노출 …) · 계층별 방어(Cloudflare · Android `--isolated` · 노출 선언 · Core 앱별 peer 제한 요청) |
 
 ## Core에서 넘어온 일
 

@@ -107,7 +107,7 @@ host/ingress/<provider>/
 
 ```text
 host.conf   NIMWAKE_INGRESS=cloudflare          (비우면 없음 — 지금처럼 LAN만)
-            NIMWAKE_LISTEN=                      (ingress가 있으면 gateway를 loopback으로 닫는다 — 권장)
+            NIMWAKE_LISTEN=                      (공개 앱만 있으면 비워 gateway를 loopback으로 닫는다. LAN 전용 앱이 있으면 0.0.0.0 유지 — 04)
 secrets/    cloudflare.token
 ```
 
