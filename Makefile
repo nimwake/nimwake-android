@@ -4,7 +4,7 @@ HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
 lint:
@@ -43,6 +43,20 @@ deploy:
 # 배포 · bench · 재시작 전에 먼저 본다. 읽기만 한다
 device-status:
 	scripts/device-status.sh
+
+# 소비처(개인 레포)의 앱 — nimwake.toml(working_dir 없이) + bundle/. 다른 앱은 건드리지 않는다 (SIGHUP 재적재)
+# 계약: .docs/phases/phase-2/03-deploy-and-ingress-contract.md
+deploy-app:
+	scripts/apps.sh deploy $(APP)
+
+rollback-app:
+	scripts/apps.sh rollback $(NAME)
+
+remove-app:
+	scripts/apps.sh remove $(NAME)
+
+apps:
+	scripts/apps.sh list
 
 run:
 	scripts/run.sh
