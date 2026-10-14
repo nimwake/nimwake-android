@@ -1,7 +1,9 @@
 #!/bin/sh
 # 장시간 soak — 기기의 sampler(nimwake-soak)를 다루고 결과를 요약한다. (A5 · A6, Core PRD §51)
 #
-#   soak.sh start [HOURS] [INTERVAL]   sampler를 기기에서 백그라운드로 띄운다 (기본 24h · 300s)
+#   soak.sh start [HOURS] [INTERVAL] [HOST] [PATH]
+#                                      sampler를 기기에서 백그라운드로 띄운다 (기본 24h · 300s · echo.local /)
+#                                      실제 앱: start 72 300 blog.local /api/whoami (#45)
 #   soak.sh stop                       sampler를 멈춘다
 #   soak.sh report [OPTS]              soak.csv를 가져와 요약한다 — 실행 중에도 된다
 #   soak.sh summarize [OPTS] < soak.csv  요약만 한다 (기기 없이)
@@ -19,8 +21,10 @@ device="${NIMWAKE_DEVICE:-nimwake-phone}"
 cmd_start() {
 	hours="${1:-24}"
 	interval="${2:-300}"
+	target_host="${3:-echo.local}"
+	target_path="${4:-/}"
 	# `{ … } </dev/null`: termux-wake-lock 등이 표준 입력(=이 스크립트)을 삼키지 못하게 한다 (scripts/doctor.sh 참고)
-	ssh "$device" sh -s "$hours" "$interval" <<'EOF'
+	ssh "$device" sh -s "$hours" "$interval" "$target_host" "$target_path" <<'EOF'
 {
 set -eu
 host="$HOME/.nimwake-host"
@@ -32,8 +36,8 @@ if [ -f "$host/logs/soak.csv" ]; then
 	mv "$host/logs/soak.csv" "$host/logs/soak-$(date +%Y%m%d-%H%M%S).csv"
 fi
 termux-wake-lock
-nohup "$host/bin/nimwake-soak" "$2" "$1" >/dev/null 2>&1 &
-echo "soak: started (pid $!) — ${1}h, every ${2}s → ~/.nimwake-host/logs/soak.csv"
+nohup "$host/bin/nimwake-soak" "$2" "$1" "$3" "$4" >/dev/null 2>&1 &
+echo "soak: started (pid $!) — ${1}h, every ${2}s, Host $3 $4 → ~/.nimwake-host/logs/soak.csv"
 } </dev/null
 EOF
 }
