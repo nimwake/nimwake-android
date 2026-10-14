@@ -1,0 +1,26 @@
+# Core manifest (Core PRD §21) — nimwake-android 배포 계약을 따른다
+#   host        공개 hostname 그대로 — Cloudflare Public Hostname과 같게. Core가 이 이름으로 라우팅한다
+#   working_dir 쓰지 않는다 — make deploy가 폰의 release 디렉터리로 채운다
+#   command     nimwake-android가 제공하는 런타임만 (/opt/node/bin/node — Node 버전은 nimwake-android guest/node.lock)
+name = "blog"
+
+[server]
+host = "blog.example.com"
+port = 3102
+
+[runtime]
+command = ["/opt/node/bin/node", "server.js"]
+
+# 앱은 loopback에만 연다 — 밖에서는 gateway를 거쳐서만 닿는다
+[runtime.env]
+PORT = "3102"
+HOSTNAME = "127.0.0.1"
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
+
+[lifecycle]
+idle_timeout_seconds = 300
+startup_timeout_seconds = 30
+shutdown_timeout_seconds = 10
+response_header_timeout_seconds = 60
+max_pending_requests = 256
