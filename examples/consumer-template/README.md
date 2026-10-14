@@ -74,4 +74,21 @@ make status
 ## 보안
 
 - 토큰은 레포에 넣지 않는다 — `.env`는 경로만, `.gitignore`에 있다
-- ingress를 켰으면 폰의 `host.conf`에서 `NIMWAKE_LISTEN`을 비워 gateway를 loopback으로 닫는 것을 권한다 — LAN에 인증 없이 열려 있지 않게
+- 공개 앱만 있으면 폰의 `host.conf`에서 `NIMWAKE_LISTEN`을 비워 gateway를 loopback으로 닫는다 — LAN에 인증 없이 열려 있지 않게. LAN 전용 앱이 있으면 열어 둔다 (아래)
+- Cloudflare Public Hostname은 **공개할 이름을 하나씩** — 와일드카드(`*.example.com`) · Host 재작성은 LAN 전용 앱까지 연다
+- 나만 쓸 앱을 밖에서 열려면 Cloudflare Access(로그인)를 앞에. WAF · Rate Limiting 규칙도
+- **공개 앱 하나가 뚫리면 폰 전체가 넘어갈 수 있다** — proot는 보안 경계가 아니다. 앱이 Termux의 SSH 키 · 부팅 스크립트를 읽고 쓸 수 있다 (nimwake-android Phase 2 04). 공개 앱의 의존성은 최신으로 유지한다
+
+## 공개 앱과 LAN 전용 앱을 함께
+
+한 폰에 둘 다 띄울 수 있다. 같은 gateway를 쓰고 **Host로** 갈린다.
+
+| | 공개 앱 | LAN 전용 앱 |
+| - | - | - |
+| `nimwake.toml` `host` | `blog.example.com` | `notes.home.arpa` (가정용 이름, RFC 8375) |
+| Cloudflare Public Hostname | 등록 | **등록하지 않는다** |
+| 인터넷에서 | 닿는다 | 닿지 않는다 |
+| 같은 Wi-Fi에서 | 닿는다 | 닿는다 — hosts 파일이나 공유기 DNS에 `notes.home.arpa → 폰 IP` |
+
+- LAN 전용 앱이 있으면 폰의 gateway는 LAN에 열려 있어야 한다 (`NIMWAKE_LISTEN=0.0.0.0:8080`) — 같은 Wi-Fi의 누구나 인증 없이 닿는다
+- LAN 전용 앱을 막는 것은 지금 **'Cloudflare에 그 이름이 없다'뿐**이다 — Core가 앱별 접속 제한을 갖기 전까지는 Cloudflare 설정이 곧 방어선이다
