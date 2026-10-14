@@ -92,7 +92,7 @@ fi
 
 # git이 실행 비트를 잃으면 기기에서 Permission denied가 난다. CI의 같은 검사.
 not_executable=""
-for f in $(git ls-files '*.sh' 'host/bin/*' 'host/boot/*' 'tests/unit/fixtures/*'); do
+for f in $(git ls-files '*.sh' 'host/bin/*' 'host/boot/*' 'host/ingress/*' 'tests/unit/fixtures/*'); do
 	case "$f" in host/lib/*) continue ;; esac
 	[ -x "$f" ] || not_executable="$not_executable $f"
 done

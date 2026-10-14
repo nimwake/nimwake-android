@@ -48,6 +48,14 @@ install -m 600 "$stage"/host/lib/*.sh "$host/lib/"
 # #!/bin/sh는 Termux에 없다. termux-exec 없이도 돌도록 shebang을 Termux 경로로 바꾼다.
 termux-fix-shebang "$host"/bin/*
 ln -sf "$host/bin/nimwake-host" "$PREFIX/bin/nimwake-host"
+# ingress provider — 켜는 것은 host.conf의 NIMWAKE_INGRESS (make ingress-enable). 놓는 것은 늘 한다
+for provider in "$stage"/host/ingress/*/; do
+	[ -d "$provider" ] || continue
+	name="$(basename "$provider")"
+	mkdir -p "$host/ingress/$name"
+	install -m 700 "$provider"* "$host/ingress/$name/"
+	termux-fix-shebang "$host/ingress/$name"/*
+done
 if [ ! -f "$host/host.conf" ]; then
 	install -m 600 "$stage/host/host.conf.example" "$host/host.conf"
 fi

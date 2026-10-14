@@ -33,6 +33,10 @@ teardown() {
 	if [ -f "$FAKE_DIR/apps" ]; then
 		xargs kill -9 <"$FAKE_DIR/apps" 2>/dev/null || true
 	fi
+	# 가짜 ingress provider의 run (exec sleep)
+	if [ -f "$FAKE_DIR/ingress-runs" ]; then
+		xargs kill -9 <"$FAKE_DIR/ingress-runs" 2>/dev/null || true
+	fi
 }
 
 alive() {
@@ -313,4 +317,83 @@ load_libs() {
 	state_is RUNNING
 	[ "$(cut -d' ' -f6 "$NIMWAKE_HOST_HOME/run/state")" = "$pid" ]
 	[ "$(launches)" -eq 1 ]
+}
+
+# ingress provider (Phase 2 03 "2. ingress provider 계약") — 가짜 provider로 감시 루프를 본다
+
+# provider 디렉터리와 manifest 하나를 둔다
+use_fake_ingress() {
+	export NIMWAKE_INGRESS=fake
+	export NIMWAKE_INGRESS_DIR="$BATS_TEST_DIRNAME/fixtures/ingress"
+	export NIMWAKE_MANIFESTS="$BATS_TEST_TMPDIR/manifests"
+	mkdir -p "$NIMWAKE_MANIFESTS/blog"
+	printf 'name = "blog"\n[server]\nhost = "blog.example.com"\nport = 3102\n' >"$NIMWAKE_MANIFESTS/blog/nimwake.toml"
+}
+
+ingress_state() { cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/ingress" 2>/dev/null; }
+ingress_state_is() { [ "$(ingress_state)" = "$1" ]; }
+ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
+
+@test "ingress runs beside the daemon with the contract environment, and stop takes it down" {
+	use_fake_ingress
+	"$host" start
+	wait_for 5 state_is RUNNING
+	wait_for 5 ingress_state_is RUNNING
+	grep -q "gateway=http://127.0.0.1:8080/ hosts=blog.example.com secrets=$NIMWAKE_HOST_HOME/secrets" "$FAKE_DIR/ingress-env"
+	# 비밀 디렉터리는 0700
+	[ "$(ls -ld "$NIMWAKE_HOST_HOME/secrets" | cut -c1-10)" = "drwx------" ]
+	pid="$(cat "$NIMWAKE_HOST_HOME/run/ingress.pid")"
+
+	run "$host" status
+	echo "$output"
+	[[ "$output" == *"ingress     fake RUNNING — connected https://fake.example"* ]]
+
+	"$host" stop
+	! alive "$pid"
+	ingress_state_is STOPPED
+}
+
+@test "a dying ingress is restarted with backoff while the daemon keeps running" {
+	use_fake_ingress
+	echo exit-1 >"$FAKE_DIR/ingress-mode"
+	"$host" start
+	wait_for 5 state_is RUNNING
+	daemon_before="$(cut -d' ' -f6 "$NIMWAKE_HOST_HOME/run/state")"
+	# 1번째 재기동은 0초, 2번째는 5초 뒤 (policy_backoff)
+	wait_for 10 sh -c "[ \"\$(wc -l <\"$FAKE_DIR/ingress-runs\")\" -ge 3 ]"
+	grep -q "ingress BACKOFF — exit 1 — restart" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	# daemon은 그대로다
+	state_is RUNNING
+	[ "$(cut -d' ' -f6 "$NIMWAKE_HOST_HOME/run/state")" = "$daemon_before" ]
+	[ "$(launches)" -eq 1 ]
+}
+
+@test "ingress exit 78 is a configuration error — no restart" {
+	use_fake_ingress
+	echo exit-78 >"$FAKE_DIR/ingress-mode"
+	"$host" start
+	wait_for 5 ingress_state_is UNHEALTHY
+	grep -q "configuration error (exit 78)" "$NIMWAKE_HOST_HOME/run/ingress"
+	sleep 2
+	[ "$(ingress_runs)" -eq 1 ]
+	state_is RUNNING
+}
+
+@test "a failing check keeps ingress down and says why" {
+	use_fake_ingress
+	echo fail >"$FAKE_DIR/ingress-check"
+	"$host" start
+	wait_for 5 ingress_state_is UNHEALTHY
+	grep -q "check failed: fake: no token" "$NIMWAKE_HOST_HOME/run/ingress"
+	[ ! -f "$FAKE_DIR/ingress-runs" ]
+	# ingress가 서지 않아도 daemon은 선다 (check는 바로 끝나고 daemon은 아직 STARTING일 수 있다)
+	wait_for 5 state_is RUNNING
+}
+
+@test "without NIMWAKE_INGRESS nothing runs and status says LAN only" {
+	"$host" start
+	wait_for 5 state_is RUNNING
+	[ ! -f "$NIMWAKE_HOST_HOME/run/ingress" ]
+	run "$host" status
+	[[ "$output" == *"ingress     none"* ]]
 }

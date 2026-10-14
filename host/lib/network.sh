@@ -96,6 +96,10 @@ check_network() {
 	if [ "$_state" = ONLINE ] && { [ "$_was" = OFFLINE ] || [ "$_was" = DEGRADED ]; }; then
 		net_record "$_was" RECOVERING "$_why"
 		net_run_recover_hook
+		# ingress provider가 켜져 있으면 다시 붙인다 (host/lib/ingress.sh — 없으면 건너뛴다)
+		if command -v ingress_restart >/dev/null 2>&1; then
+			ingress_restart
+		fi
 		_was=RECOVERING
 	fi
 	net_record "$_was" "$_state" "$_why"

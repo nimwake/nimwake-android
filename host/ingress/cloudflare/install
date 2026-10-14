@@ -1,0 +1,10 @@
+#!/bin/sh
+# ingress provider: cloudflare — cloudflared를 설치한다 (멱등). Termux 패키지가 있다 (2026.10.0, 10-14 확인)
+set -eu
+
+if command -v cloudflared >/dev/null 2>&1; then
+	echo "cloudflared already installed: $(cloudflared --version 2>/dev/null | head -n 1)"
+	exit 0
+fi
+pkg install -y cloudflared
+echo "cloudflared installed: $(cloudflared --version 2>/dev/null | head -n 1)"

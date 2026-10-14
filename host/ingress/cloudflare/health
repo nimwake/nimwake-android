@@ -1,0 +1,16 @@
+#!/bin/sh
+# ingress provider: cloudflare — 연결돼 있는가. 한 줄로 답한다 (nimwake-host status · make doctor)
+# cloudflared metrics의 /ready는 엣지 연결이 하나 이상이면 200이다
+set -eu
+
+metrics="${NIMWAKE_INGRESS_CF_METRICS:-127.0.0.1:20241}"
+if ! curl -fs -m 3 -o /dev/null "http://$metrics/ready"; then
+	echo "not connected (no /ready at $metrics)"
+	exit 1
+fi
+# quick 모드면 공개 URL이 로그에 있다
+url=""
+if [ "${NIMWAKE_INGRESS_CF_MODE:-token}" = quick ]; then
+	url="$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$NIMWAKE_LOGS/ingress.log" 2>/dev/null | tail -n 1)"
+fi
+echo "connected${url:+ $url}"

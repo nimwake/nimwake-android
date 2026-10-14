@@ -62,6 +62,14 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 : "${NIMWAKE_NET_ON_RECOVER:=}"
 : "${NIMWAKE_NET_HOOK_TIMEOUT:=60}"
 
+# ingress provider (host/lib/ingress.sh, Phase 2 03). 비우면 ingress 없음 — gateway는 NIMWAKE_LISTEN대로
+: "${NIMWAKE_INGRESS:=}"
+: "${NIMWAKE_INGRESS_DIR:=$NIMWAKE_HOST_HOME/ingress}"
+# 토큰 등 비밀 — 0700, provider만 읽는다. 레포 · 로그에 남기지 않는다 (PRD §40)
+: "${NIMWAKE_SECRETS:=$NIMWAKE_HOST_HOME/secrets}"
+# 공개할 hostname을 여기의 manifest들에서 읽는다 (proot Ubuntu 안의 ~/.nimwake/apps — Termux에서 본 경로)
+: "${NIMWAKE_MANIFESTS:=${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/.nimwake/apps}"
+
 # 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
 	if command -v termux-notification >/dev/null 2>&1; then

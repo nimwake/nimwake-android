@@ -125,6 +125,23 @@ if ! grep -q '^NIMWAKE_NET_GATEWAY=.' "$HOME/.nimwake-host/host.conf" 2>/dev/nul
 	warn "gateway check is off — set NIMWAKE_NET_GATEWAY=<router IP> in ~/.nimwake-host/host.conf (PRD §14)"
 fi
 
+# ingress provider (Phase 2 03) — 켜져 있으면 감시 상태와 provider의 health
+ingress="$(sed -n 's/^NIMWAKE_INGRESS=//p' "$HOME/.nimwake-host/host.conf" 2>/dev/null | tail -n 1)"
+if [ -z "$ingress" ]; then
+	if grep -q '^NIMWAKE_LISTEN=0\.0\.0\.0' "$HOME/.nimwake-host/host.conf" 2>/dev/null; then
+		warn "no ingress, and the gateway is open on the LAN without authentication (NIMWAKE_LISTEN=0.0.0.0) — fine at home, see Phase 2 02 · 03"
+	else
+		ok "no ingress — gateway on loopback"
+	fi
+else
+	istate="$(cat "$HOME/.nimwake-host/run/ingress" 2>/dev/null || echo "not started — nimwake-host stop · start")"
+	ihealth="$(nimwake-host status 2>/dev/null | sed -n 's/^ingress *//p')"
+	case "$istate" in
+	RUNNING*) ok "ingress $ingress: ${ihealth:-$istate}" ;;
+	*) warn "ingress $ingress: $istate" ;;
+	esac
+fi
+
 log="$HOME/.nimwake-host/logs/boot.log"
 if [ ! -f "$log" ]; then
 	warn "no boot.log — Termux:Boot has not run 10-nimwake yet"

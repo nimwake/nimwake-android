@@ -1,0 +1,30 @@
+#!/bin/sh
+# ingress provider: cloudflare — 포그라운드로 터널을 연다. supervisor가 감시하고 끝나면 재기동한다.
+#
+#   token  remote-managed tunnel. 어느 hostname을 어디로 보낼지는 Cloudflare 대시보드의 Public Hostname이 정한다:
+#          blog.example.com → http://localhost:8080 (gateway). cloudflared는 원래 Host를 그대로 보낸다 —
+#          manifest의 host가 공개 hostname과 같으면 Nimwake가 그대로 라우팅한다
+#   quick  trycloudflare.com의 무작위 hostname → gateway. Host를 manifest의 이름으로 바꿔 보낸다 (앱 하나만)
+#
+# 토큰은 명령줄이 아니라 환경(TUNNEL_TOKEN)으로 넘긴다 — 명령줄은 ps로 보인다 (PRD §40)
+# health가 /ready를 읽을 metrics 주소를 고정한다
+set -eu
+
+metrics="${NIMWAKE_INGRESS_CF_METRICS:-127.0.0.1:20241}"
+
+case "${NIMWAKE_INGRESS_CF_MODE:-token}" in
+token)
+	TUNNEL_TOKEN="$(cat "$NIMWAKE_SECRETS/cloudflare.token")"
+	export TUNNEL_TOKEN
+	exec cloudflared tunnel --no-autoupdate --metrics "$metrics" run
+	;;
+quick)
+	host="${NIMWAKE_INGRESS_CF_QUICK_HOST:-${NIMWAKE_INGRESS_HOSTS%% *}}"
+	exec cloudflared tunnel --no-autoupdate --metrics "$metrics" \
+		--url "${NIMWAKE_GATEWAY%/}" --http-host-header "$host"
+	;;
+*)
+	echo "NIMWAKE_INGRESS_CF_MODE=${NIMWAKE_INGRESS_CF_MODE} — token | quick" >&2
+	exit 78
+	;;
+esac
