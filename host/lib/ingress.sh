@@ -37,13 +37,27 @@ ingress_hosts() {
 	done | tr '\n' ' ' | sed 's/ $//'
 }
 
-# provider 스크립트를 계약의 환경으로 부른다
-ingress_call() {
+# provider 스크립트를 계약의 환경으로 부른다.
+# host.conf는 셸 변수로만 읽힌다(export 아님) — provider별 설정(NIMWAKE_INGRESS_CF_MODE 등)을 별도 프로세스인
+# provider가 받으려면 내보내야 한다. 빠뜨렸을 때 quick 모드가 token 모드로 돌았다 (10-14 기기)
+#
+# ingress_exec는 지금 셸을 provider로 **바꾼다** — 이미 갈라진 셸(`&` · `$( )`) 안에서만 부른다.
+# run을 `ingress_exec run &`로 띄우면 $!가 곧 provider(cloudflared)의 pid다. 서브셸을 한 겹 더 두면 $!는
+# 바깥 서브셸이 되고, 그것을 죽여도 provider는 고아로 남아 port를 붙잡는다 (10-14 기기에서 실제로)
+ingress_exec() {
+	for _iv in $(set | sed -n 's/^\(NIMWAKE_INGRESS_[A-Z0-9_]*\)=.*/\1/p'); do
+		export "${_iv?}"
+	done
 	NIMWAKE_GATEWAY="$NIMWAKE_GATEWAY" \
 		NIMWAKE_INGRESS_HOSTS="$(ingress_hosts)" \
 		NIMWAKE_SECRETS="$NIMWAKE_SECRETS" \
 		NIMWAKE_LOGS="$NIMWAKE_LOGS" \
-		"$NIMWAKE_INGRESS_DIR/$NIMWAKE_INGRESS/$1"
+		exec "$NIMWAKE_INGRESS_DIR/$NIMWAKE_INGRESS/$1"
+}
+
+# 끝나기를 기다리는 호출 (check · health · install)
+ingress_call() {
+	(ingress_exec "$1")
 }
 
 ingress_pid() {
@@ -91,7 +105,8 @@ supervise_ingress() {
 			ingress_set_state UNHEALTHY "check failed: $(printf '%s' "$_iwhy" | tail -n 1)"
 			return 1
 		fi
-		ingress_call run >>"$NIMWAKE_LOGS/ingress.log" 2>&1 &
+		# `&`가 이미 셸을 가른다 — 그 셸이 provider로 바뀌므로 $!가 provider의 pid다
+		ingress_exec run >>"$NIMWAKE_LOGS/ingress.log" 2>&1 &
 		_ichild=$!
 		echo "$_ichild" >"$NIMWAKE_RUN/ingress.pid"
 		_ihosts="$(ingress_hosts)"

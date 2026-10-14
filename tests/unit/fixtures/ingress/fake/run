@@ -3,6 +3,8 @@
 #   (없음) 계속 돈다 · exit-N  N으로 끝난다
 echo "$$" >>"$FAKE_DIR/ingress-runs"
 printf "gateway=%s hosts=%s secrets=%s\n" "$NIMWAKE_GATEWAY" "$NIMWAKE_INGRESS_HOSTS" "$NIMWAKE_SECRETS" >"$FAKE_DIR/ingress-env"
+# provider별 설정(host.conf의 NIMWAKE_INGRESS_*)이 넘어오는가
+printf "fake_setting=%s\n" "${NIMWAKE_INGRESS_FAKE_SETTING:-}" >>"$FAKE_DIR/ingress-env"
 mode="$(cat "$FAKE_DIR/ingress-mode" 2>/dev/null || true)"
 case "$mode" in
 exit-*) exit "${mode#exit-}" ;;
