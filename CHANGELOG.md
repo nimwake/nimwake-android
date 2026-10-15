@@ -13,7 +13,8 @@
 ### Core
 
 - `core.lock`으로 Core binary를 commit SHA나 태그에 고정한다. 이 레포는 빌드하지 않고 Core CI의 aarch64 artifact만 받는다 (#2, D-A3 · D-A4)
-- 판정 대상: **Core `v0.1.0-rc5`** (#36). rc3 이후 들어온 §77 crash-loop backoff · §78 메모리 입장 제어가 매 요청 경로를 지나 앞선 증거를 돌려 쓸 수 없다 — rc4로 옮겼다가(#34) 런타임이 같은 rc5로. 72h soak은 rc5로 진행 중
+- 지금: **Core `v0.1.0-rc6`** (`4f7d991`, #46) — §79 SIGUSR1 상태 스냅샷 · §80 유휴 eviction · §81 `X-Forwarded-For` · `--version`
+- 판정 대상이었던 rc5 (#36): rc3 이후 들어온 §77 crash-loop backoff · §78 메모리 입장 제어가 매 요청 경로를 지나 앞선 증거를 돌려 쓸 수 없었다 — rc4로 옮겼다가(#34) 런타임이 같은 rc5로. soak은 24h에서 멈췄다(결함 0, 실제 앱 우선 — #45)
 - 그 전 검증: Core main `d7c5590` (`nimwaked 0.1.0`, `nimwake-bench` 포함, #16) — 72h soak 결함 없음 (#33). 처음은 `v0.1.0-rc1` (#7)
 
 ### Added
@@ -32,6 +33,12 @@
 - **기기 상태와 보호**: `make device-status` — 설치된 Core binary와 **실제 메모리에 있는** binary, supervisor · 네트워크 · 저장공간, soak 진행과 끝 시각. 이 기기는 여러 작업이 같이 쓴다 — soak 중에는 `make deploy`(`install` 포함) · `make bench`가 거부한다, `FORCE=1`로 강행 (#38)
 - **CI**: shellcheck(버전 고정) · 이식성 금지 패턴 검사 · bats, ubuntu는 항상 · macOS는 개발 머신 코드가 바뀔 때 (#9)
 - **릴리스**: `CHANGELOG.md`, `make release-check TAG=…`(CHANGELOG 절 · 정식 릴리스면 `core.lock`이 Core 태그에 고정), 태그 push → `release.yml`이 소스 묶음과 sha256을 GitHub Release로 (#27)
+- **메모리 임계값**: `host.conf` `NIMWAKE_MIN_FREE_MEMORY_MB` → Core `--min-free-memory-mb` (§78 입장 제어 · §80 eviction, 기기에서 둘 다 확인) · soak이 MemAvailable을 기록 (#43, validation/14)
+- **실제 앱**: 예시 Next.js 블로그(`examples/blog`) — 개발 머신에서 standalone으로 빌드(`make app-blog`, 네이티브 모듈이 섞이면 멈춘다) · 폰에는 Node(`guest/node.lock`, sha256 확인)와 묶음만 · `make test-app`(cold · warm · RSS · 유휴 정지 · SIGUSR1). 폰에서 cold 1.6s · warm 30–50ms · RSS 약 95 MB (#47, #48, validation/13). soak이 실제 앱을 잰다 — `SOAK_HOST` · `SOAK_PATH` (#49)
+- **앱 배포 계약** (Phase 2 03): 소비처 앱(`nimwake.toml` — `working_dir` 없이 · `bundle/` · `exposure`)을 `make deploy-app APP=…`이 `releases/<id>`에 놓고 SIGHUP 재적재 — 다른 앱은 그대로, 거부되면 되돌림, release 3개 보관. `rollback-app` · `remove-app` · `apps` (#52)
+- **ingress provider 플러그인** (Phase 2 03): `host/ingress/<provider>/{check,install,run,health}` — supervisor가 daemon과 따로 감시 · 78은 재기동 안 함 · 네트워크 복구 때 다시 붙인다. 첫 provider **cloudflare**(token · quick). `make ingress-enable` · `ingress-token`(표준 입력으로만, `secrets/` 0600) · `ingress-disable` · `restart` (#53, #54)
+- **소비처 템플릿** `examples/consumer-template` — 개인 레포의 출발점: 이 레포 버전 고정 · Makefile(setup · deploy · rollback · ingress · token · restart · status) · Cloudflare 공개 순서 (#54)
+- **노출 보안** (Phase 2 04): daemon과 앱을 `proot-distro --isolated`로(기본) — 격리하지 않으면 앱이 Termux의 SSH 키 · 부팅 스크립트를 읽고 쓴다(기기에서 확인). 앱마다 `exposure`(public · lan, 기본 lan) — ingress는 public 앱만. doctor가 노출 · 격리를 보인다 (#55, #56). Core에 앱별 peer 제한을 요청 (nimwake#66)
 
 ### Fixed
 
@@ -41,15 +48,19 @@
 - `fetch-core` · `setup-ubuntu.sh`가 artifact의 모든 binary에 실행 권한을 주고 설치한다 (#16)
 - `make deploy`가 끝나면 기기의 stage 디렉터리를 지운다 — 이전 binary가 남아 있었다 (#29)
 - `make test-boot`가 부팅이 진행 중이면 READY까지 기다린다 — ssh가 붙자마자 돌면 READY 2초 전에 FAIL했다 (#35). '부팅 직후 모두 SLEEPING' 검사는 soak 중이거나 READY 5분 뒤면 이유를 출력하고 건너뛴다 — sampler가 app을 깨운다 (#39)
+- 기기 검증에서 찾은 셋 (#57, validation/15): `deploy-app`의 원격 인자가 빈 값에서 밀렸다(ssh가 인자를 공백으로 잇는다) · provider가 `host.conf`의 `NIMWAKE_INGRESS_*`를 못 받았다 · ingress pid가 바깥 서브셸이라 cloudflared가 고아로 남았다
 
 ### Docs
 
 - PRD를 `.docs/prd/NN-그룹/NN-주제.md`로 나눴다. `§N` 번호는 그대로다 (#25)
-- 검증 리포트 `.docs/validation/01–12`: 수동 기준선 · 부팅 · rc1 · recovery · LAN · 실험 · soak(rc1 12h · `d7c5590` 24h · 72h) · bench(`d7c5590` · rc5) · 8항목 근거 (#6, #10, #17, #21, #24, #33, #34, #36). rc4 · rc5 재검증 — Boot · Network recovery (#35, #37)
-- Phase 2 설계: supervisor를 Rust `nimwake-hostd`로 — 같은 바깥 계약, `supervisor.bats`가 수용 테스트 (#32)
+- 검증 리포트 `.docs/validation/01–15`: 수동 기준선 · 부팅 · rc1 · recovery · LAN · 실험 · soak(rc1 12h · `d7c5590` 24h · 72h) · bench(`d7c5590` · rc5) · 8항목 근거 · 실제 앱(13) · 메모리 임계값(14) · 배포와 공개 URL(15) (#6, #10, #17, #21, #24, #33, #34, #36, #48, #50, #57). rc4 · rc5 재검증 — Boot · Network recovery (#35, #37)
+- Phase 2 설계: supervisor를 Rust `nimwake-hostd`로 — 같은 바깥 계약, `supervisor.bats`가 수용 테스트 (#32) · ingress 결정(02, #44) · 배포 · ingress 계약(03, #51) · 노출 보안(04, #55)
 
 ### Known limits
 
 - 비밀번호 잠금 기기는 재부팅 뒤 잠금을 한 번 풀어야 Termux:Boot가 돈다 (Android 정책)
 - 동시 연결 수십부터 무너진다 — 커널 `somaxconn 128`과 proot(ptrace) 비용. 홈서버 규모에서는 문제 없다 ([validation/08](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/08-core-d7c5590-bench.md))
-- 앱 release 정리(PRD §19)는 Core에 release 구조가 생긴 뒤
+- 앱 release 정리(PRD §19)는 Core에 release 구조가 생긴 뒤 — 소비처 앱은 `deploy-app`이 release 3개를 관리한다
+- **proot는 보안 sandbox가 아니다.** `--isolated`가 Termux 파일을 감추지만 ptrace 기반이라 탈출 취약점이 있으면 넘어간다 — root 없는 Android의 한계 (Phase 2 04)
+- LAN 전용 앱은 지금 'Cloudflare에 그 이름을 등록하지 않는다'로만 막힌다 — Core의 앱별 peer 제한(nimwake#66) 전까지
+- ingress token 모드(내 도메인)와 네트워크 복구 때의 재연결은 아직 기기에서 보지 못했다 (validation/15)

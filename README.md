@@ -7,12 +7,27 @@ Android 재부팅 · daemon crash · 네트워크 끊김을 사람 손 없이 �
 Android
   └── Termux ── Termux:Boot (00-sshd · 10-nimwake) · wake lock
         └── nimwake-host (supervisor)          ← 이 레포
-              └── proot-distro Ubuntu
+              ├── ingress provider (선택)       ← cloudflared 등 — 집 밖에서 닿게
+              └── proot-distro Ubuntu (--isolated)
                     └── nimwaked               ← Core (빌드는 Core CI)
-                          └── applications
+                          └── applications     ← 소비처(개인 레포)가 make deploy-app으로
 ```
 
 이 레포는 Core 기능을 다시 구현하지 않는다. Android 앱(APK)도 아니다 — Termux 위의 POSIX shell과, Core가 내놓은 aarch64 binary를 배치하는 스크립트다. 조직의 코어 언어는 Rust이고, Host Layer MVP는 shell이다 (이후 `nimwake-hostd`는 Rust).
+
+**이 레포가 하는 일은 둘이다.** 하나는 root 없는 Android를 Linux 서버처럼 쓰게 만드는 것(Termux:Boot · supervisor · proot · Android 제약 우회)이고, 다른 하나는 그 위에 **내 앱을 배포하고 공개하는 계약**(`deploy-app` · ingress provider)이다. 앞의 것은 Android 고유이고, 뒤의 것은 플랫폼 중립으로 설계했다 → [Phase 2](.docs/phases/phase-2/README.md#android-고유와-플랫폼-공통)
+
+## 내 앱을 폰에 배포하기
+
+내 앱 · 도메인 · 토큰은 **개인 레포**에 둔다 — [`examples/consumer-template`](examples/consumer-template/README.md)을 복사해 시작한다.
+
+```sh
+make setup                      # 이 레포를 고정한 버전으로
+make deploy APP=blog            # 빌드 → 폰 → SIGHUP 재적재 (다른 앱은 그대로)
+make ingress && make token && make restart   # Cloudflare Tunnel로 공개 (선택)
+```
+
+공개 앱과 LAN 전용 앱을 한 폰에 함께 둘 수 있다 — 앱마다 `exposure`(public · lan). 보안: [Phase 2 04](.docs/phases/phase-2/04-exposure-security.md)
 
 ## 상태
 
@@ -81,7 +96,12 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 | `make test-recovery` | `kill -9` → 재기동 · exit 78 → UNHEALTHY · stop 잔존 0 |
 | `make test-lan` · `make test-wifi` | LAN lifecycle · 동시 cold start · Wi-Fi 복구 (`NIMWAKE_LISTEN=0.0.0.0:8080` 필요) |
 | `make test-experiments` | 실패 경로 실험 E2–E4 + 고아 정리 — 별도 경로 · 포트의 실험 daemon이라 운영 daemon · soak과 섞이지 않는다 |
-| `make soak-start HOURS=24` · `soak-report` · `soak-stop` | 기기에서 도는 장시간 soak |
+| `make soak-start HOURS=24` · `soak-report` · `soak-stop` | 기기에서 도는 장시간 soak (`SOAK_HOST=blog.local SOAK_PATH=/api/whoami`로 실제 앱) |
+| `make device-status` | 기기에 지금 무엇이 도는가 — Core(설치 · 메모리) · supervisor · soak. 배포 전에 먼저 |
+| `make restart` | supervisor를 다시 띄운다 — `host.conf` 변경 반영 (soak 중 거부) |
+| `make deploy-app APP=…` · `rollback-app NAME=…` · `remove-app NAME=…` · `apps` | 소비처 앱 배포 계약 — release · SIGHUP 재적재 · 노출 |
+| `make ingress-enable INGRESS=cloudflare [MODE=quick]` · `ingress-token < 파일` · `ingress-disable` | 집 밖에서 닿게 — provider 설치 · 토큰(표준 입력으로만) |
+| `make app-blog` · `make test-app HOST=…` | 예시 Next.js 앱 빌드 · 실제 앱 측정 |
 
 기기에서는 `nimwake-host start | stop | status | logs`.
 
@@ -89,11 +109,13 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 
 ```text
 host/bin/      nimwake-host (supervisor CLI) · nimwake-soak (sampler)      ← 기기, Termux
-host/lib/      config · policy(재기동 판단) · supervisor
-host/boot/     00-sshd · 10-nimwake                                       ← ~/.termux/boot/
-guest/         setup-ubuntu.sh · apps/echo (검증용 manifest)              ← proot Ubuntu
-scripts/       fetch-core · deploy · doctor · run · stop · check-portability   ← 개발 머신
-tests/unit/    bats — 판단 로직, 가짜 daemon으로 감시 루프, soak 요약
+host/lib/      config · policy(재기동 판단) · supervisor · logs · network · ingress
+host/boot/     00-sshd · 10-nimwake · 20-soak                             ← ~/.termux/boot/
+host/ingress/  provider 플러그인 — cloudflare/{check,install,run,health}
+guest/         setup-ubuntu.sh · node.lock · apps/echo · apps/blog (검증용)  ← proot Ubuntu
+scripts/       fetch-core · deploy · apps · ingress · build-app · doctor · …  ← 개발 머신
+examples/      blog (예시 Next.js) · consumer-template (개인 레포의 출발점)
+tests/unit/    bats — 판단 로직, 가짜 daemon · 가짜 provider로 감시 루프, 배포 계약, soak 요약
 tests/device/  실기기 시나리오 — CI에 넣지 않고 결과는 .docs/validation/에
 .docs/         PRD · phases(계획) · validation(실기기 리포트)
 ```
@@ -102,4 +124,5 @@ tests/device/  실기기 시나리오 — CI에 넣지 않고 결과는 .docs/va
 
 - [PRD](.docs/prd/README.md) — Android Host Layer 요구사항
 - [Phase 1](.docs/phases/phase-1/README.md) — 레포 셋업 · 마일스톤 · Core 동기화
+- [Phase 2](.docs/phases/phase-2/README.md) — Rust hostd 설계 · ingress · 배포 계약 · 노출 보안
 - [검증 리포트](.docs/validation/) — 새 리포트는 [00-template](.docs/validation/00-template.md)에서
