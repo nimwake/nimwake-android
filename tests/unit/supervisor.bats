@@ -445,3 +445,47 @@ ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
 	grep -q "WARNING NIMWAKE_ISOLATED=0" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
 	grep -q "for no public app" "$NIMWAKE_HOST_HOME/run/ingress"
 }
+
+# Termux가 통째로 죽은 것처럼 — supervisor와 그 자식까지 SIGKILL, 아무 기록도 남기지 못한다
+kill_everything() {
+	pkill -9 -f "[_]_supervise" 2>/dev/null || true
+	pkill -9 -f "fake-(nimwaked|proot)" 2>/dev/null || true
+	sleep 0.5
+}
+
+# 10-15 기기: Android가 Termux를 내렸는데 로그가 종료 기록 없이 끊겨 언제 사라졌는지 몰랐다
+@test "a supervisor lost while the phone stayed up is reported as killed on the next start" {
+	export NIMWAKE_BOOTED_AT="2000-01-01 00:00:00"
+	"$host" start
+	wait_for 5 state_is RUNNING
+	sleep 1.5
+	kill_everything
+
+	run "$host" start
+	echo "$output"
+	[[ "$output" == *"previous run ended without exiting (killed) — last seen 20"*"in state RUNNING"* ]]
+	grep -q "previous supervisor ended without exiting (killed)" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	wait_for 5 state_is RUNNING
+
+	run "$host" status
+	[[ "$output" == *"last-lost   "*" killed — last seen "* ]]
+}
+
+@test "a supervisor lost to a reboot is reported as reboot" {
+	"$host" start
+	wait_for 5 state_is RUNNING
+	kill_everything
+	# 마지막 heartbeat 뒤에 부팅했다
+	export NIMWAKE_BOOTED_AT="2999-01-01 00:00:00"
+	run "$host" start
+	[[ "$output" == *"(reboot) — last seen"*"phone booted at 2999-01-01 00:00:00"* ]]
+}
+
+@test "a clean stop is not reported as lost" {
+	"$host" start
+	wait_for 5 state_is RUNNING
+	"$host" stop
+	run "$host" start
+	[[ "$output" != *"without exiting"* ]]
+	[ ! -f "$NIMWAKE_HOST_HOME/run/last-unclean" ]
+}

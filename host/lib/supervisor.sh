@@ -18,6 +18,48 @@ set_state() {
 	host_log "state $1${2:+ — $2}"
 }
 
+# supervisor가 살아 있던 마지막 시각. 감시 주기마다 덮어쓴다 — Termux가 통째로 죽으면 아무것도 남기지 못하므로
+# 다음 start가 이것으로 '언제 사라졌는가'를 안다 (10-15 기기: 로그가 종료 기록 없이 끊겼다)
+heartbeat() {
+	date '+%Y-%m-%d %H:%M:%S' >"$NIMWAKE_RUN/heartbeat"
+}
+
+# 이번 부팅 시각 "YYYY-MM-DD HH:MM:SS". Android는 /proc/uptime을 막는다 — `uptime -s`(sysinfo)를 쓴다
+booted_at() {
+	if [ -n "${NIMWAKE_BOOTED_AT:-}" ]; then
+		echo "$NIMWAKE_BOOTED_AT"
+	else
+		uptime -s 2>/dev/null || true
+	fi
+}
+
+# start 직전에 부른다 (supervisor가 없다는 것을 확인한 뒤). 이전 실행이 STOPPED · UNHEALTHY로 끝나지 않았다면
+# supervisor는 종료를 기록하지 못하고 사라진 것이다. 마지막 heartbeat가 이번 부팅보다 앞이면 재부팅,
+# 뒤면 폰이 켜진 채로 죽었다 — Android가 Termux를 내렸다(메모리 회수 · 배터리 · phantom process).
+# supervisor.log와 run/last-unclean("시각 원인 — 설명")에 남긴다. status와 doctor가 읽는다
+detect_unclean_end() {
+	[ -f "$NIMWAKE_RUN/state" ] || return 0
+	read -r _prev _ <"$NIMWAKE_RUN/state"
+	case "$_prev" in
+	STOPPED | UNHEALTHY | "") return 0 ;;
+	esac
+	_seen="$(cat "$NIMWAKE_RUN/heartbeat" 2>/dev/null || cut -d' ' -f2-3 "$NIMWAKE_RUN/state")"
+	_boot="$(booted_at)"
+	if [ -z "$_boot" ]; then
+		_cause=unknown
+		_why="last seen $_seen in state $_prev, boot time unknown"
+	elif [ "$(printf '%s\n%s\n' "$_seen" "$_boot" | sort | head -n 1)" = "$_seen" ] && [ "$_seen" != "$_boot" ]; then
+		_cause=reboot
+		_why="last seen $_seen in state $_prev, phone booted at $_boot"
+	else
+		_cause=killed
+		_why="last seen $_seen in state $_prev, phone up since $_boot — Android likely killed Termux (memory, battery, phantom process)"
+	fi
+	printf '%s %s — %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$_cause" "$_why" >"$NIMWAKE_RUN/last-unclean"
+	host_log "previous supervisor ended without exiting ($_cause) — $_why"
+	echo "nimwake-host: previous run ended without exiting ($_cause) — $_why"
+}
+
 health_probe() {
 	if [ -n "$NIMWAKE_PROBE" ]; then
 		sh -c "$NIMWAKE_PROBE"
@@ -125,6 +167,7 @@ monitor_daemon() {
 		_waited=$((_waited + 1))
 	done
 	set_state RUNNING "nimwaked pid $(daemon_pid), ready after ${_waited}s"
+	heartbeat
 
 	housekeeping
 	_housekeeping_next=$(($(date +%s) + NIMWAKE_HOUSEKEEPING_INTERVAL))
@@ -134,6 +177,7 @@ monitor_daemon() {
 	_failures=0
 	while :; do
 		sleep "$NIMWAKE_HEALTH_INTERVAL"
+		heartbeat
 		if [ "$(date +%s)" -ge "$_network_next" ]; then
 			check_network
 			_network_next=$(($(date +%s) + NIMWAKE_NET_INTERVAL))

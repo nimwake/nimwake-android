@@ -104,6 +104,16 @@ else
 	warn "nimwaked is not running (stopped with make stop, or the boot failed)"
 fi
 
+# supervisor가 종료를 기록하지 못하고 사라진 마지막 때 (nimwake-host start가 남긴다). 재부팅이면 정상이다.
+# 폰이 켜진 채 사라졌다면 Android가 Termux를 내렸다 — Termux:Boot는 다시 돌지 않아 사람이 Termux를 열 때까지 꺼져 있다
+lost="$HOME/.nimwake-host/run/last-unclean"
+if [ -f "$lost" ]; then
+	case "$(cut -d' ' -f3 "$lost")" in
+	killed) warn "supervisor was lost while the phone stayed up ($(cut -d' ' -f1-2 "$lost")) — Android killed Termux: check the battery exemption and phantom process limit below, and memory use by other apps" ;;
+	*) ok "last supervisor loss: $(cut -d' ' -f3- "$lost")" ;;
+	esac
+fi
+
 free_mb=$(($(df -Pk "$HOME" | awk 'NR == 2 { print $4 }') / 1024))
 if [ "$free_mb" -ge 10240 ]; then
 	ok "storage ${free_mb}MB free"

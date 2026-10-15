@@ -46,8 +46,10 @@ cmd_start() {
 		echo "nimwake-host: nimwaked (pid $_daemon) is running without a supervisor — run nimwake-host stop first" >&2
 		return 1
 	fi
+	# 이전 실행이 종료를 기록하지 못하고 사라졌는가 (재부팅 · Android가 Termux를 내림) — 상태를 지우기 전에 본다
+	detect_unclean_end
 	# 이전 실행의 RUNNING을 새 실행의 것으로 읽지 않게 상태를 비운다 (10-nimwake가 이것을 기다린다)
-	rm -f "$NIMWAKE_RUN/stop" "$NIMWAKE_RUN/hung" "$NIMWAKE_RUN/state"
+	rm -f "$NIMWAKE_RUN/stop" "$NIMWAKE_RUN/hung" "$NIMWAKE_RUN/state" "$NIMWAKE_RUN/heartbeat"
 	nohup "$0" __supervise >/dev/null 2>&1 &
 	echo "$!" >"$pid_file"
 	echo "nimwake-host: supervisor started (pid $!)"
@@ -107,6 +109,10 @@ cmd_status() {
 		echo "supervisor  running (pid $_pid)"
 	else
 		echo "supervisor  not running"
+	fi
+	# 마지막으로 종료 기록 없이 사라진 때 — 재부팅이면 정상, killed가 잦으면 Android 보호 설정을 본다
+	if [ -f "$NIMWAKE_RUN/last-unclean" ]; then
+		echo "last-lost   $(cat "$NIMWAKE_RUN/last-unclean")"
 	fi
 	_daemon="$(daemon_pid)"
 	if [ -n "$_daemon" ]; then
