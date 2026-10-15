@@ -58,7 +58,38 @@ cmd_check() {
 		*) fail "exposure '$exposure' — public | lan" ;;
 		esac
 	fi
+	check_allow
 	echo "$name $host $port $exposure"
+}
+
+# [server] allow — Core §82(rc7): gateway가 직접 본 TCP peer로만 판단, 넘으면 403이고 앱을 깨우지 않는다.
+# ingress(cloudflared)는 폰 안에서 붙으므로 터널 요청의 peer는 127.0.0.1이다 — exposure와 맞물린다 (Phase 2 04)
+check_allow() {
+	_line="$(grep '^[[:space:]]*allow[[:space:]]*=' "$toml" | head -n 1 || true)"
+	if [ -z "$_line" ]; then
+		if [ "$exposure" = lan ]; then
+			echo "app-manifest: warning: $name is lan but has no [server] allow — only the Cloudflare hostname list keeps it off the internet. Add allow = [\"192.168.0.0/16\"] (your LAN) so a tunnel request gets 403 even if that list is wrong" >&2
+		fi
+		return 0
+	fi
+	case "$_line" in
+	*\]*) ;;
+	*) fail "allow 는 한 줄로 적는다 — allow = [\"192.168.0.0/16\"] (이 검사는 TOML을 해석하지 않는다)" ;;
+	esac
+	_cidrs="$(printf '%s\n' "$_line" | sed 's/^[^[]*\[//; s/\].*//' | tr ',' ' ' | tr -d '\t"')"
+	_tunnel=no
+	for _c in $_cidrs; do
+		case "$_c" in
+		127.* | 0.0.0.0/0) _tunnel=yes ;;
+		esac
+	done
+	if [ "$exposure" = public ] && [ "$_tunnel" = no ]; then
+		fail "$name is public but allow ($_cidrs) does not include 127.0.0.1 — the tunnel connects from 127.0.0.1, so every internet request would get 403. Drop allow, or add \"127.0.0.1/32\""
+	fi
+	if [ "$exposure" = lan ] && [ "$_tunnel" = yes ]; then
+		echo "app-manifest: warning: $name is lan but allow includes 127.0.0.1 (or everything) — a tunnel request would get through. Keep allow to your LAN range" >&2
+	fi
+	return 0
 }
 
 cmd_render() {

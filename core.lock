@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=v0.1.0-rc6
-rev=4f7d9918ba0539c678251d9ab9669206007f0c41
-note=Core v0.1.0-rc6 — §79 SIGUSR1 상태 스냅샷 · §80 유휴 eviction · §81 X-Forwarded-For · --version. 런타임 변경은 §80 하나(임계값 0이면 돌지 않는다). 실제 앱 · ingress · 메모리 임계값 soak의 기준 (#45)
+tag=v0.1.0-rc7
+rev=1e2bf91744acc8ad9a1c125af7f555dc975f0e0e
+note=Core v0.1.0-rc7 — §82 앱별 peer 제한(server.allow, 넘으면 403 · 앱을 깨우지 않음) · §83 header 읽기 15초(기본 켜짐) · 요청 본문 상한(기본 꺼짐). v0.1.0 직전 (#59)

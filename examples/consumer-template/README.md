@@ -91,6 +91,13 @@ make status
 | 같은 Wi-Fi에서 | 닿는다 | 닿는다 — hosts 파일이나 공유기 DNS에 `notes.home.arpa → 폰 IP` |
 
 - LAN 전용 앱이 있으면 폰의 gateway는 LAN에 열려 있어야 한다 (`NIMWAKE_LISTEN=0.0.0.0:8080`) — 같은 Wi-Fi의 누구나 인증 없이 닿는다
-- LAN 전용 앱을 막는 것은 지금 **'Cloudflare에 그 이름이 없다'뿐**이다 — Core가 앱별 접속 제한을 갖기 전까지는 Cloudflare 설정이 곧 방어선이다
+- **LAN 전용 앱에는 `allow`를 적는다** (Core `v0.1.0-rc7` 이상). 터널 요청은 폰 안의 cloudflared에서 오므로 peer가 `127.0.0.1`이다 — LAN 대역만 허용하면 Cloudflare 설정이 틀려도 터널 요청은 **403**이고 앱을 깨우지 않는다:
+  ```toml
+  [server]
+  host  = "notes.home.arpa"
+  port  = 3103
+  allow = ["192.168.0.0/16"]   # 한 줄로. host bit 없이 (192.168.0.9/16은 거부된다)
+  ```
+  `allow`가 없으면 막는 것은 'Cloudflare에 그 이름이 없다'뿐이다 — `make deploy`가 경고한다. 공개 앱은 `allow`를 적지 않는다(적으면 `127.0.0.1/32`가 있어야 한다 — 없으면 배포가 거부한다)
 - 앱마다 **`exposure` 파일**로 의도를 적는다 — `apps/<앱>/exposure`에 `public` 또는 `lan`. **없으면 `lan`**. nimwake-android가 `public` 앱의 이름만 ingress에 넘기고 `make status`에 보인다. 공개 앱인 `apps/blog`에는 `public`이 들어 있다
 - nimwake-android는 daemon과 앱을 **격리 모드**(`proot-distro --isolated`)로 띄운다 — 앱이 Termux의 SSH 키 · 부팅 스크립트를 볼 수 없다. 끄지 않는다 (`NIMWAKE_ISOLATED=1`)
