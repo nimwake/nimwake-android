@@ -1,6 +1,6 @@
 # 16. Core `v0.1.0-rc7` — 배치 · lifecycle · recovery · §82 peer 제한 · §83 header 상한
 
-> **일시:** 2026-10-15 · **Core:** `v0.1.0-rc7` (`1e2bf91`, release asset) · **결과:** #59의 넷 중 **1(배치)** · **3의 일부(lifecycle · recovery · LAN)** · **4(§82 · §83)** 통과. 남은 것은 사람 손이 필요한 셋 — 초기화 기기 `make install` · 재부팅 · Wi-Fi
+> **일시:** 2026-10-15 · **Core:** `v0.1.0-rc7` (`1e2bf91`, release asset) · **결과:** #59의 넷 중 **1(배치)** · **3의 일부(lifecycle · recovery · LAN)** · **4(§82 · §83)** 통과, 이어서 **재부팅 · Wi-Fi**도 통과. 남은 것은 초기화 기기 `make install` 하나
 >
 > [#59](https://github.com/nimwake/nimwake-android/issues/59) · Core nimwake#68(§82) · #69(§83)
 
@@ -88,13 +88,30 @@ apps: Core rejected the reload — restoring the previous manifest
 | lan | `127.*` · `0.0.0.0/0` 포함 | 경고 |
 | public | 127.0.0.1을 빠뜨림 | **거부** |
 
+## 6. 재부팅 · Wi-Fi (같은 날 저녁, 사람이 폰을 조작)
+
+**`make test-boot` — PASS.** 잠금 해제 1분 뒤 READY(health 404 after 2s) · 부팅 직후 모든 앱 SLEEPING · lifecycle. #60의 판정이 기기에서 처음 돌았다:
+
+```text
+previous run ended without exiting (reboot) — last seen 2026-10-15 18:23:43 in state RUNNING, phone booted at 2026-10-15 18:23:47
+```
+
+**Wi-Fi 끄고 켜기 — PASS.** 측정을 시작하기 전에 Wi-Fi가 이미 꺼져 `make test-wifi`의 사전 점검(LAN 404)이 실패했다 — 끊기 전 daemon pid를 알고 있어 돌아오기를 기다리는 쪽으로 같은 판정을 했다.
+
+```text
+18:48:40 network ONLINE → OFFLINE — no interface with an address
+18:49:41 network OFFLINE → RECOVERING — wlan0 192.168.0.25
+18:49:41 network RECOVERING → ONLINE — wlan0 192.168.0.25
+```
+
+nimwaked는 **같은 pid(10689)** — 재시작 없음(PRD §13). 다시 붙은 직후 요청 200. 진행 중인 soak은 그대로.
+
 ## 남은 것 (#59)
 
 | | 필요한 것 |
 | - | ---------- |
 | 2. 초기화 기기 `make install` → 블로그까지 | Termux 데이터 삭제 — 사람이 폰에서, ssh 키를 다시 등록 |
-| 3. `make test-boot` | 재부팅 — 잠금 해제 |
-| 3. `make test-wifi` | Wi-Fi 끄고 켜기 |
-| 그 뒤 | rc7로 72h soak (실제 앱) |
+| ~~3. `make test-boot` · Wi-Fi~~ | 위 6 |
+| 진행 중 | rc7로 72h soak (블로그, 10-15 18:47 → 10-18 18:47) |
 
 시험 앱 `lanapp` · `pubapp`과 release 디렉터리는 지웠다. 앱은 blog · echo(LAN).
