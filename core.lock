@@ -1,4 +1,4 @@
 repo=nimwake/nimwake
-tag=v0.1.0-rc7
-rev=1e2bf91744acc8ad9a1c125af7f555dc975f0e0e
-note=Core v0.1.0-rc7 — §82 앱별 peer 제한(server.allow, 넘으면 403 · 앱을 깨우지 않음) · §83 header 읽기 15초(기본 켜짐) · 요청 본문 상한(기본 꺼짐). v0.1.0 직전 (#59)
+tag=v0.1.0
+rev=b6fec404f81dfe34b860b934345ca4f1d810080e
+note=Core v0.1.0 — 첫 정식 릴리스. rc7(1e2bf91)과 런타임이 같다(그 뒤는 기본값 테스트 · dependabot · 버전). 검증: validation/16 · 17 (#59)
