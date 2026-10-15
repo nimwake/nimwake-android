@@ -8,12 +8,15 @@
 
 ## [Unreleased]
 
-`v0.1.0` 후보. Phase 1 — Android MVP. 기기 검증은 [Android 8항목 근거](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/09-android-acceptance.md)에 있다.
+## [0.1.0] — 2026-10-15
+
+첫 릴리스. Android 폰(root 없음, Termux)을 Nimwake 서버로 — 설치 · 부팅 자동 기동 · 감시와 복구, 그 위에 내 앱을 배포하고 공개하는 계약까지. 기기 검증은 [Android 8항목 근거](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/09-android-acceptance.md)와 [validation/16](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/16-core-rc7.md) · [17](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/17-install-wiped-device.md)에 있다.
 
 ### Core
 
 - `core.lock`으로 Core binary를 commit SHA나 태그에 고정한다. 이 레포는 빌드하지 않고 Core CI의 aarch64 artifact만 받는다 (#2, D-A3 · D-A4)
-- 지금: **Core `v0.1.0-rc7`** (`1e2bf91`, #59) — §82 앱별 peer 제한(`[server] allow`) · §83 header 읽기 15초 · 본문 상한. 그 전 rc6 (`4f7d991`, #46) — §79 SIGUSR1 상태 스냅샷 · §80 유휴 eviction · §81 `X-Forwarded-For` · `--version`
+- **Core `v0.1.0`** (`b6fec40`) — rc7(`1e2bf91`)과 런타임이 같다(그 뒤는 기본값 테스트 · dependabot · 버전). 기기에서 lifecycle · 블로그 확인
+- rc7에서 #59의 넷: 배치 · 초기화 기기 `make install` · 태그 binary로 lifecycle · recovery · 재부팅 · Wi-Fi · §82 앱별 peer 제한(`[server] allow`) · §83 header 읽기 15초 (#61–#63). 그 전 rc6 (`4f7d991`, #46) — §79 SIGUSR1 상태 스냅샷 · §80 유휴 eviction · §81 `X-Forwarded-For` · `--version`
 - 판정 대상이었던 rc5 (#36): rc3 이후 들어온 §77 crash-loop backoff · §78 메모리 입장 제어가 매 요청 경로를 지나 앞선 증거를 돌려 쓸 수 없었다 — rc4로 옮겼다가(#34) 런타임이 같은 rc5로. soak은 24h에서 멈췄다(결함 0, 실제 앱 우선 — #45)
 - 그 전 검증: Core main `d7c5590` (`nimwaked 0.1.0`, `nimwake-bench` 포함, #16) — 72h soak 결함 없음 (#33). 처음은 `v0.1.0-rc1` (#7)
 
