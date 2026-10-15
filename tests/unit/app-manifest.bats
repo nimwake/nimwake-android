@@ -34,7 +34,8 @@ EOF
 	run "$m" check "$app"
 	echo "$output"
 	[ "$status" -eq 0 ]
-	[ "$output" = "blog blog.example.com 3102 lan" ]
+	# lan인데 allow가 없으면 경고가 앞에 붙는다 — 결과는 마지막 줄
+	[ "${lines[${#lines[@]}-1]}" = "blog blog.example.com 3102 lan" ]
 }
 
 @test "working_dir is refused — the deploy fills it with the release directory" {
@@ -94,7 +95,7 @@ EOF
 	run "$m" check "$ex"
 	echo "$output"
 	[ "$status" -eq 0 ]
-	[ "$output" = "blog blog.local 3102 lan" ]
+	[ "${lines[${#lines[@]}-1]}" = "blog blog.local 3102 lan" ]
 }
 
 # 노출 선언 (Phase 2 04) — nimwake.toml이 아니라 옆 파일. Core는 모르는 키를 거부한다
@@ -106,10 +107,61 @@ EOF
 
 	printf ' lan \n' >"$app/exposure"
 	run "$m" check "$app"
-	[ "$output" = "blog blog.example.com 3102 lan" ]
+	[ "${lines[${#lines[@]}-1]}" = "blog blog.example.com 3102 lan" ]
 
 	echo internet >"$app/exposure"
 	run "$m" check "$app"
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"exposure 'internet' — public | lan"* ]]
+}
+
+# [server] allow (Core §82, rc7) — 터널 요청의 peer는 127.0.0.1이다 (Phase 2 04)
+with_allow() {
+	awk -v a="$1" '{ print } /^port = / { print "allow = " a }' "$app/nimwake.toml" >"$app/t" && mv "$app/t" "$app/nimwake.toml"
+}
+
+@test "a lan app without allow passes with a warning to add the LAN range" {
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"warning: blog is lan but has no [server] allow"* ]]
+}
+
+@test "a lan app limited to the LAN passes quietly" {
+	with_allow '["192.168.0.0/16", "10.0.0.0/8"]'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[ "$output" = "blog blog.example.com 3102 lan" ]
+}
+
+@test "a public app whose allow leaves out 127.0.0.1 is refused — every tunnel request would get 403" {
+	echo public >"$app/exposure"
+	with_allow '["192.168.0.0/16"]'
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"does not include 127.0.0.1"* ]]
+}
+
+@test "a public app with 127.0.0.1 in allow, or without allow, passes" {
+	echo public >"$app/exposure"
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[ "$output" = "blog blog.example.com 3102 public" ]
+	with_allow '["127.0.0.1/32", "192.168.0.0/16"]'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[ "$output" = "blog blog.example.com 3102 public" ]
+}
+
+@test "a lan app whose allow lets 127.0.0.1 in is warned — the tunnel would get through" {
+	with_allow '["0.0.0.0/0"]'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"warning: blog is lan but allow includes 127.0.0.1"* ]]
+}
+
+@test "allow spread over several lines is refused — the check reads one line" {
+	with_allow '['
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"allow 는 한 줄로"* ]]
 }
