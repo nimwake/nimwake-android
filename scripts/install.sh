@@ -33,6 +33,10 @@ install: cannot ssh to $device with a key yet. First time on a new device:
              User <whoami>
              IdentityFile ${key:-~/.ssh/nimwake_phone}
     4. ssh-copy-id -i ${key:-~/.ssh/nimwake_phone}.pub $device     (asks the passwd once)
+       no .pub file? derive it from the private key — do not make a new key:
+         ssh-keygen -y -f ${key:-~/.ssh/nimwake_phone} > ${key:-~/.ssh/nimwake_phone}.pub
+       wiped the phone (Termux data)? its host key changed:
+         ssh-keygen -R "[<phone IP>]:8022"
     5. make install
 
 install turns password login off once a key is registered.
@@ -49,6 +53,9 @@ if [ ! -x "$root/dist/aarch64/nimwaked" ]; then
 	echo "== fetch-core"
 	"$root/scripts/fetch-core.sh"
 fi
+
+# 초기화한 기기면 host.conf가 없다 — make backup이 받아 둔 것이 있으면 되살린다 (deploy는 없을 때 기본값을 놓는다)
+"$root/scripts/backup.sh" restore
 
 echo "== deploy"
 "$root/scripts/deploy.sh"
