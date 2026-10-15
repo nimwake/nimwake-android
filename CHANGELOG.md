@@ -32,6 +32,7 @@
 - **네트워크 상태 감시** (PRD §13–§14): supervisor가 30초마다 인터페이스 · 게이트웨이(설정 시) · 외부(설정 시)를 보고 `ONLINE` · `DEGRADED` · `OFFLINE`을 바뀔 때만 `supervisor.log`에 남긴다. `status`에 표시. 끊겨도 Nimwake는 내리지 않는다. Android가 netlink · `/proc/net`을 막아 인터페이스는 `ifconfig`로 본다 — `make install`이 `net-tools`를 설치한다 (#30). 돌아올 때 `RECOVERING`을 거치며 `NIMWAKE_NET_ON_RECOVER`(ingress 재연결 등, PRD §15)를 시간 제한을 걸고 돌린다. `make doctor`가 상태와 게이트웨이 설정을 보고, `make test-wifi`가 supervisor 기록을 확인한다 (#31)
 - **기기 상태와 보호**: `make device-status` — 설치된 Core binary와 **실제 메모리에 있는** binary, supervisor · 네트워크 · 저장공간, soak 진행과 끝 시각. 이 기기는 여러 작업이 같이 쓴다 — soak 중에는 `make deploy`(`install` 포함) · `make bench`가 거부한다, `FORCE=1`로 강행 (#38)
 - **`allow`와 `exposure` 맞춤** (Core §82): 배포 계약 검사가 public 앱의 `allow`에 127.0.0.1이 빠지면 거부(터널 요청이 모두 403), lan 앱에 `allow`가 없거나 127.0.0.1이 들어 있으면 경고한다 (validation/16)
+- **백업**: `make backup`이 기기에만 있는 `host.conf`와 soak 기록을 개발 머신(레포 밖)으로, `make install`이 초기화한 기기에 `host.conf`를 되살린다. 토큰은 폰 밖으로 꺼내지 않는다 (validation/17)
 - **사라진 supervisor 감지**: supervisor가 감시 주기마다 `run/heartbeat`를 남기고, 다음 `start`가 이전 실행이 종료 기록 없이 끝났으면 마지막 heartbeat와 부팅 시각으로 **재부팅**인지 **폰이 켜진 채 죽었는지**(Android가 Termux를 내림 — Termux:Boot가 다시 돌지 않는다)를 `supervisor.log` · `status`(`last-lost`) · `make doctor`에 남긴다 (10-15 기기에서 로그가 아무 기록 없이 끊긴 일에서)
 - **CI**: shellcheck(버전 고정) · 이식성 금지 패턴 검사 · bats, ubuntu는 항상 · macOS는 개발 머신 코드가 바뀔 때 (#9)
 - **릴리스**: `CHANGELOG.md`, `make release-check TAG=…`(CHANGELOG 절 · 정식 릴리스면 `core.lock`이 Core 태그에 고정), 태그 push → `release.yml`이 소스 묶음과 sha256을 GitHub Release로 (#27)
