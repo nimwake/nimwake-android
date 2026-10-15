@@ -25,7 +25,7 @@
 
 | 항목 | 상태 | 근거 | binary |
 | ---- | ---- | ---- | ------ |
-| **Install** | ✓ | 수동 설치로 전 시나리오 통과 ([01](01-a1-manual-baseline.md)) · `make install` 멱등(설치된 기기에서 0 change) ([02-milestones A4](../phases/phase-1/02-milestones.md#a4--install-automation-mvp-1-자동)). 초기화 기기에서 `make install` 한 번은 **72h 뒤** | rc1 · d7c5590 |
+| **Install** | ✓ | 수동 설치로 전 시나리오 통과 ([01](01-a1-manual-baseline.md)) · `make install` 멱등(설치된 기기에서 0 change) ([02-milestones A4](../phases/phase-1/02-milestones.md#a4--install-automation-mvp-1-자동)). **초기화 기기에서 `make install` 한 번 — rc7 PASS (7분 35초, [17](17-install-wiped-device.md))** | rc1 · d7c5590 |
 | **Boot recovery** | ✓ | 재부팅 6회 연속 무인 READY, 부팅 직후 전부 SLEEPING ([02](02-a3-boot.md)) · supervisor 경유 부팅 ([04](04-a2-recovery.md)) | rc1 |
 | **Cold start** | ✓ | loopback · LAN cold start, 1시간 방치 뒤 103ms (swap-in) ([02](02-a3-boot.md) · [05](05-a5-network.md)) · bench cold start 8.79ms vs CI 51.85ms ([08](08-core-d7c5590-bench.md)) | rc1 · **d7c5590** |
 | **Scale-to-zero** | ✓ | idle → sleep → 새 PID (lifecycle 전 회차) · 동시 cold start 20 → process 1 (LAN) · storm 1000 → spawn 1 ([05](05-a5-network.md) · [08](08-core-d7c5590-bench.md)) · soak 표본마다 요청 직전 app 0 | rc1 · **d7c5590** |
@@ -42,7 +42,7 @@
 | ---- | ---- | ---- |
 | Boot recovery | 재부팅 1회 → `make test-boot` | rc1로만 재부팅했다 |
 | Network recovery | `make test-wifi` | rc1로만 했다 |
-| Install | Termux 데이터 삭제 → `make install` | 초기화 기기 미검증 (A4 완료 조건) |
+| Install | Termux 데이터 삭제 → `make install` | 초기화 기기 PASS — rc7, [17](17-install-wiped-device.md) |
 
 `v0.1.0` 태그가 `d7c5590`과 다른 commit을 가리키면 태그 binary로 lifecycle · recovery를 다시 돌린다 ([03-core-sync](../phases/phase-1/03-core-sync.md)).
 
@@ -54,7 +54,7 @@
 | ---- | ------ | ---- | ---- |
 | Boot recovery | rc4 | 10-12 20:46 재부팅 (사람이 잠금 해제) | ✓ — Termux:Boot 20:57:00 → `ready: health 404 after 2s`, 부팅 직후 application 전부 SLEEPING, lifecycle PASS (`make test-boot`). rc4 72h soak 도중이었고 `20-soak`(#19)가 같은 끝 시각으로 이어 받았다 — 표본 공백 약 14분(20:43 → 20:57) |
 | Network recovery | **rc5** | 10-13 00:11 Wi-Fi 끔 → 약 30초 뒤 켬 (사람이 조작) | ✓ — LAN 00:11:59 끊김 → **47초 뒤 복구**, nimwaked **같은 pid 12975**로 생존, 재연결 뒤 요청 200 (`make test-wifi`). supervisor가 처음으로 실기기에서 상태 전이를 기록했다 (#30 · #31): `ONLINE → OFFLINE`(00:11:32) → `RECOVERING` → `ONLINE`(00:12:33). rc5 72h soak 도중이었다 — sampler는 loopback으로 요청하므로 표본에 영향 없음(00:10 · 00:15 둘 다 200) |
-| Install (초기화 기기) | — | — | 남음 — Termux 데이터를 지우므로 **rc5 soak이 끝난 뒤(10-15 21:14)** |
+| Install (초기화 기기) | rc7 | 10-15 | **PASS** — [17](17-install-wiped-device.md) |
 
 **rc5 soak 중간 점검 (10-13 17:33, 20.3h · 표본 244):** non-200 0 · 잔존 app 0 · daemon 재기동 0. 초반 표본 36개에서 cold start p95가 106ms로 보였던 것은 rc5 전환 직후 한 시간에 100ms대 2개가 몰린 탓이었다. **같은 길이로 자르면 `d7c5590`과 같다** — §77 · §78이 요청 경로에 더한 비용은 기기에서 보이지 않는다.
 
