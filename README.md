@@ -117,7 +117,8 @@ host/boot/     00-sshd · 10-nimwake · 20-soak                             ← 
 host/ingress/  provider 플러그인 — cloudflare/{check,install,run,health}
 guest/         setup-ubuntu.sh · node.lock · apps/echo · apps/blog (검증용)  ← proot Ubuntu
 scripts/       fetch-core · deploy · apps · ingress · build-app · doctor · …  ← 개발 머신
-examples/      blog (예시 Next.js) · consumer-template (개인 레포의 출발점)
+examples/      blog (예시 Next.js) · consumer-template (개인 레포의 출발점 — Next.js · 정적 사이트)
+runtime/       static-server.mjs — 정적 사이트 묶음의 server.mjs (Node 내장 모듈만)
 tests/unit/    bats — 판단 로직, 가짜 daemon · 가짜 provider로 감시 루프, 배포 계약, soak 요약
 tests/device/  실기기 시나리오 — CI에 넣지 않고 결과는 .docs/validation/에
 .docs/         PRD · phases(계획) · validation(실기기 리포트)

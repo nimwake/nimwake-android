@@ -1,0 +1,25 @@
+# 정적 빌드 사이트 — Vite + React + TanStack Router (Vite만 · Docusaurus도 같은 모양)
+# make deploy APP=site: build-app.sh가 app/의 `npm run build` 결과(dist/)를 site/에, 정적 서버를 server.mjs로 묶는다
+#   host        공개 hostname 그대로 — Cloudflare Public Hostname과 같게
+#   working_dir 쓰지 않는다 — make deploy가 폰의 release 디렉터리로 채운다
+#   SPA         "1" 없는 경로를 index.html로 (클라이언트 라우터) · "0" 페이지마다 HTML이 있는 사이트(Docusaurus)
+name = "site"
+
+[server]
+host = "site.example.com"
+port = 3110
+
+[runtime]
+command = ["/opt/node/bin/node", "server.mjs"]
+
+[runtime.env]
+PORT = "3110"
+HOSTNAME = "127.0.0.1"
+SPA = "1"
+
+# 파일만 내주는 서버라 가볍다 — 폰에서 cold start 약 1.1초(대부분 proot 안의 Node 기동), warm 40–80ms, RSS 약 58 MB
+[lifecycle]
+idle_timeout_seconds = 120
+startup_timeout_seconds = 10
+shutdown_timeout_seconds = 5
+max_pending_requests = 256
