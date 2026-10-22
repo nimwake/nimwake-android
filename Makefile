@@ -6,10 +6,12 @@ ROUNDS ?= 3
 
 .PHONY: lint test doctor-dev release-check install backup fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
-# shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를 본다
+# shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를,
+# check-docs는 docs/의 영문 · 국문 문서가 같은 뼈대 · 같은 명령인지를 본다
 lint:
 	shellcheck $(SCRIPTS)
 	scripts/check-portability.sh
+	scripts/check-docs.sh
 
 # 기기 없이 도는 테스트 (bats-core). host/lib 판단 로직 + 가짜 daemon으로 감시 루프
 test:
