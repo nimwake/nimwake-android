@@ -23,6 +23,8 @@ lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
 . "$lib/network.sh"
 # shellcheck source=../lib/ingress.sh
 . "$lib/ingress.sh"
+# shellcheck source=../lib/battery.sh
+. "$lib/battery.sh"
 
 pid_file="$NIMWAKE_RUN/supervisor.pid"
 
@@ -150,6 +152,13 @@ cmd_status() {
 		echo "storage     LOW ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
 	else
 		echo "storage     ok ${_free}MB free"
+	fi
+	# supervisor가 정리 작업 주기마다 남긴 것 — "LEVEL PCT PLUGGED STATUS TEMP 날짜 시각"
+	if [ -f "$NIMWAKE_RUN/battery" ]; then
+		read -r _b_level _b_pct _b_plugged _b_status _b_temp _b_day _b_time <"$NIMWAKE_RUN/battery"
+		echo "battery     $_b_level ${_b_pct}% $_b_plugged $_b_status ${_b_temp}°C (checked $_b_day $_b_time)"
+	elif [ "$NIMWAKE_BATTERY_WATCH" = 1 ]; then
+		echo "battery     not checked yet (every ${NIMWAKE_HOUSEKEEPING_INTERVAL}s while RUNNING)"
 	fi
 }
 

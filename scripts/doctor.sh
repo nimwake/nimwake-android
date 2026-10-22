@@ -121,6 +121,22 @@ else
 	warn "storage ${free_mb}MB free (< 10GB, PRD §18)"
 fi
 
+# 전원 — 10-18 · 10-20: USB에 꽂힌 채 하루 약 45%씩 줄어 두 번 꺼졌다. 꺼지면 사람이 전원을 눌러야 켜진다.
+# Termux:API가 응답해야 supervisor가 배터리를 본다 (host/lib/battery.sh) — 응답이 없으면 앱을 한 번 연다 (#67)
+bat="$(timeout 10 termux-battery-status 2>/dev/null | tr -d '\n ')" # portable-ok: 기기(Termux)에서 돈다
+pct="$(printf '%s' "$bat" | sed -n 's/.*"percentage":\([0-9][0-9]*\).*/\1/p')"
+plugged="$(printf '%s' "$bat" | sed -n 's/.*"plugged":"\([A-Z_]*\)".*/\1/p')"
+bstatus="$(printf '%s' "$bat" | sed -n 's/.*"status":"\([A-Z_]*\)".*/\1/p')"
+if [ -z "$pct" ]; then
+	warn "battery unreadable — termux-battery-status did not answer: open the Termux:API app once (the supervisor cannot watch power without it)"
+elif [ "$plugged" = UNPLUGGED ]; then
+	warn "battery ${pct}% on battery — a server phone stays on a charger"
+elif [ "$bstatus" = DISCHARGING ]; then
+	warn "battery ${pct}% $plugged but discharging — the charger, cable or PC USB port cannot keep up; use a wall charger"
+else
+	ok "battery ${pct}% $plugged $bstatus"
+fi
+
 # 네트워크 상태는 supervisor가 기록한다 (host/lib/network.sh, PRD §13–§14)
 net="$HOME/.nimwake-host/run/network"
 if [ ! -f "$net" ]; then
