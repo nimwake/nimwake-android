@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **정적 빌드 사이트** — Vite · Vite + TanStack Router · Docusaurus 같은 정적 사이트를 Next.js 앱처럼 `make deploy APP=…`로. `build-app.sh`가 `next.config.*`가 없으면 빌드 결과(`dist/` · `build/` · `out/`)를 `site/`에, 정적 서버 `runtime/static-server.mjs`(Node 내장 모듈만 · SPA fallback · 해시 파일 immutable 캐시 · ETag · 경로 탈출 · 점 파일 차단)를 `server.mjs`로 묶는다. 템플릿 예시 `apps/site`. 폰에서 cold 1.1s · warm 40–80ms · RSS 58 MB
+
 ## [0.1.0] — 2026-10-15
 
 첫 릴리스. Android 폰(root 없음, Termux)을 Nimwake 서버로 — 설치 · 부팅 자동 기동 · 감시와 복구, 그 위에 내 앱을 배포하고 공개하는 계약까지. 기기 검증은 [Android 8항목 근거](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/09-android-acceptance.md)와 [validation/16](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/16-core-rc7.md) · [17](https://github.com/nimwake/nimwake-android/blob/main/.docs/validation/17-install-wiped-device.md)에 있다.

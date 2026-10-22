@@ -145,6 +145,7 @@ examples/consumer-template/        → 소비처가 복사해 개인 레포를 �
 ├── nimwake-android.lock           이 레포의 버전 고정 (core.lock과 같은 모양)
 ├── apps/blog/nimwake.toml         host = "blog.example.com" (자리표시자)
 ├── apps/blog/                     Next.js 앱 (examples/blog와 같은 구성)
+├── apps/site/                     정적 사이트 (Vite + TanStack Router) — 묶을 때 runtime/static-server.mjs가 server.mjs로
 ├── .env.example                   NIMWAKE_DEVICE · CLOUDFLARE_TUNNEL_TOKEN=… (실제 값은 넣지 않는다)
 └── Makefile                       build → nimwake-android의 deploy-app · 토큰을 secrets/로
 ```

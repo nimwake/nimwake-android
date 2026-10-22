@@ -2,9 +2,14 @@
 # 예시 앱을 개발 머신에서 빌드해 폰에 놓을 묶음을 만든다. (#45)
 #
 #   build-app.sh NAME             examples/NAME → dist/apps/NAME
-#   build-app.sh SRC_DIR OUT_DIR  소비처의 Next.js 앱 → OUT_DIR (예: apps/blog/app → apps/blog/bundle, make deploy-app이 받는 모양)
+#   build-app.sh SRC_DIR OUT_DIR  소비처의 앱 → OUT_DIR (예: apps/blog/app → apps/blog/bundle, make deploy-app이 받는 모양)
 #
-# Next.js standalone: .next/standalone/(server.js + 필요한 node_modules)에 static · public을 더한다.
+# 두 종류를 안다 (next.config.*가 있으면 Next.js, 없으면 정적 사이트):
+#   Next.js  standalone: .next/standalone/(server.js + 필요한 node_modules)에 static · public을 더한다.
+#            manifest command = ["/opt/node/bin/node", "server.js"]
+#   정적     Vite · Vite + TanStack Router · Docusaurus …: `npm run build`의 결과(dist/ · build/ · out/,
+#            STATIC_DIR로 지정)를 site/에, 이 레포의 runtime/static-server.mjs를 server.mjs로.
+#            manifest command = ["/opt/node/bin/node", "server.mjs"], env SPA = "1" | "0"
 # 폰은 이 묶음을 `node server.js`로만 돌린다 — 폰에서 npm install · next build를 하지 않는다
 # (Core binary를 Core CI가 빌드하고 폰은 받기만 하는 것과 같은 구조, D-A3).
 # 결과는 순수 JS다 — 빌드 머신의 CPU(x86_64)와 폰(aarch64)이 달라도 된다. 네이티브 모듈을 쓰면 깨진다.
@@ -55,8 +60,35 @@ node_cmd() {
 }
 
 cd "$src"
+kind=static
+for f in next.config.js next.config.mjs next.config.ts next.config.cjs; do
+	[ -f "$f" ] && kind=next
+done
 node_cmd npm ci --no-audit --no-fund
 NEXT_TELEMETRY_DISABLED=1 node_cmd npm run build
+
+if [ "$kind" = static ]; then
+	# 빌드 결과 디렉터리 — Vite는 dist/, Docusaurus는 build/, 그 밖의 정적 export는 out/
+	site="${STATIC_DIR:-}"
+	if [ -z "$site" ]; then
+		for d in dist build out; do
+			if [ -f "$d/index.html" ]; then
+				site="$d"
+				break
+			fi
+		done
+	fi
+	[ -n "$site" ] && [ -f "$site/index.html" ] || {
+		echo "build-app: 정적 빌드 결과(index.html)를 찾지 못했다 — dist/ · build/ · out/ 중 어디도 아니면 STATIC_DIR=…" >&2
+		exit 1
+	}
+	rm -rf "$out"
+	mkdir -p "$out"
+	cp -R "$site" "$out/site"
+	cp "$root/runtime/static-server.mjs" "$out/server.mjs"
+	echo "build-app: $name (static, $site/) → $out ($(du -sk "$out" | cut -f1) KB, node v$want)"
+	exit 0
+fi
 
 [ -f .next/standalone/server.js ] || {
 	echo "build-app: .next/standalone/server.js 가 없다 — next.config의 output: \"standalone\"" >&2

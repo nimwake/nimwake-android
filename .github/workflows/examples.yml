@@ -10,6 +10,7 @@ on:
     paths:
       - "examples/**"
       - "scripts/build-app.sh"
+      - "runtime/**"
       - "guest/node.lock"
       - ".github/workflows/examples.yml"
   push:
@@ -17,6 +18,7 @@ on:
     paths:
       - "examples/**"
       - "scripts/build-app.sh"
+      - "runtime/**"
       - "guest/node.lock"
       - ".github/workflows/examples.yml"
 
@@ -88,3 +90,29 @@ jobs:
           code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3199/)"
           echo "/ $code"
           [ "$code" = 200 ] || { cat server.log; exit 1; }
+
+      # 정적 사이트 — Vite + TanStack Router가 site/ + server.mjs로 묶이고, 정적 서버가 SPA 경로를 내준다
+      - name: Static server — contract tests
+        run: node --test runtime/static-server.test.mjs
+
+      - name: Static site — build into bundle/ and check the deploy contract
+        working-directory: examples/consumer-template
+        run: |
+          ../../scripts/build-app.sh apps/site/app apps/site/bundle
+          ../../scripts/app-manifest.sh check apps/site
+          [ -f apps/site/bundle/server.mjs ] && [ -f apps/site/bundle/site/index.html ]
+
+      - name: Static site — smoke
+        working-directory: examples/consumer-template/apps/site/bundle
+        run: |
+          PORT=3198 HOSTNAME=127.0.0.1 SPA=1 node server.mjs >server.log 2>&1 &
+          for i in $(seq 1 50); do curl -s -o /dev/null http://127.0.0.1:3198/ && break; sleep 0.2; done
+          js="$(grep -o '/assets/[^"]*\.js' site/index.html | head -n 1)"
+          for path in / /about "$js"; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3198$path")"
+            echo "$path $code"
+            [ "$code" = 200 ] || { cat server.log; exit 1; }
+          done
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3198/assets/missing-AbCd1234.js)"
+          echo "/assets/missing $code"
+          [ "$code" = 404 ]

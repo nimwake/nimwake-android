@@ -4,7 +4,7 @@
 
 ```text
 nimwake-android  설치 · 부팅 · supervisor · 감시 · 앱 배포(deploy-app) · ingress(cloudflare)
-이 레포          apps/<앱>/ (Next.js 소스 + nimwake.toml) · 도메인 · 토큰 파일 경로(.env)
+이 레포          apps/<앱>/ (Next.js · 정적 사이트 소스 + nimwake.toml) · 도메인 · 토큰 파일 경로(.env)
 ```
 
 배포 계약: nimwake-android `.docs/phases/phase-2/03-deploy-and-ingress-contract.md`
@@ -17,6 +17,8 @@ Makefile                setup · deploy · rollback · ingress · token · resta
 .env.example            NIMWAKE_DEVICE · CLOUDFLARE_TOKEN_FILE (토큰 자체가 아니라 파일 경로)
 apps/blog/nimwake.toml  host = 공개 hostname, working_dir 없음
 apps/blog/app/          Next.js 앱 (output: standalone, images.unoptimized)
+apps/site/nimwake.toml  정적 사이트 — command는 server.mjs, env SPA
+apps/site/app/          Vite + React + TanStack Router (빌드 결과 dist/)
 ```
 
 ## 처음 한 번
@@ -62,6 +64,31 @@ make deploy APP=blog       # 새 release. 다음 요청부터 새 코드 (Core�
 make rollback APP=blog     # 직전 release로
 make status
 ```
+
+## 정적 빌드 사이트 — Vite · Vite + TanStack Router · Docusaurus
+
+`next.config.*`가 없는 앱은 **정적 사이트**로 묶인다. `make deploy APP=site`가 `npm run build`의 결과(`dist/` · `build/` · `out/` 중 `index.html`이 있는 곳, 또는 `STATIC_DIR=…`)를 `bundle/site/`에, nimwake-android의 정적 서버(`runtime/static-server.mjs`, Node 내장 모듈만)를 `bundle/server.mjs`로 넣는다. 폰에서는 Nimwake가 그 서버를 깨우고 재운다.
+
+새 정적 사이트는 `apps/site`를 복사해 시작한다:
+
+1. `apps/<이름>/app/`에 프로젝트 — `package.json`의 `build`가 정적 파일을 낸다. **`package-lock.json`을 커밋한다** (빌드는 `npm ci`)
+2. `apps/<이름>/nimwake.toml` — `name` · `host` · `port`(앱마다 다르게) · `PORT`를 바꾼다. `command`는 그대로 `server.mjs`
+3. `SPA` — 클라이언트 라우터(TanStack Router · React Router)면 `"1"`: 없는 경로에 `index.html`을 줘 새로고침 · 직접 링크가 열린다. 페이지마다 HTML이 있는 사이트(Docusaurus · Astro 정적)면 `"0"`: 없는 경로는 `404.html`
+4. `apps/<이름>/exposure` — `public` 또는 `lan`
+5. `make deploy APP=<이름>`
+
+| | 동작 |
+| - | - |
+| `/about` 같은 경로 | 파일 → `about/index.html` → `about.html` → (SPA면) `index.html` |
+| 해시가 붙은 파일 (`assets/index-B4x9kQ2z.js`) | `Cache-Control: immutable`, 1년 |
+| HTML | `no-cache` + ETag — 배포하면 바로 새 버전 |
+| 없는 `/assets/…` | 404 (SPA여도 `index.html`을 JS로 주지 않는다) |
+| `.env` · `.git` 같은 점 파일, `..` | 404 (`.well-known`만 연다) |
+| 압축 | 하지 않는다 — Cloudflare가 가장자리에서 한다 |
+
+- 빌드 때 넣는 값(`VITE_*`)은 **브라우저에 그대로 보인다** — 비밀을 넣지 않는다. 개인 레포의 `.env`에 두고 빌드 환경으로 넘긴다
+- `base`(Vite) · `baseUrl`(Docusaurus)은 `/` — 사이트는 자기 hostname의 루트에 선다
+- 폰에서: cold start 약 1.1초, warm 40–80ms, 깨어 있을 때 약 58 MB. 정적 사이트가 여러 개여도 깨어 있는 것만 메모리를 쓴다
 
 ## 앱을 만들 때
 
