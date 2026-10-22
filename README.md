@@ -19,7 +19,7 @@ Android
 
 ## 내 앱을 폰에 배포하기
 
-내 앱 · 도메인 · 토큰은 **개인 레포**에 둔다 — [`examples/consumer-template`](examples/consumer-template/README.md)을 복사해 시작한다.
+내 앱 · 도메인 · 토큰은 **개인 레포**에 둔다 — [`examples/consumer-template`](examples/consumer-template/README.md)을 복사해 시작한다. 처음이면 **[온보딩 가이드](docs/onboarding.ko.md)** ([English](docs/onboarding.md))를 따라간다.
 
 ```sh
 make setup                      # 이 레포를 고정한 버전으로
@@ -129,4 +129,5 @@ tests/device/  실기기 시나리오 — CI에 넣지 않고 결과는 .docs/va
 - [PRD](.docs/prd/README.md) — Android Host Layer 요구사항
 - [Phase 1](.docs/phases/phase-1/README.md) — 레포 셋업 · 마일스톤 · Core 동기화
 - [Phase 2](.docs/phases/phase-2/README.md) — Rust hostd 설계 · ingress · 배포 계약 · 노출 보안
+- [온보딩](docs/onboarding.ko.md) ([English](docs/onboarding.md)) — 개인 레포를 만들어 내 앱을 폰에 올리고 공개하기. 영문이 기본, 두 판은 `make lint`가 맞춰 본다
 - [검증 리포트](.docs/validation/) — 새 리포트는 [00-template](.docs/validation/00-template.md)에서

@@ -1,6 +1,6 @@
 # 개인 레포 템플릿 — 내 앱을 Android 폰 서버에, Cloudflare로 공개
 
-이 디렉터리를 통째로 복사해 **개인 레포**(비공개 권장)를 시작한다. 폰을 다루는 일은 모두 [nimwake-android](https://github.com/nimwake/nimwake-android)가 하고, 이 레포는 **내 앱과 내 도메인**만 갖는다.
+이 디렉터리를 통째로 복사해 **개인 레포**(비공개 권장)를 시작한다. 처음부터 끝까지의 순서는 [온보딩 가이드](../../docs/onboarding.ko.md)([English](../../docs/onboarding.md))에 있다. 폰을 다루는 일은 모두 [nimwake-android](https://github.com/nimwake/nimwake-android)가 하고, 이 레포는 **내 앱과 내 도메인**만 갖는다.
 
 ```text
 nimwake-android  설치 · 부팅 · supervisor · 감시 · 앱 배포(deploy-app) · ingress(cloudflare)
