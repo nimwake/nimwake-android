@@ -6,9 +6,10 @@ setup() {
 	soak="$root/tests/device/soak.sh"
 }
 
-# 옛 형식(12열)과 #42부터의 형식(13열, mem_avail_mb)
+# 옛 형식(12열), #42부터의 형식(13열, mem_avail_mb), 10-22부터의 형식(15열, + plugged,battery_status)
 header='epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb'
 header_mem="$header,mem_avail_mb"
+header_power="$header_mem,plugged,battery_status"
 
 @test "the sampler writes one well-formed row per sample" {
 	export HOME="$BATS_TEST_TMPDIR/home"
@@ -17,10 +18,12 @@ header_mem="$header,mem_avail_mb"
 	[ "$status" -eq 0 ]
 
 	csv="$HOME/.nimwake-host/logs/soak.csv"
-	[ "$(head -n 1 "$csv")" = "$header_mem" ]
+	[ "$(head -n 1 "$csv")" = "$header_power" ]
 	[ "$(wc -l <"$csv" | tr -d ' ')" -eq 3 ]
 	# 기기가 아니므로 gateway가 없다 → http 000, 그래도 열 수는 같다
-	awk -F, 'NR > 1 && NF != 13 { exit 1 }' "$csv"
+	awk -F, 'NR > 1 && NF != 15 { exit 1 }' "$csv"
+	# Termux:API가 없으면 전원 열은 NA
+	awk -F, 'NR > 1 && ($14 != "NA" || $15 != "NA") { exit 1 }' "$csv"
 	awk -F, 'NR > 1 && $3 != "000" { exit 1 }' "$csv"
 	# MemAvailable: Linux면 MB 숫자, /proc/meminfo가 없는 macOS면 NA
 	awk -F, 'NR > 1 && $13 !~ /^([0-9]+|NA)$/ { exit 1 }' "$csv"
@@ -182,10 +185,48 @@ EOF
 	[[ "$output" == *"| 가용 메모리 (MemAvailable) | min 1800 · p50 2500 · 마지막 2600 MB | |"* ]]
 }
 
+# 13열(#42) 파일에 이어 쓸 때는 13열을 지킨다 — 전원 열을 섞지 않는다
+@test "--resume keeps a 13-column soak.csv at 13 columns" {
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/run" "$HOME/.nimwake-host/logs"
+	echo "$header_mem" >"$HOME/.nimwake-host/logs/soak.csv"
+	echo "1000,earlier,200,0.040,1,0,1,1,RUNNING,80,30.0,1,2500" >>"$HOME/.nimwake-host/logs/soak.csv"
+	echo "$(($(date +%s) + 3600)) 1" >"$HOME/.nimwake-host/run/soak.active"
+	NIMWAKE_SOAK_SAMPLES=1 run "$root/host/bin/nimwake-soak" --resume
+	[ "$status" -eq 0 ]
+	awk -F, 'NR > 1 && NF != 13 { exit 1 }' "$HOME/.nimwake-host/logs/soak.csv"
+}
+
+# 10-22부터의 형식 — 꽂힌 채 배터리가 닳은 표본을 센다 (10-18 · 10-20 기기)
+sample_csv_power() {
+	cat <<EOF
+$header_power
+1000,2026-10-09 00:00:00,200,0.040,101,0,9000,2000,RUNNING,80,30.0,100000,2700,PLUGGED_USB,CHARGING
+1300,2026-10-09 00:05:00,200,0.030,102,0,9000,2100,RUNNING,79,31.0,100000,2500,PLUGGED_USB,DISCHARGING
+1600,2026-10-09 00:10:00,200,0.050,103,0,9000,2100,RUNNING,78,32.0,99990,2600,PLUGGED_USB,DISCHARGING
+1900,2026-10-09 00:15:00,200,0.050,104,0,9000,2000,RUNNING,77,32.0,99980,1800,UNPLUGGED,DISCHARGING
+2200,2026-10-09 00:20:00,200,0.040,105,0,9000,2000,RUNNING,77,32.0,99980,2600,NA,NA
+EOF
+}
+
+@test "summarize counts unplugged and discharging-while-plugged samples" {
+	run sh -c "\"$soak\" summarize" < <(sample_csv_power)
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"power            4 samples read: unplugged 1 · discharging while plugged in 2"* ]]
+
+	run sh -c "\"$soak\" summarize --md" < <(sample_csv_power)
+	[[ "$output" == *"| 전원 | 읽은 표본 4 — 충전기 빠짐 1 · 꽂힌 채 방전 2 | ✗ |"* ]]
+
+	# 전원 열이 없는 형식에는 전원 줄이 없다
+	run sh -c "\"$soak\" summarize" < <(sample_csv_mem)
+	[[ "$output" != *"power "* ]]
+}
+
 # macOS(one-true-awk) · Linux(mawk · gawk)에서 요약이 같아야 한다. 이 머신에 있는 구현을 모두 돌린다.
 @test "summary is identical across the awk implementations on this machine" {
 	summary="$root/tests/device/soak-summary.awk"
-	for csv in sample_csv sample_csv_mem; do
+	for csv in sample_csv sample_csv_mem sample_csv_power; do
 		for mode in "-v md=0" "-v md=1 -v hours=0.25"; do
 			# shellcheck disable=SC2086 # mode는 일부러 나눈다
 			expected="$($csv | awk -F, $mode -f "$summary")"

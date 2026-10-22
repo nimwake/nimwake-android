@@ -135,7 +135,7 @@ check_storage() {
 	if [ "$_level" = low ]; then
 		host_log "storage: LOW ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
 		if [ -n "$NIMWAKE_NOTIFY" ]; then
-			sh -c "$NIMWAKE_NOTIFY" -- "storage low: ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)" >/dev/null 2>&1 ||
+			sh -c "$NIMWAKE_NOTIFY" -- "storage low: ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)" storage >/dev/null 2>&1 ||
 				host_log "storage: notify failed"
 		fi
 	elif [ -n "$_was" ]; then
@@ -148,6 +148,7 @@ check_storage() {
 # RUNNING 동안 NIMWAKE_HOUSEKEEPING_INTERVAL마다 (logs.sh의 rotate_logs)
 housekeeping() {
 	check_storage
+	check_battery
 	rotate_logs
 }
 

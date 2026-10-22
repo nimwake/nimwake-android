@@ -7,6 +7,7 @@
 # 변수: -v md=1 이면 검증 리포트에 붙일 마크다운 표, -v hours=N 이면 첫 표본부터 N시간까지만 (72h에서 24h 판정)
 #
 # 열: epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb
+#     (+ mem_avail_mb #42부터, + plugged,battery_status 10-22부터)
 
 # nearest-rank 백분위: ceil(n * p)번째 (1부터)
 function rank(n, p,    r) {
@@ -99,6 +100,15 @@ hours > 0 && n > 0 && $1 - first > hours * 3600 {
 		mem[k] = $13 + 0
 		mem_last = $13 + 0
 	}
+
+	# 14 · 15번째 열 plugged · battery_status — 꽂힌 채 배터리가 닳아 꺼진 뒤(10-18 · 10-20) 더했다
+	if (NF >= 15 && $14 != "NA") {
+		power++
+		if ($14 == "UNPLUGGED")
+			unplugged++
+		else if ($15 == "DISCHARGING")
+			draining++
+	}
 }
 
 function sort_mem(    i, j, v) {
@@ -156,6 +166,8 @@ END {
 	printf "free storage     %s → %s MB\n", free_first, free_last
 	if (k > 0)
 		printf "memory available min %d MB  p50 %d MB  last %d MB  (MemAvailable — --min-free-memory-mb, #42)\n", mem_min, mem_p50, mem_last
+	if (power > 0)
+		printf "power            %d samples read: unplugged %d · discharging while plugged in %d  (should be 0 — use a wall charger)\n", power, unplugged + 0, draining + 0
 }
 
 # 검증 리포트에 그대로 붙이는 표. 판정 열은 기계적으로 정할 수 있는 것만 채운다
@@ -177,4 +189,8 @@ function markdown(    v_bad, v_orphan, v_restarts) {
 	printf "| 남은 저장공간 | %s → %s MB | |\n", free_first, free_last
 	if (k > 0)
 		printf "| 가용 메모리 (MemAvailable) | min %d · p50 %d · 마지막 %d MB | |\n", mem_min, mem_p50, mem_last
+	if (power > 0) {
+		v_power = verdict(unplugged + draining)
+		printf "| 전원 | 읽은 표본 %d — 충전기 빠짐 %d · 꽂힌 채 방전 %d | %s |\n", power, unplugged + 0, draining + 0, v_power
+	}
 }

@@ -10,6 +10,7 @@
 
 ### Added
 
+- **배터리 · 전원 감시** (`host/lib/battery.sh`): supervisor가 정리 작업 주기(10분)마다 Termux:API로 잔량 · 충전 연결 · 충전 상태를 보고 `ok` · `unplugged` · `draining`(꽂혀 있는데 방전) · `low`(`NIMWAKE_BATTERY_LOW`, 기본 20%) · `unknown`을 바뀔 때만 `supervisor.log`와 Android 알림에 남긴다. `status`에 배터리 줄, `make doctor`가 Termux:API 응답과 전원을 본다 (#67). soak CSV에 `plugged` · `battery_status` 열(15열)과 요약의 전원 줄. 알림은 종류(storage · battery)마다 따로 남는다 — 10-18 · 10-20 기기에서 USB에 꽂힌 채 하루 약 45%씩 줄어 두 번 꺼졌는데 아무도 몰랐다
 - **온보딩 가이드** `docs/onboarding.md`(영문, 기본) · `docs/onboarding.ko.md` — 개인 레포를 만들어 lock을 고정하고, 앱(정적 사이트 · Next.js)을 추가해 배포하고, quick tunnel · 내 도메인으로 공개하기까지. `make lint`의 `check-docs`가 두 판의 제목 뼈대 · 코드 블록이 같은지, 코드 블록의 `make` 대상이 실제로 있는지 본다
 - **정적 빌드 사이트** — Vite · Vite + TanStack Router · Docusaurus 같은 정적 사이트를 Next.js 앱처럼 `make deploy APP=…`로. `build-app.sh`가 `next.config.*`가 없으면 빌드 결과(`dist/` · `build/` · `out/`)를 `site/`에, 정적 서버 `runtime/static-server.mjs`(Node 내장 모듈만 · SPA fallback · 해시 파일 immutable 캐시 · ETag · 경로 탈출 · 점 파일 차단)를 `server.mjs`로 묶는다. 템플릿 예시 `apps/site`. 폰에서 cold 1.1s · warm 40–80ms · RSS 58 MB
 

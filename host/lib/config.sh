@@ -78,11 +78,18 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 # 앱 묶음 · release · 노출 선언(exposure: public | lan — 없으면 lan)이 있는 곳 (make deploy-app이 쓴다)
 : "${NIMWAKE_APP_HOME:=${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/apps}"
 
-# 알림 명령. 메시지는 $1로 받는다. 비우면 supervisor.log에만 남긴다
+# 배터리 · 전원 감시 (host/lib/battery.sh). 정리 작업 주기마다. 잔량이 LOW(%) 아래거나 충전기가 빠졌거나
+# 꽂혀 있는데 줄면 supervisor.log와 알림. 읽는 명령은 테스트가 바꾼다
+: "${NIMWAKE_BATTERY_WATCH:=1}"
+: "${NIMWAKE_BATTERY_LOW:=20}"
+: "${NIMWAKE_BATTERY_CMD:=timeout 10 termux-battery-status}"
+
+# 알림 명령. 메시지는 $1, 종류(storage · battery)는 $2로 받는다 — 종류마다 알림이 따로 남는다.
+# 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then
 	if command -v termux-notification >/dev/null 2>&1; then
-		# shellcheck disable=SC2016 # $1은 알릴 때 sh -c가 푼다
-		NIMWAKE_NOTIFY='termux-notification --id nimwake-storage --title Nimwake --content "$1"'
+		# shellcheck disable=SC2016 # $1 · $2는 알릴 때 sh -c가 푼다
+		NIMWAKE_NOTIFY='termux-notification --id "nimwake-${2:-alert}" --title Nimwake --content "$1"'
 	else
 		NIMWAKE_NOTIFY=''
 	fi

@@ -62,28 +62,38 @@ echo "$$" >"$host/run/soak.pid"
 trap 'rm -f "$host/run/soak.pid" "$tmp"' EXIT
 
 if [ ! -f "$out" ]; then
-	echo "epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb,mem_avail_mb" >"$out"
+	echo "epoch,time,http,seconds,app_pid,apps_before,daemon_pid,daemon_rss_kb,state,battery_pct,battery_temp_c,free_mb,mem_avail_mb,plugged,battery_status" >"$out"
 fi
-# 한 파일 안에서 열 수가 섞이지 않게 한다
+# 한 파일 안에서 열 수가 섞이지 않게 한다 — 옛 형식(12열 · 13열)에 이어 쓸 때는 그 형식대로
 with_mem=0
-head -n 1 "$out" | grep -q ',mem_avail_mb$' && with_mem=1
+with_power=0
+head -n 1 "$out" | grep -q ',mem_avail_mb\(,\|$\)' && with_mem=1
+head -n 1 "$out" | grep -q ',plugged,battery_status$' && with_power=1
 
 read_or_na() {
 	cat "$1" 2>/dev/null || echo NA
 }
 
-# battery · temp를 채운다. Android는 앱에서 /sys/class/power_supply를 막는다 (SELinux — 2026-10-09 시운전에서 NA).
+# battery · temp · plugged · bstatus를 채운다. Android는 앱에서 /sys/class/power_supply를 막는다 (SELinux — 2026-10-09 시운전에서 NA).
 # Termux:API(같은 출처의 앱 + pkg termux-api)가 있으면 그것을 쓴다. 앱이 없으면 명령이
 # 응답하지 않고 멈추므로 timeout을 건다. 둘 다 안 되면 NA.
+# plugged(UNPLUGGED · PLUGGED_USB · PLUGGED_AC …)와 status(CHARGING · DISCHARGING · FULL …)는 10-18 · 10-20 기기에서
+# 꽂힌 채 배터리가 닳아 꺼진 뒤 더했다 — 잔량만으로는 '왜 줄었나'를 알 수 없었다
 battery_status() {
 	battery=NA
 	temp=NA
+	plugged=NA
+	bstatus=NA
 	if command -v termux-battery-status >/dev/null 2>&1; then
 		_json="$(timeout 10 termux-battery-status 2>/dev/null | tr -d '\n ')"
 		_pct="$(printf '%s' "$_json" | sed -n 's/.*"percentage":\([0-9][0-9]*\).*/\1/p')"
 		_temp="$(printf '%s' "$_json" | sed -n 's/.*"temperature":\(-*[0-9][0-9.]*\).*/\1/p')"
+		_plugged="$(printf '%s' "$_json" | sed -n 's/.*"plugged":"\([A-Z_]*\)".*/\1/p')"
+		_bstatus="$(printf '%s' "$_json" | sed -n 's/.*"status":"\([A-Z_]*\)".*/\1/p')"
 		[ -n "$_pct" ] && battery="$_pct"
 		[ -n "$_temp" ] && temp="$(awk -v t="$_temp" 'BEGIN { printf "%.1f", t }')"
+		[ -n "$_plugged" ] && plugged="$_plugged"
+		[ -n "$_bstatus" ] && bstatus="$_bstatus"
 	fi
 	if [ "$battery" = NA ]; then
 		battery="$(read_or_na /sys/class/power_supply/battery/capacity)"
@@ -137,6 +147,9 @@ while [ "$(date +%s)" -lt "$end" ]; do
 	if [ "$with_mem" = 1 ]; then
 		mem="$(awk '/^MemAvailable:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)"
 		row="$row,${mem:-NA}"
+	fi
+	if [ "$with_power" = 1 ]; then
+		row="$row,$plugged,$bstatus"
 	fi
 	echo "$row" >>"$out"
 

@@ -190,6 +190,7 @@ load_libs() {
 	. "$root/host/lib/supervisor.sh"
 	. "$root/host/lib/logs.sh"
 	. "$root/host/lib/network.sh"
+	. "$root/host/lib/battery.sh"
 }
 
 @test "check_storage logs and notifies only when the level changes" {
@@ -488,4 +489,89 @@ kill_everything() {
 	run "$host" start
 	[[ "$output" != *"without exiting"* ]]
 	[ ! -f "$NIMWAKE_HOST_HOME/run/last-unclean" ]
+}
+
+# 배터리 · 전원 감시 (host/lib/battery.sh) — 10-18 · 10-20 기기: USB에 꽂힌 채 하루 약 45%씩 줄어 두 번 꺼졌다
+battery() { # pct plugged status
+	printf '{\n  "percentage": %s,\n  "plugged": "%s",\n  "status": "%s",\n  "temperature": 29.04\n}\n' "$1" "$2" "$3" >"$FAKE_DIR/battery.json"
+}
+
+notified() {
+	if [ -f "$FAKE_DIR/notified" ]; then
+		wc -l <"$FAKE_DIR/notified" | tr -d ' '
+	else
+		echo 0
+	fi
+}
+
+@test "check_battery reports ok, draining, unplugged and low — and notifies only on a change" {
+	export NIMWAKE_BATTERY_CMD="cat \"$FAKE_DIR/battery.json\""
+	export NIMWAKE_NOTIFY="echo \"\$2: \$1\" >>\"$FAKE_DIR/notified\""
+	load_libs
+	log="$NIMWAKE_HOST_HOME/logs/supervisor.log"
+
+	battery 100 PLUGGED_USB FULL
+	check_battery
+	grep -q "battery: ok — 100% PLUGGED_USB FULL 29.0°C" "$log"
+	[ "$(cut -d' ' -f1-5 "$NIMWAKE_HOST_HOME/run/battery")" = "ok 100 PLUGGED_USB FULL 29.0" ]
+	[ "$(notified)" -eq 0 ]
+
+	# 꽂혀 있는데 줄어든다 — 이번 사고
+	battery 80 PLUGGED_USB DISCHARGING
+	check_battery
+	check_battery
+	[ "$(grep -c "battery: draining" "$log")" -eq 1 ]
+	grep -q "^battery: battery draining: 80% — plugged in but discharging" "$FAKE_DIR/notified"
+
+	battery 70 UNPLUGGED DISCHARGING
+	check_battery
+	grep -q "battery: unplugged — 70% UNPLUGGED" "$log"
+
+	# 잔량이 기준 아래면 연결 상태보다 먼저
+	battery 15 PLUGGED_USB DISCHARGING
+	check_battery
+	grep -q "battery: low — 15%.*below 20%" "$log"
+	[ "$(notified)" -eq 3 ]
+
+	# 충전 보호(85%에서 멈춤)는 문제가 아니다
+	battery 85 PLUGGED_AC NOT_CHARGING
+	check_battery
+	grep -q "battery: ok again — 85% PLUGGED_AC NOT_CHARGING" "$log"
+	[ "$(notified)" -eq 3 ]
+}
+
+@test "check_battery is unknown when Termux:API does not answer, and does not notify" {
+	export NIMWAKE_BATTERY_CMD="false"
+	export NIMWAKE_NOTIFY="echo \"\$1\" >>\"$FAKE_DIR/notified\""
+	load_libs
+	check_battery
+	grep -q "battery: unknown — termux-battery-status did not answer; open the Termux:API app once" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+	[ "$(cut -d' ' -f1-2 "$NIMWAKE_HOST_HOME/run/battery")" = "unknown NA" ]
+	[ "$(notified)" -eq 0 ]
+}
+
+@test "the battery watch can be turned off" {
+	export NIMWAKE_BATTERY_WATCH=0
+	export NIMWAKE_BATTERY_CMD="false"
+	load_libs
+	check_battery
+	[ ! -f "$NIMWAKE_HOST_HOME/run/battery" ]
+}
+
+@test "status shows the last battery check" {
+	mkdir -p "$NIMWAKE_HOST_HOME/run"
+	echo "draining 64 PLUGGED_USB DISCHARGING 28.9 2026-10-17 09:31:15" >"$NIMWAKE_HOST_HOME/run/battery"
+	run "$host" status
+	[[ "$output" == *"battery     draining 64% PLUGGED_USB DISCHARGING 28.9°C (checked 2026-10-17 09:31:15)"* ]]
+}
+
+@test "storage and battery notifications carry their kind, so one does not replace the other" {
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_MIN_FREE_MB=999999999
+	export NIMWAKE_BATTERY_CMD="cat \"$FAKE_DIR/battery.json\""
+	export NIMWAKE_NOTIFY="echo \"\$2\" >>\"$FAKE_DIR/kinds\""
+	battery 10 UNPLUGGED DISCHARGING
+	load_libs
+	housekeeping
+	[ "$(sort "$FAKE_DIR/kinds" | tr '\n' ' ')" = "battery storage " ]
 }
