@@ -33,7 +33,7 @@ apps/<name>/
 | `[server] port` | 1024–65535, 8080 제외, 폰에서 겹치지 않게 |
 | `[server] allow` | 한 줄로. `public` 앱은 `127.0.0.1`을 넣거나 `allow`를 빼야 한다. `allow`가 없는 `lan` 앱은 경고 |
 | `[runtime] command` | `/opt/node/bin/node` 또는 `/opt/nimwake/bin/` 아래 binary |
-| `working_dir`, `NIMWAKE_DATA_DIR` | 적지 않는다 — 배포가 둘 다 채운다 |
+| `working_dir`, `NIMWAKE_DATA_DIR`, `NIMWAKE_SECRETS_DIR` | 적지 않는다 — 배포가 채운다 |
 | bundle | 네이티브 모듈(`*.node`) 없음 |
 
 앱이 받는 것:
@@ -42,6 +42,7 @@ apps/<name>/
 | - | - |
 | 작업 디렉터리 | release 디렉터리 — **배포마다 바뀐다** |
 | `NIMWAKE_DATA_DIR` | `/home/nimwake/data/<name>`(0700) — 재배포, rollback, `remove-app`을 거쳐 남고 `make backup`이 복사한다 |
+| `NIMWAKE_SECRETS_DIR` | `/home/nimwake/secrets/<name>`(0700, 파일 0600) — 키마다 파일 하나, `make secret`이 넣는다. 앱이 시작할 때 읽는다. 백업하지 않는다 |
 | 네트워크 | `127.0.0.1:<port>`에서 듣는다. 요청은 gateway를 거쳐 `X-Forwarded-For`와 함께 온다(맨 오른쪽 값이 gateway가 본 peer) |
 
 ## 배포의 의미
@@ -66,6 +67,9 @@ make rollback-app NAME=<name>
 make remove-app NAME=<name>
 make apps                         # apps, host, port, exposure, release, state
 make logs APP=<name>              # LINES=, FOLLOW=1
+make secret APP=<name> KEY=<KEY>  # value on standard input only
+make secrets APP=<name>           # names, never values
+make secret-rm APP=<name> KEY=<KEY>
 make ingress-enable INGRESS=cloudflare
 make ingress-token INGRESS=cloudflare
 make ingress-disable
@@ -87,6 +91,8 @@ make token
 make restart
 make status
 make logs APP=<name>
+make secret APP=<name> KEY=<KEY>
+make secrets APP=<name>
 make verify
 make upgrade REV=<tag>
 ```

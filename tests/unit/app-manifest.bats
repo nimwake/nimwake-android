@@ -191,3 +191,17 @@ with_allow() {
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"NIMWAKE_DATA_DIR 은 쓰지 않는다"* ]]
 }
+
+# 앱의 비밀 — 레포 · manifest 밖, 폰의 /home/nimwake/secrets/<name>. 넣는 것은 make secret
+@test "render tells the app its secrets directory next to its data directory" {
+	run "$m" render "$app/nimwake.toml" /w /home/nimwake/data/blog /home/nimwake/secrets/blog
+	echo "$output"
+	[ "$(printf '%s\n' "$output" | grep -A2 '^\[runtime\.env\]$' | tail -n 2 | tr '\n' '|')" = 'NIMWAKE_DATA_DIR = "/home/nimwake/data/blog"|NIMWAKE_SECRETS_DIR = "/home/nimwake/secrets/blog"|' ]
+}
+
+@test "a manifest that sets NIMWAKE_SECRETS_DIR itself is refused" {
+	awk '{ print } /^\[runtime\.env\]$/ { print "NIMWAKE_SECRETS_DIR = \"/tmp/x\"" }' "$app/nimwake.toml" >"$app/t" && mv "$app/t" "$app/nimwake.toml"
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"NIMWAKE_SECRETS_DIR 은 쓰지 않는다"* ]]
+}

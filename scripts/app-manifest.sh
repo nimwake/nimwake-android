@@ -4,9 +4,9 @@
 #
 #   app-manifest.sh check APP_DIR              통과하면 "name host port exposure" 한 줄, 아니면 이유와 1
 #                                               exposure: APP_DIR/exposure — public | lan. 없으면 lan (Phase 2 04)
-#   app-manifest.sh render MANIFEST WORKDIR [DATA_DIR]
-#                                               [runtime]에 working_dir = WORKDIR을, DATA_DIR을 주면
-#                                               [runtime.env]에 NIMWAKE_DATA_DIR = DATA_DIR을 넣어 출력
+#   app-manifest.sh render MANIFEST WORKDIR [DATA_DIR [SECRETS_DIR]]
+#                                               [runtime]에 working_dir = WORKDIR을, 주면 [runtime.env]에
+#                                               NIMWAKE_DATA_DIR = DATA_DIR · NIMWAKE_SECRETS_DIR = SECRETS_DIR을 넣어 출력
 #
 # 이 셸은 TOML을 해석하지 않는다 — 배포 계약이 쓰는 줄 모양(key = "value", key = 숫자)만 읽는다.
 # 최종 검증은 Core가 한다 (§21 · §76: 전부-또는-전무, 거부되면 apps.sh가 되돌린다).
@@ -47,6 +47,9 @@ cmd_check() {
 	fi
 	if grep -q '^[[:space:]]*NIMWAKE_DATA_DIR[[:space:]]*=' "$toml"; then
 		fail "NIMWAKE_DATA_DIR 은 쓰지 않는다 — 배포가 앱의 영구 디렉터리(/home/nimwake/data/<name>)로 채운다"
+	fi
+	if grep -q '^[[:space:]]*NIMWAKE_SECRETS_DIR[[:space:]]*=' "$toml"; then
+		fail "NIMWAKE_SECRETS_DIR 은 쓰지 않는다 — 배포가 앱의 비밀 디렉터리(/home/nimwake/secrets/<name>)로 채운다. 비밀은 make secret으로"
 	fi
 	command="$(sed -n 's/^[[:space:]]*command[[:space:]]*=[[:space:]]*\[[[:space:]]*"\([^"]*\)".*/\1/p' "$toml" | head -n 1)"
 	case "$command" in
@@ -101,24 +104,31 @@ check_allow() {
 # 영구 디렉터리에 둔다 — 그 경로를 NIMWAKE_DATA_DIR로 알린다. [runtime.env]가 없으면 끝에 만든다(TOML은
 # 하위 table을 뒤에 정의해도 된다)
 cmd_render() {
-	toml="${1:?usage: app-manifest.sh render MANIFEST WORKDIR [DATA_DIR]}"
-	workdir="${2:?usage: app-manifest.sh render MANIFEST WORKDIR [DATA_DIR]}"
+	toml="${1:?usage: app-manifest.sh render MANIFEST WORKDIR [DATA_DIR [SECRETS_DIR]]}"
+	workdir="${2:?usage: app-manifest.sh render MANIFEST WORKDIR [DATA_DIR [SECRETS_DIR]]}"
 	data="${3:-}"
-	awk -v wd="$workdir" -v data="$data" '
+	secrets="${4:-}"
+	awk -v wd="$workdir" -v data="$data" -v secrets="$secrets" '
+		function env_lines() {
+			if (data != "")
+				print "NIMWAKE_DATA_DIR = \"" data "\""
+			if (secrets != "")
+				print "NIMWAKE_SECRETS_DIR = \"" secrets "\""
+		}
 		{ print }
 		/^[[:space:]]*\[runtime\][[:space:]]*$/ && !done {
 			print "working_dir = \"" wd "\""
 			done = 1
 		}
-		data != "" && /^[[:space:]]*\[runtime\.env\][[:space:]]*$/ && !env {
-			print "NIMWAKE_DATA_DIR = \"" data "\""
+		(data != "" || secrets != "") && /^[[:space:]]*\[runtime\.env\][[:space:]]*$/ && !env {
+			env_lines()
 			env = 1
 		}
 		END {
-			if (data != "" && !env) {
+			if ((data != "" || secrets != "") && !env) {
 				print ""
 				print "[runtime.env]"
-				print "NIMWAKE_DATA_DIR = \"" data "\""
+				env_lines()
 			}
 		}
 	' "$toml"
@@ -128,7 +138,7 @@ case "${1:-}" in
 check) shift; cmd_check "$@" ;;
 render) shift; cmd_render "$@" ;;
 *)
-	echo "usage: app-manifest.sh check APP_DIR | render MANIFEST WORKDIR [DATA_DIR]" >&2
+	echo "usage: app-manifest.sh check APP_DIR | render MANIFEST WORKDIR [DATA_DIR [SECRETS_DIR]]" >&2
 	exit 2
 	;;
 esac

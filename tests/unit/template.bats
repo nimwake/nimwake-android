@@ -36,3 +36,18 @@ setup() {
 	[[ "$output" == *"restart"* ]]
 	[[ "$output" == *'for d in apps/*/'* ]]
 }
+
+@test "secrets.sh refuses bad app names and keys before touching the phone" {
+	secrets="$root/scripts/secrets.sh"
+	NIMWAKE_DEVICE=nowhere.invalid run "$secrets" set "Bad App" KEY </dev/null
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"app 'Bad App'"* ]]
+	NIMWAKE_DEVICE=nowhere.invalid run "$secrets" set api "../etc/passwd" </dev/null
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"key '../etc/passwd'"* ]]
+	NIMWAKE_DEVICE=nowhere.invalid run "$secrets" rm api ".hidden"
+	[ "$status" -eq 2 ]
+	NIMWAKE_DEVICE=nowhere.invalid run "$secrets" set api
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"usage:"* ]]
+}

@@ -10,6 +10,7 @@
 #   make status                    폰의 앱 · Core · supervisor · ingress
 #   make logs APP=blog [FOLLOW=1]  그 앱의 출력과 Core의 사건 (LINES=200으로 더)
 #   make verify                    사람 손 없이 도는 기기 검증 전부 (APP_HOST=블로그 host)
+#   make secret APP=blog KEY=X < f 앱의 비밀을 폰에 (표준 입력으로만) · make secrets APP=blog — 이름만
 #   make upgrade REV=v0.1.2        nimwake-android를 올린다 — lock · 이 머신 · 폰(Core · Host Layer) · 앱 전부 재배포
 #
 # .env (커밋하지 않는다): NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — .env.example 참고
@@ -21,7 +22,7 @@ NA := .nimwake-android
 APP ?= blog
 MODE ?=
 
-.PHONY: setup build deploy rollback ingress token restart status logs verify upgrade
+.PHONY: setup build deploy rollback ingress token restart status logs verify upgrade secret secrets
 
 setup:
 	@repo="$$(sed -n 's/^repo=//p' nimwake-android.lock)"; rev="$$(sed -n 's/^rev=//p' nimwake-android.lock)"; \
@@ -58,6 +59,12 @@ logs:
 
 verify:
 	$(MAKE) -C $(NA) verify
+
+secret:
+	$(MAKE) -C $(NA) secret APP=$(APP) KEY=$(KEY)
+
+secrets:
+	$(MAKE) -C $(NA) secrets APP=$(APP)
 
 # 올리기는 한 번에 — 문서의 네 단계를 잊지 않게. rev는 태그나 commit SHA만 (main은 움직인다).
 # 앱은 새 빌드 도구로 다시 묶어 올린다 — 뜨지 않는 앱은 배포가 이전 release로 되돌린다(deploy-app의 확인)
