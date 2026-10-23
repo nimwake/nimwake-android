@@ -164,6 +164,7 @@ make deploy APP=about    # ship a new release (the phone keeps the last three)
 make rollback APP=about  # back to the previous release
 make status
 make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watching)
+make verify              # every device check that needs no hands — run it after upgrades
 ```
 
 Upgrade nimwake-android: change `rev` in `nimwake-android.lock` to the new tag and read its CHANGELOG, then update both this machine and the phone:

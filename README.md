@@ -103,6 +103,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 | `make backup` · `restore-data` | 기기에만 있는 `host.conf` · soak 기록 · 앱 데이터(`/home/nimwake/data`) → 개발 머신 `~/.nimwake-backup/<기기>`. 초기화한 기기면 `make install`이 `host.conf`를, `make restore-data`가 앱 데이터를 되살린다 (토큰은 가져오지 않는다) |
 | `make device-status` | 기기에 지금 무엇이 도는가 — Core(설치 · 메모리) · supervisor · soak. 배포 전에 먼저 |
 | `make restart` | supervisor를 다시 띄운다 — `host.conf` 변경 반영 (soak 중 거부) |
+| `make verify` | 사람 손이 필요 없는 기기 검증 전부 — doctor · Core socket · 전원 · lifecycle · recovery · LAN · 실제 앱. 표와 단계별 로그를 `dist/verify/<UTC>/`에. soak 중 거부 |
 | `make logs APP=… [FOLLOW=1]` | 그 앱의 출력(stdout · stderr)과 Core의 사건만 — 시각 · 종류 · 내용. APP 없이는 supervisor · daemon 로그 |
 | `make deploy-app APP=…` · `rollback-app NAME=…` · `remove-app NAME=…` · `apps` | 소비처 앱 배포 계약 — release · SIGHUP 재적재 · 노출 |
 | `make ingress-enable INGRESS=cloudflare [MODE=quick]` · `ingress-token < 파일` · `ingress-disable` | 집 밖에서 닿게 — provider 설치 · 토큰(표준 입력으로만) |
