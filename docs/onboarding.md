@@ -54,7 +54,7 @@ cp .env.example .env  # NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — never commit .
 
 ```text
 repo=nimwake/nimwake-android
-rev=v0.1.1
+rev=v0.2.0
 ```
 
 - `rev` is a **release tag or a commit SHA** — never `main`, which moves under you.
@@ -256,6 +256,7 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 | Static sites (`server.mjs`, `SPA`) | v0.1.1 | v0.1.0 |
 | `NIMWAKE_DATA_DIR` (persistent app data), `make restore-data` | v0.1.1 | v0.1.0 |
 | `nimwake status` on the phone (Core control socket) | v0.1.1 | v0.1.2 or later — v0.1.1 pins v0.1.4 |
+| Deploy check and automatic rollback, `make logs`, `make verify`, `make upgrade` | v0.2.0 | v0.1.4 |
 
 ## Reference
 
