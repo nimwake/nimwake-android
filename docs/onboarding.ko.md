@@ -163,6 +163,7 @@ make status
 make deploy APP=about    # ship a new release (the phone keeps the last three)
 make rollback APP=about  # back to the previous release
 make status
+make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watching)
 ```
 
 nimwake-android 올리기: `nimwake-android.lock`의 `rev`를 새 태그로 바꾸고 그 CHANGELOG를 읽은 뒤, 이 머신과 폰을 함께 올린다:

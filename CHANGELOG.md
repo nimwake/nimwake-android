@@ -10,6 +10,7 @@
 
 ### Added
 
+- **`make logs APP=…`**(이 레포 · 템플릿): 그 앱의 출력(stdout · stderr)과 Core의 사건만 `시각 out|err|core 내용`으로. `LINES=` · `FOLLOW=1`(최근 줄 뒤로 새 줄을 따라간다, 로그 순환에도). APP 없이는 supervisor · daemon 로그
 - **배포 후 확인과 자동 롤백**: `make deploy-app`이 재적재 뒤 새 release를 한 번 깨우고 control socket으로 상태를 본다. 뜨지 않으면(FAILED · 무응답 · 5xx) 이전 manifest로 되돌리고 새 release를 지우며, 앱의 마지막 로그(에러와 파일 · 줄)를 보여 준다. 처음 올린 앱이면 다시 내린다. `allow`에 127.0.0.1이 없으면 확인할 수 없다고만 하고 유지. `NO_VERIFY=1`로 건너뛴다. 기기 stage를 풀 때 수정 시각을 복원하지 않는다(PC와 폰의 시계 차이 경고)
 
 ## [0.1.1] — 2026-10-23
