@@ -172,6 +172,64 @@ make restart                                 # run them (apps start again on the
 make deploy APP=about                        # rebuild your app with the new build tools
 ```
 
+## 7. Scheduled jobs and webhooks
+
+Nimwake has no scheduler, and an app that is asleep cannot run its own cron. **Wake it from outside with an HTTP request** — the request starts the app, the app does the work, and it goes back to sleep.
+
+| Need | Use |
+| ---- | --- |
+| Run something every night / every 10 minutes | GitHub Actions `schedule`, or a Cloudflare Worker with a Cron Trigger, calling an endpoint of your app |
+| React to an event (GitHub push, payment, form) | the service's webhook, pointed at your app |
+| Work that must not be lost while the phone is off | a queue outside the phone (Cloudflare Queues) whose consumer calls your app and retries |
+
+From GitHub Actions:
+
+```yaml
+# .github/workflows/nightly.yml in your consumer repo
+on:
+  schedule:
+    - cron: "0 15 * * *"   # UTC — 00:00 KST. GitHub may start it minutes late
+  workflow_dispatch: {}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -m 120 -X POST https://jobs.example.com/run/nightly \
+            -H "CF-Access-Client-Id: ${{ secrets.CF_ACCESS_CLIENT_ID }}" \
+            -H "CF-Access-Client-Secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}"
+```
+
+From a Cloudflare Worker:
+
+```js
+// Cloudflare Worker with a Cron Trigger (wrangler.toml: [triggers] crons = ["*/10 * * * *"])
+export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fetch("https://jobs.example.com/run/check", {
+      method: "POST",
+      headers: {
+        "CF-Access-Client-Id": env.CF_ACCESS_CLIENT_ID,
+        "CF-Access-Client-Secret": env.CF_ACCESS_CLIENT_SECRET,
+      },
+    }));
+  },
+};
+```
+
+Rules that keep this reliable on a phone:
+
+- **Put a Cloudflare Access application with a service token in front of the job hostname** (`jobs.example.com`). Only callers with the token get through, so the app itself needs no auth code. Store the token as a GitHub secret or a Worker secret.
+- **Do the work inside the request** and answer when it is done. Nimwake stops an app `idle_timeout_seconds` after its last request — work left running after the response can be cut off. Raise `response_header_timeout_seconds` for jobs longer than a minute, or split them.
+- **Make jobs idempotent.** A scheduled call can arrive late, twice, or not at all (phone off, home internet down). Keep what was done in `NIMWAKE_DATA_DIR` and skip work that is already done.
+- **Webhooks:** verify the sender's signature (for GitHub, `X-Hub-Signature-256`). A cold start (1–2 s) fits inside GitHub's 10 s limit. A webhook sent while the phone is off is not retried automatically — redeliver it from the sender's page.
+- **Secrets the app reads** (webhook secrets, API keys) go in a file in the app's data directory on the phone, not in `nimwake.toml`, which lives in your repo:
+
+```sh
+# a secret the app reads at runtime — on the phone, never in the repo or the manifest
+ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/data/jobs/webhook-secret"' < ~/.secrets/jobs-webhook-secret
+```
+
 ## Troubleshooting
 
 | You see | Do this |
