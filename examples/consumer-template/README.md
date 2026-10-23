@@ -93,6 +93,7 @@ make status
 ## 앱을 만들 때
 
 - `next.config.mjs`의 `output: "standalone"` · `images.unoptimized: true`는 지운다면 폰에서 깨진다 — 네이티브 모듈(sharp 등)은 빌드 머신의 CPU용이다. 빌드가 네이티브 모듈을 찾으면 멈춘다
+- **남겨야 하는 데이터(SQLite · 업로드)는 `process.env.NIMWAKE_DATA_DIR`에** — 폰의 `/home/nimwake/data/<name>`. 작업 디렉터리는 배포마다 새 release라 거기에 쓴 것은 다음 배포에 사라진다. 데이터 디렉터리는 재배포 · rollback · remove를 거쳐 남고 `make backup`이 가져간다. manifest에 직접 적지 않는다 — 배포가 채운다
 - 앱은 `HOSTNAME=127.0.0.1`로 loopback에만 연다 — 밖에서는 gateway(그리고 Cloudflare)를 거쳐서만 닿는다
 - 접속자 주소는 `X-Forwarded-For` — Cloudflare가 넣은 값 뒤에 gateway가 본 `127.0.0.1`이 붙는다. **맨 오른쪽 `127.0.0.1`의 바로 왼쪽 하나**가 Cloudflare가 본 클라이언트다 (Core PRD §81, nimwake-android Phase 2 02)
 - 앱은 쓰지 않으면 내려간다 (`idle_timeout_seconds`). 다음 첫 요청은 cold start — Next.js는 폰에서 약 1.6초 (nimwake-android validation/13)

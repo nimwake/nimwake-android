@@ -14,6 +14,7 @@
 
 ### Added
 
+- **앱의 영구 데이터 디렉터리**: 배포가 앱마다 `/home/nimwake/data/<name>`(0700)을 만들고 manifest의 `[runtime.env]`에 `NIMWAKE_DATA_DIR`로 알린다. 작업 디렉터리(release)와 달리 재배포 · rollback · `remove-app`을 거쳐 남는다. 소비처가 직접 적으면 배포가 거부한다. `make backup`이 앱 데이터도 가져오고 `make restore-data`가 되살린다(폰의 데이터가 비어 있을 때만, `FORCE=1`). 기기에서 v1 → 재배포 → rollback → remove 동안 카운터가 이어졌다
 - **Core에게 직접 묻는다 — control socket** (§85 · §86): daemon을 `--control-socket`으로 띄운다. 격리된 proot에는 Termux 경로가 보이지 않고 proot 안 경로는 Unix socket 한계(108바이트)를 넘으므로, 짧은 `~/.nimwake-host/run/core` 하나만 `/run/nimwake`로 bind한다. 폰에서 `nimwake status`(래퍼), `nimwake-host status`에 Core 버전과 앱 상태, `make apps` · `device-status` · `test-app`이 `SIGUSR1` + 로그 grep 대신 `nimwake status --json`(없으면 예전 방식). 기동 전 디렉터리 0700 · 낡은 socket 정리. `NIMWAKE_CONTROL_SOCKET=0`으로 끈다 (validation/18)
 - **배터리 · 전원 감시** (`host/lib/battery.sh`): supervisor가 정리 작업 주기(10분)마다 Termux:API로 잔량 · 충전 연결 · 충전 상태를 보고 `ok` · `unplugged` · `draining`(꽂혀 있는데 방전) · `low`(`NIMWAKE_BATTERY_LOW`, 기본 20%) · `unknown`을 바뀔 때만 `supervisor.log`와 Android 알림에 남긴다. `status`에 배터리 줄, `make doctor`가 Termux:API 응답과 전원을 본다 (#67). soak CSV에 `plugged` · `battery_status` 열(15열)과 요약의 전원 줄. 알림은 종류(storage · battery)마다 따로 남는다 — 10-18 · 10-20 기기에서 USB에 꽂힌 채 하루 약 45%씩 줄어 두 번 꺼졌는데 아무도 몰랐다
 - **온보딩 가이드** `docs/onboarding.md`(영문, 기본) · `docs/onboarding.ko.md` — 개인 레포를 만들어 lock을 고정하고, 앱(정적 사이트 · Next.js)을 추가해 배포하고, quick tunnel · 내 도메인으로 공개하기까지. `make lint`의 `check-docs`가 두 판의 제목 뼈대 · 코드 블록이 같은지, 코드 블록의 `make` 대상이 실제로 있는지 본다

@@ -100,7 +100,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 | `make test-lan` · `make test-wifi` | LAN lifecycle · 동시 cold start · Wi-Fi 복구 (`NIMWAKE_LISTEN=0.0.0.0:8080` 필요) |
 | `make test-experiments` | 실패 경로 실험 E2–E4 + 고아 정리 — 별도 경로 · 포트의 실험 daemon이라 운영 daemon · soak과 섞이지 않는다 |
 | `make soak-start HOURS=24` · `soak-report` · `soak-stop` | 기기에서 도는 장시간 soak (`SOAK_HOST=blog.local SOAK_PATH=/api/whoami`로 실제 앱) |
-| `make backup` | 기기에만 있는 `host.conf` · soak 기록 → 개발 머신 `~/.nimwake-backup/<기기>`. 초기화한 기기면 `make install`이 `host.conf`를 되살린다 (토큰은 가져오지 않는다) |
+| `make backup` · `restore-data` | 기기에만 있는 `host.conf` · soak 기록 · 앱 데이터(`/home/nimwake/data`) → 개발 머신 `~/.nimwake-backup/<기기>`. 초기화한 기기면 `make install`이 `host.conf`를, `make restore-data`가 앱 데이터를 되살린다 (토큰은 가져오지 않는다) |
 | `make device-status` | 기기에 지금 무엇이 도는가 — Core(설치 · 메모리) · supervisor · soak. 배포 전에 먼저 |
 | `make restart` | supervisor를 다시 띄운다 — `host.conf` 변경 반영 (soak 중 거부) |
 | `make deploy-app APP=…` · `rollback-app NAME=…` · `remove-app NAME=…` · `apps` | 소비처 앱 배포 계약 — release · SIGHUP 재적재 · 노출 |

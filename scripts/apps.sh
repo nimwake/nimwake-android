@@ -2,7 +2,8 @@
 # 소비처 앱을 폰에 배포 · 되돌리기 · 빼기 · 보기. 소비처(개인 레포)가 부르는 입구다.
 # 배포 계약: .docs/phases/phase-2/03-deploy-and-ingress-contract.md "1. 앱 배포 계약"
 #
-#   apps.sh deploy APP_DIR     bundle/ → releases/<id>, working_dir을 채운 manifest, SIGHUP (Core §76)
+#   apps.sh deploy APP_DIR     bundle/ → releases/<id>, working_dir · NIMWAKE_DATA_DIR을 채운 manifest, SIGHUP (Core §76)
+#                              앱의 영구 디렉터리 /home/nimwake/data/<name> — release · rollback · remove를 거쳐도 남는다
 #   apps.sh rollback NAME      직전 release로 되돌리고 SIGHUP (PRD §31)
 #   apps.sh remove NAME        manifest를 빼고 SIGHUP — Core가 정지시키고 라우팅에서 뺀다
 #   apps.sh list               앱 · 현재 release · 상태 (SIGUSR1 스냅샷, Core §79)
@@ -88,7 +89,7 @@ cmd_deploy() {
 	# 1) 묶음과 manifest를 기기의 stage로 (표준 입력을 tar가 쓴다 — 스크립트는 다음 ssh로)
 	tmp="$(mktemp -d)"
 	trap 'rm -rf "$tmp"' EXIT
-	"$root/scripts/app-manifest.sh" render "$dir/nimwake.toml" "$workdir" >"$tmp/nimwake.toml"
+	"$root/scripts/app-manifest.sh" render "$dir/nimwake.toml" "$workdir" "/home/nimwake/data/$name" >"$tmp/nimwake.toml"
 	mkdir -p "$tmp/bundle"
 	(cd "$dir/bundle" && tar -cf - .) | (cd "$tmp/bundle" && tar -xf -)
 	(cd "$tmp" && tar -cf - nimwake.toml bundle) |
@@ -106,6 +107,13 @@ if [ -f "$s" ] && [ "$force" != 1 ] && [ "$(cut -d' ' -f3 "$s")" = "$host" ]; th
 fi
 rel="$apps/$name/releases/$id"
 mkdir -p "$apps/$name/releases" "$manifests/$name"
+# 영구 데이터 — 앱이 NIMWAKE_DATA_DIR로 받는다. 있으면 그대로 둔다
+data="$rootfs/home/nimwake/data/$name"
+if [ ! -d "$data" ]; then
+	mkdir -p "$data"
+	chmod 700 "$data"
+	echo "  data: /home/nimwake/data/$name (new — kept across releases, rollback and remove)"
+fi
 mv "$stage/bundle" "$rel"
 echo "  bundle: $(du -sk "$rel" | cut -f1) KB → /home/nimwake/apps/$name/releases/$id"
 cur="$manifests/$name/nimwake.toml"
@@ -184,7 +192,7 @@ m="$manifests/$name/nimwake.toml"
 mkdir -p "$apps/$name"
 mv "$m" "$apps/$name/removed.toml"
 rmdir "$manifests/$name" 2>/dev/null || true
-echo "== remove $name (releases kept in /home/nimwake/apps/$name)"
+echo "== remove $name (releases kept in /home/nimwake/apps/$name, data in /home/nimwake/data/$name)"
 if ! reload; then
 	echo "apps: Core kept the current set — restoring $name" >&2
 	mkdir -p "$manifests/$name"
