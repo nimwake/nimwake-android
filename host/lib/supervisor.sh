@@ -24,6 +24,21 @@ heartbeat() {
 	date '+%Y-%m-%d %H:%M:%S' >"$NIMWAKE_RUN/heartbeat"
 }
 
+# control socket(§85)의 디렉터리 — Core는 만들지 않는다(없으면 기동하지 않는다, 78).
+# daemon이 SIGKILL로 죽으면 socket 파일이 남는다 — 기동 전(daemon이 없을 때)에 지운다
+prepare_control_socket() {
+	[ "$NIMWAKE_CONTROL_SOCKET" = 1 ] || return 0
+	mkdir -p "$NIMWAKE_CONTROL_DIR"
+	chmod 700 "$NIMWAKE_CONTROL_DIR"
+	rm -f "$NIMWAKE_SOCKET"
+}
+
+# Core 상태 JSON (§86 `nimwake status --json`, contract 1). socket이 없거나 닿지 않으면 빈 값
+core_status_json() {
+	[ "$NIMWAKE_CONTROL_SOCKET" = 1 ] && [ -e "$NIMWAKE_SOCKET" ] && [ -x "$NIMWAKE_CORE_CLI" ] || return 1
+	"$NIMWAKE_CORE_CLI" status --json --socket "$NIMWAKE_SOCKET" 2>/dev/null
+}
+
 # 이번 부팅 시각 "YYYY-MM-DD HH:MM:SS". Android는 /proc/uptime을 막는다 — `uptime -s`(sysinfo)를 쓴다
 booted_at() {
 	if [ -n "${NIMWAKE_BOOTED_AT:-}" ]; then
@@ -224,6 +239,7 @@ supervise() {
 		reap_orphan_daemon
 		# daemon이 없는 지금 돌리면 복사와 비우기 사이에 잃는 줄이 없다
 		rotate_logs
+		prepare_control_socket
 		host_log "launch: $NIMWAKE_LAUNCH"
 		# exec로 sh를 대체한다. wait가 받는 종료 코드는 기동 명령의 것이다.
 		sh -c "exec $NIMWAKE_LAUNCH" >>"$NIMWAKE_LOGS/nimwaked.log" 2>&1 &

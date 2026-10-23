@@ -27,7 +27,23 @@ fi
 _nimwake_isolated=""
 [ "$NIMWAKE_ISOLATED" = 1 ] && _nimwake_isolated=" --isolated"
 
-: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu${_nimwake_isolated} --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}${NIMWAKE_MIN_FREE_MEMORY_MB:+ --min-free-memory-mb $NIMWAKE_MIN_FREE_MEMORY_MB}}"
+# Core control socket (§85, Core v0.1.2+). 상태를 로그 파싱 없이 묻는다 — `nimwake status --json` (§86, #71).
+# 격리된 proot에는 Termux 경로가 보이지 않고, proot 안 경로를 Termux에서 보면 Unix socket 한계(108바이트)를 넘는다
+# (rootfs/run/… = 116). 그래서 짧은 Termux 디렉터리 하나만 proot 안 /run/nimwake로 bind한다 — 앱에 보이는 것은
+# 그 socket(0600, 같은 uid)뿐이다. Core는 디렉터리를 만들지 않는다(없으면 78) — supervisor가 기동 전에 만든다
+: "${NIMWAKE_CONTROL_SOCKET:=1}"
+: "${NIMWAKE_CONTROL_DIR:=$NIMWAKE_HOST_HOME/run/core}"
+: "${NIMWAKE_CORE_CLI:=${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/containers/ubuntu/rootfs/opt/nimwake/bin/nimwake}"
+_nimwake_bind=""
+_nimwake_control=""
+if [ "$NIMWAKE_CONTROL_SOCKET" = 1 ]; then
+	NIMWAKE_SOCKET="$NIMWAKE_CONTROL_DIR/nimwake.sock"
+	export NIMWAKE_SOCKET
+	_nimwake_bind=" --bind $NIMWAKE_CONTROL_DIR:/run/nimwake"
+	_nimwake_control=" --control-socket /run/nimwake/nimwake.sock"
+fi
+
+: "${NIMWAKE_LAUNCH:=proot-distro login ubuntu${_nimwake_isolated}${_nimwake_bind} --user nimwake -- $NIMWAKE_DAEMON $NIMWAKE_APPS${NIMWAKE_LISTEN:+ --listen $NIMWAKE_LISTEN}${NIMWAKE_MIN_FREE_MEMORY_MB:+ --min-free-memory-mb $NIMWAKE_MIN_FREE_MEMORY_MB}${_nimwake_control}}"
 # proot 아래에서 comm이 잘리므로 전체 경로로 찾는다. `^`는 래퍼(proot, sh -c)를 제외한다 (validation/01)
 : "${NIMWAKE_DAEMON_MATCH:=^$NIMWAKE_DAEMON}"
 

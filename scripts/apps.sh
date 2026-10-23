@@ -199,10 +199,20 @@ EOF
 cmd_list() {
 	on_device "$(
 		cat <<'EOF'
-n="$(wc -l <"$log")"
-kill -USR1 "$daemon"
-sleep 0.5
-snap="$(tail -n +$((n + 1)) "$log")"
+# 상태는 Core에게 직접 묻는다 — control socket (§85 · §86 `nimwake status --json`, #71).
+# socket이 없는 daemon(Core v0.1.2 전, 또는 업그레이드 뒤 재시작 전)이면 예전처럼 SIGUSR1 스냅샷을 로그에서 읽는다
+sock="$HOME/.nimwake-host/run/core/nimwake.sock"
+cli="$rootfs/opt/nimwake/bin/nimwake"
+json=""
+if [ -S "$sock" ] && [ -x "$cli" ]; then
+	json="$("$cli" status --json --socket "$sock" 2>/dev/null | tr '{' '\n')"
+fi
+if [ -z "$json" ]; then
+	n="$(wc -l <"$log")"
+	kill -USR1 "$daemon"
+	sleep 0.5
+	snap="$(tail -n +$((n + 1)) "$log")"
+fi
 printf '%-10s %-28s %-6s %-8s %-18s %s\n' NAME HOST PORT EXPOSURE RELEASE STATE
 for m in "$manifests"/*/nimwake.toml; do
 	name="$(sed -n 's/^name = "\(.*\)"/\1/p' "$m")"
@@ -211,7 +221,14 @@ for m in "$manifests"/*/nimwake.toml; do
 	# 없으면 lan — 공개하지 않는 쪽이 기본이다 (Phase 2 04)
 	exposure="$(cat "$apps/$name/exposure" 2>/dev/null || echo lan)"
 	rel="$(cat "$apps/$name/current" 2>/dev/null || echo -)"
-	state="$(printf '%s\n' "$snap" | grep "app app=\"$name\"" | sed -n 's/.* state=\([A-Z]*\) pid="\([^"]*\)".*/\1 pid \2/p' | tail -n 1)"
+	if [ -n "$json" ]; then
+		line="$(printf '%s\n' "$json" | grep "\"name\":\"$name\"" | head -n 1)"
+		st="$(printf '%s' "$line" | sed -n 's/.*"state":"\([A-Z_]*\)".*/\1/p')"
+		pid="$(printf '%s' "$line" | sed -n 's/.*"pid":\([0-9][0-9]*\).*/\1/p')"
+		state="${st:+$st pid ${pid:--}}"
+	else
+		state="$(printf '%s\n' "$snap" | grep "app app=\"$name\"" | sed -n 's/.* state=\([A-Z]*\) pid="\([^"]*\)".*/\1 pid \2/p' | tail -n 1)"
+	fi
 	printf '%-10s %-28s %-6s %-8s %-18s %s\n' "$name" "$host" "$port" "$exposure" "$rel" "${state:-?}"
 done
 EOF

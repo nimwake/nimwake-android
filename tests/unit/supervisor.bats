@@ -575,3 +575,34 @@ notified() {
 	housekeeping
 	[ "$(sort "$FAKE_DIR/kinds" | tr '\n' ' ')" = "battery storage " ]
 }
+
+# control socket (Core §85 · §86, #71)
+@test "start makes the control socket directory 0700 and removes a stale socket" {
+	mkdir -p "$NIMWAKE_HOST_HOME/run/core"
+	: >"$NIMWAKE_HOST_HOME/run/core/nimwake.sock"
+	"$host" start
+	wait_for 5 state_is RUNNING
+	[ "$(ls -ld "$NIMWAKE_HOST_HOME/run/core" | cut -c1-10)" = "drwx------" ]
+	[ ! -e "$NIMWAKE_HOST_HOME/run/core/nimwake.sock" ]
+}
+
+@test "status asks Core through the control socket" {
+	"$host" start
+	wait_for 5 state_is RUNNING
+	cat >"$FAKE_DIR/nimwake" <<'EOF'
+#!/bin/sh
+echo '{"contract":1,"version":"0.1.4","apps":[{"name":"blog","host":"blog.local","state":"RUNNING","active":0,"pending":0,"pid":12971,"since_ms":4120,"idle_ms":3100,"error":null},{"name":"echo","host":"echo.local","state":"SLEEPING","active":0,"pending":0,"pid":null,"since_ms":0,"idle_ms":0,"error":null}]}'
+EOF
+	chmod +x "$FAKE_DIR/nimwake"
+	: >"$NIMWAKE_HOST_HOME/run/core/nimwake.sock"
+	NIMWAKE_CORE_CLI="$FAKE_DIR/nimwake" run "$host" status
+	echo "$output"
+	[[ "$output" == *"core        nimwaked 0.1.4 — blog RUNNING pid 12971, echo SLEEPING (control socket)"* ]]
+}
+
+@test "status says so when a running daemon has no control socket" {
+	"$host" start
+	wait_for 5 state_is RUNNING
+	NIMWAKE_CORE_CLI=/nonexistent run "$host" status
+	[[ "$output" == *"core        control socket not answering"* ]]
+}

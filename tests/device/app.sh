@@ -37,9 +37,15 @@ port="$(sed -n 's/^port = \([0-9]*\)/\1/p' "$toml")"
 idle="$(sed -n 's/^idle_timeout_seconds = \([0-9]*\)/\1/p' "$toml")"
 echo "app $name port $port idle ${idle}s"
 
-# app의 pid는 Core에게 묻는다 — SIGUSR1 상태 스냅샷(Core PRD §79, rc6). 프로세스 이름으로 찾지 않는다:
-# Next.js는 자기 이름을 `next-server (v…)`로 바꿔 명령줄 검색에 잡히지 않는다 (10-14 실제로)
+# app의 pid는 Core에게 묻는다 — control socket(§85 · §86, Core v0.1.2+), 없으면 SIGUSR1 상태 스냅샷(§79).
+# 프로세스 이름으로 찾지 않는다: Next.js는 자기 이름을 `next-server (v…)`로 바꿔 명령줄 검색에 잡히지 않는다 (10-14 실제로)
 daemon="$(pgrep -f '^/opt/nimwake/bin/nimwaked' | head -n 1)"
+sock="$HOME/.nimwake-host/run/core/nimwake.sock"
+cli="$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/opt/nimwake/bin/nimwake"
+socket_pid() {
+	"$cli" status --json --socket "$sock" 2>/dev/null | tr '{' '\n' | grep "\"name\":\"$name\"" |
+		sed -n 's/.*"pid":\([0-9][0-9]*\).*/\1/p'
+}
 snapshot() {
 	_n="$(wc -l <"$log")"
 	kill -USR1 "$daemon"
@@ -48,7 +54,11 @@ snapshot() {
 }
 # 깨어 있으면 pid, 자고 있으면(pid="-") 빈 값
 app_pid() {
-	snapshot | sed -n 's/.* pid="\([0-9][0-9]*\)".*/\1/p'
+	if [ -S "$sock" ] && [ -x "$cli" ]; then
+		socket_pid
+	else
+		snapshot | sed -n 's/.* pid="\([0-9][0-9]*\)".*/\1/p'
+	fi
 }
 now_ms() { echo $(($(date +%s%N) / 1000000)); } # portable-ok: 기기(Termux, GNU)에서 돈다
 
@@ -86,7 +96,9 @@ while [ "$r" -lt "$rounds" ]; do
 	done
 	t0="$(now_ms)"
 	while kill -0 "$p" 2>/dev/null; do sleep 0.1; done
-	echo "round $r stop_ms $(($(now_ms) - t0))"
+	# stop_ms는 0.1–0.2초 polling이라 거칠다. Core v0.1.4부터 정지 완료를 직접 남긴다(took_ms) — 그것이 기준이다
+	took="$(tail -n +"$((n2 + 1))" "$log" | grep "stopped application app=$name" | tail -n 1 | sed -n 's/.*took_ms=\([0-9]*\).*/\1/p')"
+	echo "round $r stop_ms $(($(now_ms) - t0)) core_took_ms ${took:-NA}"
 done
 grep MemAvailable /proc/meminfo | sed 's/^/mem /'
 } </dev/null

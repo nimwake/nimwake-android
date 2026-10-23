@@ -190,6 +190,7 @@ make deploy APP=about                        # rebuild your app with the new bui
 | Next.js apps, `make deploy`, Cloudflare ingress, `exposure` | v0.1.0 | v0.1.0 |
 | `[server] allow` (403 for other peers, does not wake the app) | v0.1.0 | v0.1.0 |
 | Static sites (`server.mjs`, `SPA`) | after v0.1.0 — commit `8cce97b` until the next tag | v0.1.0 |
+| `nimwake status` on the phone (Core control socket) | after v0.1.0 | v0.1.2 or later — use v0.1.4 |
 
 ## Reference
 
