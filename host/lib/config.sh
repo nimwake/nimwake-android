@@ -100,6 +100,17 @@ _nimwake_port="${NIMWAKE_LISTEN##*:}"
 : "${NIMWAKE_BATTERY_LOW:=20}"
 : "${NIMWAKE_BATTERY_CMD:=timeout 10 termux-battery-status}"
 
+# 밖으로 알리기 (host/lib/alert.sh). 비우면 보내지 않는다. URL은 비밀이다 — host.conf(0600)에만
+#   ALERT_URL     상태가 나빠지면 POST (FORMAT: text = ntfy 등 · discord · slack)
+#   HEARTBEAT_URL RUNNING인 동안 정리 작업 주기마다 GET — 끊기면 그쪽(healthchecks.io 등)이 알린다
+#   NAME          메시지 앞에 붙는 이 서버의 이름
+: "${NIMWAKE_ALERT_URL:=}"
+: "${NIMWAKE_ALERT_FORMAT:=text}"
+: "${NIMWAKE_HEARTBEAT_URL:=}"
+: "${NIMWAKE_NAME:=nimwake}"
+: "${NIMWAKE_ALERT_TRIES:=3}"
+: "${NIMWAKE_ALERT_RETRY_DELAY:=20}"
+
 # 알림 명령. 메시지는 $1, 종류(storage · battery)는 $2로 받는다 — 종류마다 알림이 따로 남는다.
 # 비우면 supervisor.log에만 남긴다
 if [ -z "${NIMWAKE_NOTIFY+set}" ]; then

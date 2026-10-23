@@ -17,6 +17,10 @@ ingress_enabled() {
 ingress_set_state() {
 	printf '%s %s %s\n' "$1" "$(date '+%Y-%m-%d %H:%M:%S')" "$2" >"$NIMWAKE_RUN/ingress"
 	host_log "ingress $1${2:+ — $2}"
+	# 공개 URL이 끊긴 채 다시 붙지 않는다
+	if [ "$1" = UNHEALTHY ]; then
+		alert ingress "ingress $NIMWAKE_INGRESS UNHEALTHY — $2"
+	fi
 }
 
 # 앱의 노출 선언 — $NIMWAKE_APP_HOME/<name>/exposure. 없거나 모르는 값이면 lan (안전한 쪽, Phase 2 04)

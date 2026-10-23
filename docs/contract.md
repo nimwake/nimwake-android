@@ -107,7 +107,10 @@ On the phone: `nimwake-host start | stop | status | logs [N]`, and `nimwake` —
 | `NIMWAKE_MAX_RESTARTS` · `NIMWAKE_RESTART_WINDOW` | crash-loop limit — that many restarts within the window means `UNHEALTHY` |
 | `NIMWAKE_HOUSEKEEPING_INTERVAL` | seconds between storage, battery and log-rotation checks |
 | `NIMWAKE_MIN_FREE_MB` · `NIMWAKE_STORAGE_CLEANUP` | low-storage alert threshold, and whether rotated logs are removed first |
-| `NIMWAKE_NOTIFY` | alert command; message in `$1`, kind (`storage`, `battery`) in `$2` |
+| `NIMWAKE_NOTIFY` | phone notification command; message in `$1`, kind (`storage`, `battery`, `unhealthy`, `lost`, `ingress`, `network`) in `$2` |
+| `NIMWAKE_ALERT_URL` · `NIMWAKE_ALERT_FORMAT` | where to POST the same alerts off the phone, and how: `text` (ntfy and the like), `discord`, `slack`. The URL is a secret |
+| `NIMWAKE_HEARTBEAT_URL` | pinged (GET) every housekeeping interval while the server is RUNNING — when the pings stop, that service alerts you, even if the phone is off |
+| `NIMWAKE_NAME` | this server's name at the front of every alert |
 | `NIMWAKE_BATTERY_WATCH` · `NIMWAKE_BATTERY_LOW` | battery watch on/off, and the low-battery percentage |
 | `NIMWAKE_LOG_MAX_KB` · `NIMWAKE_LOG_KEEP` | log rotation size and how many old logs to keep |
 | `NIMWAKE_NET_INTERVAL` · `NIMWAKE_NET_GATEWAY` · `NIMWAKE_NET_INTERNET_URL` | network watch interval, router to probe, optional internet probe |

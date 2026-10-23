@@ -16,6 +16,10 @@ host_log() {
 set_state() {
 	printf '%s %s %s\n' "$1" "$(date '+%Y-%m-%d %H:%M:%S')" "$2" >"$NIMWAKE_RUN/state"
 	host_log "state $1${2:+ — $2}"
+	# 재기동을 멈춘 상태 — 사람이 봐야 한다
+	if [ "$1" = UNHEALTHY ]; then
+		alert unhealthy "nimwaked UNHEALTHY — $2"
+	fi
 }
 
 # supervisor가 살아 있던 마지막 시각. 감시 주기마다 덮어쓴다 — Termux가 통째로 죽으면 아무것도 남기지 못하므로
@@ -72,6 +76,7 @@ detect_unclean_end() {
 	fi
 	printf '%s %s — %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$_cause" "$_why" >"$NIMWAKE_RUN/last-unclean"
 	host_log "previous supervisor ended without exiting ($_cause) — $_why"
+	alert lost "the server was down ($_cause) — $_why"
 	echo "nimwake-host: previous run ended without exiting ($_cause) — $_why"
 }
 
@@ -149,10 +154,7 @@ check_storage() {
 
 	if [ "$_level" = low ]; then
 		host_log "storage: LOW ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
-		if [ -n "$NIMWAKE_NOTIFY" ]; then
-			sh -c "$NIMWAKE_NOTIFY" -- "storage low: ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)" storage >/dev/null 2>&1 ||
-				host_log "storage: notify failed"
-		fi
+		alert storage "storage low: ${_free}MB free (< ${NIMWAKE_MIN_FREE_MB}MB)"
 	elif [ -n "$_was" ]; then
 		host_log "storage: ok again ${_free}MB free"
 	else
@@ -165,6 +167,7 @@ housekeeping() {
 	check_storage
 	check_battery
 	rotate_logs
+	heartbeat_ping
 }
 
 # 기동 직후부터 daemon이 끝날 때까지 health를 본다. 별도 subshell로 돈다.
