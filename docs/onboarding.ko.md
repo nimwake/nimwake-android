@@ -172,6 +172,64 @@ make restart                                 # run them (apps start again on the
 make deploy APP=about                        # rebuild your app with the new build tools
 ```
 
+## 7. 주기 작업과 웹훅
+
+Nimwake에는 스케줄러가 없고, 잠든 앱은 자기 cron을 돌리지 못한다. **밖에서 HTTP 요청으로 깨운다** — 요청이 앱을 띄우고, 앱이 일을 하고, 다시 잠든다.
+
+| 필요한 것 | 쓰는 것 |
+| --------- | ------- |
+| 매일 밤 · 10분마다 무언가 돌리기 | GitHub Actions `schedule`, 또는 Cron Trigger를 단 Cloudflare Worker가 앱의 엔드포인트를 부른다 |
+| 이벤트에 반응(GitHub push, 결제, 폼) | 그 서비스의 웹훅을 앱으로 |
+| 폰이 꺼져 있어도 잃으면 안 되는 일 | 폰 밖의 큐(Cloudflare Queues) — consumer가 앱을 부르고 실패하면 다시 시도한다 |
+
+GitHub Actions에서:
+
+```yaml
+# .github/workflows/nightly.yml in your consumer repo
+on:
+  schedule:
+    - cron: "0 15 * * *"   # UTC — 00:00 KST. GitHub may start it minutes late
+  workflow_dispatch: {}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -m 120 -X POST https://jobs.example.com/run/nightly \
+            -H "CF-Access-Client-Id: ${{ secrets.CF_ACCESS_CLIENT_ID }}" \
+            -H "CF-Access-Client-Secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}"
+```
+
+Cloudflare Worker에서:
+
+```js
+// Cloudflare Worker with a Cron Trigger (wrangler.toml: [triggers] crons = ["*/10 * * * *"])
+export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fetch("https://jobs.example.com/run/check", {
+      method: "POST",
+      headers: {
+        "CF-Access-Client-Id": env.CF_ACCESS_CLIENT_ID,
+        "CF-Access-Client-Secret": env.CF_ACCESS_CLIENT_SECRET,
+      },
+    }));
+  },
+};
+```
+
+폰에서 이것을 믿을 만하게 하는 규칙:
+
+- **작업용 hostname(`jobs.example.com`) 앞에 서비스 토큰을 쓰는 Cloudflare Access 애플리케이션을 둔다.** 토큰을 가진 호출만 통과하므로 앱에는 인증 코드가 필요 없다. 토큰은 GitHub secret이나 Worker secret에 둔다.
+- **일은 요청 안에서 끝내고**, 끝나면 응답한다. Nimwake는 마지막 요청 뒤 `idle_timeout_seconds`가 지나면 앱을 내린다 — 응답 뒤에 남겨 둔 일은 끊길 수 있다. 1분이 넘는 작업은 `response_header_timeout_seconds`를 올리거나 나눈다.
+- **작업은 여러 번 돌아도 같은 결과가 되게 만든다.** 예약 호출은 늦게, 두 번, 또는 아예 안 올 수 있다(폰 꺼짐, 집 인터넷 끊김). 한 일을 `NIMWAKE_DATA_DIR`에 기록하고 이미 한 일은 건너뛴다.
+- **웹훅:** 보낸 쪽의 서명을 확인한다(GitHub는 `X-Hub-Signature-256`). cold start(1–2초)는 GitHub의 10초 제한 안에 든다. 폰이 꺼져 있을 때 온 웹훅은 자동으로 다시 오지 않는다 — 보낸 쪽 페이지에서 재전송한다.
+- **앱이 읽는 비밀**(웹훅 secret, API 키)은 폰의 앱 데이터 디렉터리에 파일로 둔다. 레포에 있는 `nimwake.toml`에는 넣지 않는다:
+
+```sh
+# a secret the app reads at runtime — on the phone, never in the repo or the manifest
+ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/data/jobs/webhook-secret"' < ~/.secrets/jobs-webhook-secret
+```
+
 ## 문제 해결
 
 | 이런 것이 보이면 | 이렇게 한다 |
