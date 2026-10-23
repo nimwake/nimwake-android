@@ -4,7 +4,7 @@ HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps logs ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps logs verify ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를,
 # check-docs는 docs/의 영문 · 국문 문서가 같은 뼈대 · 같은 명령인지를 본다
@@ -95,6 +95,10 @@ stop:
 
 doctor:
 	scripts/doctor.sh
+
+# 사람 손이 필요 없는 기기 검증을 한 번에 — doctor · socket · 전원 · lifecycle · recovery · LAN · 실제 앱 → dist/verify/<UTC>/summary.md
+verify:
+	scripts/verify.sh
 
 test-device:
 	tests/device/lifecycle.sh

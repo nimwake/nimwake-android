@@ -9,6 +9,7 @@
 #   make restart                   폰의 supervisor를 다시 띄운다 — ingress 설정이 반영된다 (앱도 다시 뜬다)
 #   make status                    폰의 앱 · Core · supervisor · ingress
 #   make logs APP=blog [FOLLOW=1]  그 앱의 출력과 Core의 사건 (LINES=200으로 더)
+#   make verify                    사람 손 없이 도는 기기 검증 전부 (APP_HOST=블로그 host)
 #
 # .env (커밋하지 않는다): NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — .env.example 참고
 
@@ -19,7 +20,7 @@ NA := .nimwake-android
 APP ?= blog
 MODE ?=
 
-.PHONY: setup build deploy rollback ingress token restart status logs
+.PHONY: setup build deploy rollback ingress token restart status logs verify
 
 setup:
 	@repo="$$(sed -n 's/^repo=//p' nimwake-android.lock)"; rev="$$(sed -n 's/^rev=//p' nimwake-android.lock)"; \
@@ -53,3 +54,6 @@ status:
 
 logs:
 	$(MAKE) -C $(NA) logs APP=$(APP)
+
+verify:
+	$(MAKE) -C $(NA) verify
