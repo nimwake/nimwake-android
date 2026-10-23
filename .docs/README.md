@@ -31,8 +31,9 @@ Core 레포의 규칙을 그대로 따른다. → [nimwake/.docs/README.md](http
 
 | 페이즈                              | 버전     | 주제                                               | 상태      |
 | ----------------------------------- | -------- | -------------------------------------------------- | --------- |
-| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 8항목 충족 — 재검증 · `v0.1.0` 태그 남음 |
-| [Phase 2](phases/phase-2/README.md) | `v0.2.0` | Host Layer를 Rust로 · ingress · 메모리 임계값 | 설계 |
+| [Phase 1](phases/phase-1/README.md) | `v0.1.0` | Android MVP — Install · Start · Recovery · Boot   | 완료 — `v0.1.0` (2026-10-15) |
+| [Phase 2](phases/phase-2/README.md) | — | ingress · 메모리 임계값 · 배포 계약 · 노출 보안 (Rust hostd는 설계만) | ingress · 배포 · 보안 완료 — `v0.1.1`. hostd는 D-A9 결정 대기 |
+| [**v1.0**](phases/v1.0/README.md) | `v1.0.0` | 바깥 계약을 SemVer로 약속 · 실사용 근거 | 진행 중 — 기준 10개 중 5개 남음 |
 
 ---
 
