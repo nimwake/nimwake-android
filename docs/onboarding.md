@@ -259,6 +259,7 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 
 ## Reference
 
+- [Contract](contract.md) — exactly what is stable: app directory, manifest rules, commands, `host.conf` keys, ingress providers
 - [Consumer template README](../examples/consumer-template/README.md) — the template itself (Korean)
 - [Deploy and ingress contract](../.docs/phases/phase-2/03-deploy-and-ingress-contract.md) · [Exposure security](../.docs/phases/phase-2/04-exposure-security.md) (Korean)
 - [CHANGELOG](../CHANGELOG.md) · [Validation reports](../.docs/validation/)

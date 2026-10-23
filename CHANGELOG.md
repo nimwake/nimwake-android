@@ -10,6 +10,7 @@
 
 ### Added
 
+- **계약 문서** `docs/contract.md`(영문, 기본) · `contract.ko.md` — v1.0부터 SemVer로 약속하는 것: 버전 고정, 앱 디렉터리와 manifest 규칙, 앱이 받는 것, 배포의 의미, 명령, `host.conf` 키 전부, ingress provider. `check-docs`가 `host.conf.example`의 모든 키가 두 판에 있는지 본다
 - **템플릿 `make upgrade REV=…`**: nimwake-android 올리기를 한 번에 — lock의 rev(태그나 SHA만, `main` 거부) → setup → 폰에 Core · Host Layer(`fetch-core deploy`) → restart → `apps/`의 앱 전부 재배포(뜨지 않는 앱은 이전 release를 유지하고 실패로 알린다)
 - **`make verify`**(이 레포 · 템플릿): 사람 손이 필요 없는 기기 검증을 한 번에 — doctor에 FAIL 없음 · Core socket 응답 · 배터리를 읽고 충전 중 · lifecycle · recovery · LAN(열려 있을 때) · 실제 앱(있을 때, cold · RSS). PASS/FAIL/SKIP과 시간을 표로, 단계별 로그와 `summary.md`를 `dist/verify/<UTC>/`에. soak 중 거부(`FORCE=1`)
 - **`make logs APP=…`**(이 레포 · 템플릿): 그 앱의 출력(stdout · stderr)과 Core의 사건만 `시각 out|err|core 내용`으로. `LINES=` · `FOLLOW=1`(최근 줄 뒤로 새 줄을 따라간다, 로그 순환에도). APP 없이는 supervisor · daemon 로그
