@@ -4,6 +4,9 @@
 # LAN에서 접근하려면 연다. 비우면 Core 기본값 127.0.0.1:8080 (Core PRD §74 — 노출은 opt-in)
 #NIMWAKE_LISTEN=0.0.0.0:8080
 
+# Core control socket (§85 · §86, Core v0.1.2+) — 상태를 로그 파싱 없이: 폰에서 `nimwake status`.
+# 짧은 디렉터리 ~/.nimwake-host/run/core만 proot 안 /run/nimwake로 bind한다. 0이면 끈다(옛 Core binary용)
+#NIMWAKE_CONTROL_SOCKET=1
 # daemon과 앱을 proot-distro --isolated로 띄운다 (기본 1). 0이면 앱이 Termux의 SSH 키 · 부팅 스크립트를
 # 읽고 쓴다 — ingress로 인터넷에 열 때는 끄지 않는다 (Phase 2 04 T1)
 #NIMWAKE_ISOLATED=1

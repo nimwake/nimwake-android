@@ -127,6 +127,14 @@ cmd_status() {
 	else
 		echo "health      FAIL"
 	fi
+	# Core에게 직접 묻는다 — control socket (§85 · §86). 앱 이름은 [a-z0-9-]뿐이라 JSON을 sed로 읽어도 된다
+	if _json="$(core_status_json)"; then
+		_ver="$(printf '%s' "$_json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+		_apps="$(printf '%s' "$_json" | tr '{' '\n' | sed -n 's/.*"name":"\([^"]*\)".*"state":"\([A-Z_]*\)".*"pid":\([0-9][0-9]*\).*/\1 \2 pid \3/p; s/.*"name":"\([^"]*\)".*"state":"\([A-Z_]*\)".*"pid":null.*/\1 \2/p' | paste -sd ',' - | sed 's/,/, /g')"
+		echo "core        nimwaked $_ver — ${_apps:-no apps} (control socket)"
+	elif [ "$NIMWAKE_CONTROL_SOCKET" = 1 ] && [ -n "$(daemon_pid)" ]; then
+		echo "core        control socket not answering ($NIMWAKE_SOCKET) — a daemon started before Core v0.1.2, or by an older nimwake-host? nimwake-host stop · start"
+	fi
 	# supervisor가 마지막으로 바뀐 상태를 남긴다 ("STATE 바뀐시각 이유"). 지금 값은 supervisor가 30초마다 갱신한다
 	if [ -f "$NIMWAKE_RUN/network" ]; then
 		read -r _net_state _net_day _net_time _net_why <"$NIMWAKE_RUN/network"

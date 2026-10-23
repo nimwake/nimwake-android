@@ -54,8 +54,19 @@ echo "soak $soak $why"
 
 core="$(proot-distro login ubuntu -- sed -n 's/^\(ref\|commit\)=//p' /opt/nimwake/BUILD_INFO 2>/dev/null | tr '\n' ' ')"
 echo "core        ${core:-unknown}(installed binary)"
-running="$(grep -o 'nimwaked [0-9][0-9a-z.-]*' "$h/logs/nimwaked.log" 2>/dev/null | tail -n 1)"
-echo "running     ${running:-unknown} (last line in nimwaked.log — the binary actually in memory)"
+# 메모리에 있는 binary — Core에게 직접 묻는다 (control socket §85). 없으면 nimwaked.log의 마지막 버전 줄
+sock="$h/run/core/nimwake.sock"
+cli="$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/opt/nimwake/bin/nimwake"
+running=""
+if [ -S "$sock" ] && [ -x "$cli" ]; then
+	running="$("$cli" status --json --socket "$sock" 2>/dev/null | sed -n 's/.*"version":"\([^"]*\)".*/nimwaked \1/p')"
+fi
+if [ -n "$running" ]; then
+	echo "running     $running (control socket — the binary actually in memory)"
+else
+	running="$(grep -o 'nimwaked [0-9][0-9a-z.-]*' "$h/logs/nimwaked.log" 2>/dev/null | tail -n 1)"
+	echo "running     ${running:-unknown} (last line in nimwaked.log — the binary actually in memory)"
+fi
 if command -v nimwake-host >/dev/null 2>&1; then
 	nimwake-host status 2>/dev/null | sed 's/^/host        /'
 fi

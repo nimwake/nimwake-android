@@ -1,0 +1,18 @@
+#!/bin/sh
+# nimwake — Core CLI(§86)를 폰의 Termux에서 바로. `nimwake status` · `nimwake status --json`
+#
+# CLI는 proot Ubuntu 안(/opt/nimwake/bin/nimwake)에 설치되지만 정적(musl) binary라 Termux에서 그대로 돈다.
+# control socket(§85)은 짧은 Termux 경로(~/.nimwake-host/run/core)에 있다 — proot 안 경로를 Termux에서 보면
+# Unix socket 한계(108바이트)를 넘는다. 그 경로를 NIMWAKE_SOCKET으로 넘겨 운영자가 외우지 않게 한다.
+#   NIMWAKE_HOST_LIB  lib 디렉터리 (기본 ~/.nimwake-host/lib)
+set -eu
+
+lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
+# shellcheck source=../lib/config.sh
+. "$lib/config.sh"
+
+if [ "$NIMWAKE_CONTROL_SOCKET" != 1 ]; then
+	echo "nimwake: the control socket is off (NIMWAKE_CONTROL_SOCKET=0 in host.conf)" >&2
+	exit 78
+fi
+exec "$NIMWAKE_CORE_CLI" "$@"

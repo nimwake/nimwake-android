@@ -254,13 +254,13 @@ EOF
 
 	run sh -c "NIMWAKE_LISTEN=0.0.0.0:8080 NIMWAKE_MIN_FREE_MEMORY_MB=512 . \"$root/host/lib/config.sh\"; echo \"\$NIMWAKE_LAUNCH\""
 	echo "$output"
-	[[ "$output" == *"/home/nimwake/.nimwake/apps --listen 0.0.0.0:8080 --min-free-memory-mb 512" ]]
+	[[ "$output" == *"/home/nimwake/.nimwake/apps --listen 0.0.0.0:8080 --min-free-memory-mb 512"* ]]
 
 	# host.conf로도 같다
 	mkdir -p "$NIMWAKE_HOST_HOME"
 	echo "NIMWAKE_MIN_FREE_MEMORY_MB=768" >"$NIMWAKE_HOST_HOME/host.conf"
 	run sh -c ". \"$root/host/lib/config.sh\"; echo \"\$NIMWAKE_LAUNCH\""
-	[[ "$output" == *" --min-free-memory-mb 768" ]]
+	[[ "$output" == *" --min-free-memory-mb 768"* ]]
 }
 
 @test "summarize --md prints a report table with verdicts" {

@@ -8,8 +8,13 @@
 
 ## [Unreleased]
 
+### Core
+
+- **Core `v0.1.4`** (`bf79367`, #71) — §85 control socket · §86 `nimwake` CLI · §84 WebSocket upgrade는 501 · 정지 완료 로그 `took_ms`. v0.1.2 · v0.1.3은 건너뛴다(기동 직후 SIGTERM에 app 생존 · FAILED app에서 CLI 실패)
+
 ### Added
 
+- **Core에게 직접 묻는다 — control socket** (§85 · §86): daemon을 `--control-socket`으로 띄운다. 격리된 proot에는 Termux 경로가 보이지 않고 proot 안 경로는 Unix socket 한계(108바이트)를 넘으므로, 짧은 `~/.nimwake-host/run/core` 하나만 `/run/nimwake`로 bind한다. 폰에서 `nimwake status`(래퍼), `nimwake-host status`에 Core 버전과 앱 상태, `make apps` · `device-status` · `test-app`이 `SIGUSR1` + 로그 grep 대신 `nimwake status --json`(없으면 예전 방식). 기동 전 디렉터리 0700 · 낡은 socket 정리. `NIMWAKE_CONTROL_SOCKET=0`으로 끈다 (validation/18)
 - **배터리 · 전원 감시** (`host/lib/battery.sh`): supervisor가 정리 작업 주기(10분)마다 Termux:API로 잔량 · 충전 연결 · 충전 상태를 보고 `ok` · `unplugged` · `draining`(꽂혀 있는데 방전) · `low`(`NIMWAKE_BATTERY_LOW`, 기본 20%) · `unknown`을 바뀔 때만 `supervisor.log`와 Android 알림에 남긴다. `status`에 배터리 줄, `make doctor`가 Termux:API 응답과 전원을 본다 (#67). soak CSV에 `plugged` · `battery_status` 열(15열)과 요약의 전원 줄. 알림은 종류(storage · battery)마다 따로 남는다 — 10-18 · 10-20 기기에서 USB에 꽂힌 채 하루 약 45%씩 줄어 두 번 꺼졌는데 아무도 몰랐다
 - **온보딩 가이드** `docs/onboarding.md`(영문, 기본) · `docs/onboarding.ko.md` — 개인 레포를 만들어 lock을 고정하고, 앱(정적 사이트 · Next.js)을 추가해 배포하고, quick tunnel · 내 도메인으로 공개하기까지. `make lint`의 `check-docs`가 두 판의 제목 뼈대 · 코드 블록이 같은지, 코드 블록의 `make` 대상이 실제로 있는지 본다
 - **정적 빌드 사이트** — Vite · Vite + TanStack Router · Docusaurus 같은 정적 사이트를 Next.js 앱처럼 `make deploy APP=…`로. `build-app.sh`가 `next.config.*`가 없으면 빌드 결과(`dist/` · `build/` · `out/`)를 `site/`에, 정적 서버 `runtime/static-server.mjs`(Node 내장 모듈만 · SPA fallback · 해시 파일 immutable 캐시 · ETag · 경로 탈출 · 점 파일 차단)를 `server.mjs`로 묶는다. 템플릿 예시 `apps/site`. 폰에서 cold 1.1s · warm 40–80ms · RSS 58 MB
