@@ -107,6 +107,7 @@ Rules the deploy checks for you (`make deploy` refuses or warns before touching 
 - the only runtime is the Node from `guest/node.lock` (`/opt/node/bin/node`);
 - a `public` app must not have an `allow` that leaves out `127.0.0.1` — tunnel traffic comes from there;
 - `VITE_*` and other build-time values end up in the browser — never put secrets there.
+- Secrets (API keys, passwords) go to the phone with `make secret APP=<name> KEY=<KEY> < file` — standard input only, stored 0600 in `/home/nimwake/secrets/<name>`, read by the app from `NIMWAKE_SECRETS_DIR`. They are not in `make backup`; keep the originals in your password manager.
 
 **Data your app keeps** (SQLite, uploads, caches) goes in the directory named by the `NIMWAKE_DATA_DIR` environment variable — `/home/nimwake/data/<name>` on the phone. The deploy creates it and fills the variable in; don't set it yourself. The working directory is a new release folder on every deploy, so anything written there is gone after the next one. The data directory survives redeploys, rollbacks and `remove-app`, and `make backup` copies it to your machine (`make restore-data` puts it back on a wiped phone).
 
@@ -237,11 +238,12 @@ Rules that keep this reliable on a phone:
 - **Do the work inside the request** and answer when it is done. Nimwake stops an app `idle_timeout_seconds` after its last request — work left running after the response can be cut off. Raise `response_header_timeout_seconds` for jobs longer than a minute, or split them.
 - **Make jobs idempotent.** A scheduled call can arrive late, twice, or not at all (phone off, home internet down). Keep what was done in `NIMWAKE_DATA_DIR` and skip work that is already done.
 - **Webhooks:** verify the sender's signature (for GitHub, `X-Hub-Signature-256`). A cold start (1–2 s) fits inside GitHub's 10 s limit. A webhook sent while the phone is off is not retried automatically — redeliver it from the sender's page.
-- **Secrets the app reads** (webhook secrets, API keys) go in a file in the app's data directory on the phone, not in `nimwake.toml`, which lives in your repo:
+- **Secrets the app reads** (webhook secrets, API keys) go to the phone with `make secret`, never into `nimwake.toml`, which lives in your repo. The app reads `$NIMWAKE_SECRETS_DIR/<KEY>` when it starts:
 
 ```sh
 # a secret the app reads at runtime — on the phone, never in the repo or the manifest
-ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/data/jobs/webhook-secret"' < ~/.secrets/jobs-webhook-secret
+make secret APP=jobs KEY=WEBHOOK_SECRET < ~/.secrets/jobs-webhook-secret
+make secrets APP=jobs    # names only, never values
 ```
 
 ## Troubleshooting

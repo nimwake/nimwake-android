@@ -107,6 +107,7 @@ cp -R apps/site apps/about
 - 런타임은 `guest/node.lock`의 Node(`/opt/node/bin/node`) 하나뿐이다.
 - `public` 앱의 `allow`에 `127.0.0.1`이 빠지면 안 된다. 터널 요청이 거기서 온다.
 - `VITE_*` 같은 빌드 때 넣는 값은 브라우저에 그대로 보인다. 비밀을 넣지 않는다.
+- 비밀(API 키, 비밀번호)은 `make secret APP=<name> KEY=<KEY> < 파일`로 폰에 넣는다 — 표준 입력으로만, `/home/nimwake/secrets/<name>`에 0600, 앱은 `NIMWAKE_SECRETS_DIR`에서 읽는다. `make backup`에는 들어가지 않는다 — 원본은 비밀번호 관리자에.
 
 **앱이 남겨야 하는 데이터**(SQLite, 업로드, 캐시)는 환경 변수 `NIMWAKE_DATA_DIR`이 가리키는 디렉터리에 둔다 — 폰의 `/home/nimwake/data/<name>`. 배포가 만들고 변수를 채우니 직접 적지 않는다. 작업 디렉터리는 배포마다 새 release 폴더라 거기에 쓴 것은 다음 배포 뒤 사라진다. 데이터 디렉터리는 재배포, rollback, `remove-app`을 거쳐도 남고, `make backup`이 개발 머신으로 복사한다(초기화한 폰에는 `make restore-data`로 되살린다).
 
@@ -237,11 +238,12 @@ export default {
 - **일은 요청 안에서 끝내고**, 끝나면 응답한다. Nimwake는 마지막 요청 뒤 `idle_timeout_seconds`가 지나면 앱을 내린다 — 응답 뒤에 남겨 둔 일은 끊길 수 있다. 1분이 넘는 작업은 `response_header_timeout_seconds`를 올리거나 나눈다.
 - **작업은 여러 번 돌아도 같은 결과가 되게 만든다.** 예약 호출은 늦게, 두 번, 또는 아예 안 올 수 있다(폰 꺼짐, 집 인터넷 끊김). 한 일을 `NIMWAKE_DATA_DIR`에 기록하고 이미 한 일은 건너뛴다.
 - **웹훅:** 보낸 쪽의 서명을 확인한다(GitHub는 `X-Hub-Signature-256`). cold start(1–2초)는 GitHub의 10초 제한 안에 든다. 폰이 꺼져 있을 때 온 웹훅은 자동으로 다시 오지 않는다 — 보낸 쪽 페이지에서 재전송한다.
-- **앱이 읽는 비밀**(웹훅 secret, API 키)은 폰의 앱 데이터 디렉터리에 파일로 둔다. 레포에 있는 `nimwake.toml`에는 넣지 않는다:
+- **앱이 읽는 비밀**(웹훅 secret, API 키)은 `make secret`으로 폰에 넣는다. 레포에 있는 `nimwake.toml`에는 넣지 않는다. 앱은 시작할 때 `$NIMWAKE_SECRETS_DIR/<KEY>`를 읽는다:
 
 ```sh
 # a secret the app reads at runtime — on the phone, never in the repo or the manifest
-ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/home/nimwake/data/jobs/webhook-secret"' < ~/.secrets/jobs-webhook-secret
+make secret APP=jobs KEY=WEBHOOK_SECRET < ~/.secrets/jobs-webhook-secret
+make secrets APP=jobs    # names only, never values
 ```
 
 ## 문제 해결

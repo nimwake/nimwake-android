@@ -33,7 +33,7 @@ Manifest rules the deploy enforces before touching the phone:
 | `[server] port` | 1024–65535, not 8080, unique on the phone |
 | `[server] allow` | one line. A `public` app must include `127.0.0.1` or leave `allow` out; a `lan` app without it gets a warning |
 | `[runtime] command` | `/opt/node/bin/node` or a binary under `/opt/nimwake/bin/` |
-| `working_dir`, `NIMWAKE_DATA_DIR` | never set them — the deploy fills both |
+| `working_dir`, `NIMWAKE_DATA_DIR`, `NIMWAKE_SECRETS_DIR` | never set them — the deploy fills them |
 | bundle | no native modules (`*.node`) |
 
 What the app is given:
@@ -42,6 +42,7 @@ What the app is given:
 | - | - |
 | Working directory | the release directory — **replaced on every deploy** |
 | `NIMWAKE_DATA_DIR` | `/home/nimwake/data/<name>` (0700) — survives redeploy, rollback and `remove-app`; copied by `make backup` |
+| `NIMWAKE_SECRETS_DIR` | `/home/nimwake/secrets/<name>` (0700, files 0600) — one file per key, put there by `make secret`; read when the app starts; never backed up |
 | Network | it listens on `127.0.0.1:<port>`; requests arrive through the gateway with `X-Forwarded-For` (the rightmost value is the peer the gateway saw) |
 
 ## Deploy semantics
@@ -66,6 +67,9 @@ make rollback-app NAME=<name>
 make remove-app NAME=<name>
 make apps                         # apps, host, port, exposure, release, state
 make logs APP=<name>              # LINES=, FOLLOW=1
+make secret APP=<name> KEY=<KEY>  # value on standard input only
+make secrets APP=<name>           # names, never values
+make secret-rm APP=<name> KEY=<KEY>
 make ingress-enable INGRESS=cloudflare
 make ingress-token INGRESS=cloudflare
 make ingress-disable
@@ -87,6 +91,8 @@ make token
 make restart
 make status
 make logs APP=<name>
+make secret APP=<name> KEY=<KEY>
+make secrets APP=<name>
 make verify
 make upgrade REV=<tag>
 ```

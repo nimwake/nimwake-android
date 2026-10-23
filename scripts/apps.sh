@@ -100,7 +100,7 @@ cmd_deploy() {
 	# 1) 묶음과 manifest를 기기의 stage로 (표준 입력을 tar가 쓴다 — 스크립트는 다음 ssh로)
 	tmp="$(mktemp -d)"
 	trap 'rm -rf "$tmp"' EXIT
-	"$root/scripts/app-manifest.sh" render "$dir/nimwake.toml" "$workdir" "/home/nimwake/data/$name" >"$tmp/nimwake.toml"
+	"$root/scripts/app-manifest.sh" render "$dir/nimwake.toml" "$workdir" "/home/nimwake/data/$name" "/home/nimwake/secrets/$name" >"$tmp/nimwake.toml"
 	mkdir -p "$tmp/bundle"
 	(cd "$dir/bundle" && tar -cf - .) | (cd "$tmp/bundle" && tar -xf -)
 	(cd "$tmp" && tar -cf - nimwake.toml bundle) |
@@ -124,6 +124,12 @@ if [ ! -d "$data" ]; then
 	mkdir -p "$data"
 	chmod 700 "$data"
 	echo "  data: /home/nimwake/data/$name (new — kept across releases, rollback and remove)"
+fi
+# 비밀 — 앱이 NIMWAKE_SECRETS_DIR로 받는다. 넣는 것은 make secret (표준 입력으로만). 백업하지 않는다
+sec="$rootfs/home/nimwake/secrets/$name"
+if [ ! -d "$sec" ]; then
+	mkdir -p "$sec"
+	chmod 700 "$rootfs/home/nimwake/secrets" "$sec"
 fi
 mv "$stage/bundle" "$rel"
 echo "  bundle: $(du -sk "$rel" | cut -f1) KB → /home/nimwake/apps/$name/releases/$id"
