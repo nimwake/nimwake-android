@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-24
+
+v1.0으로 가는 길의 자동 기준 다섯([v1.0](https://github.com/nimwake/nimwake-android/blob/main/.docs/phases/v1.0/README.md)). 배포가 스스로 확인하고 되돌리며, 로그 · 검증 · 올리기가 명령 하나가 됐고, 약속하는 것을 [계약](https://github.com/nimwake/nimwake-android/blob/main/docs/contract.md)으로 적었다. 남은 것은 사람이 필요한 실사용 근거뿐이다. Core는 그대로 `v0.1.4`.
+
 ### Added
 
 - **계약 문서** `docs/contract.md`(영문, 기본) · `contract.ko.md` — v1.0부터 SemVer로 약속하는 것: 버전 고정, 앱 디렉터리와 manifest 규칙, 앱이 받는 것, 배포의 의미, 명령, `host.conf` 키 전부, ingress provider. `check-docs`가 `host.conf.example`의 모든 키가 두 판에 있는지 본다
