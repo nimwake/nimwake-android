@@ -54,7 +54,7 @@ cp .env.example .env  # NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — never commit .
 
 ```text
 repo=nimwake/nimwake-android
-rev=v0.1.0
+rev=v0.1.1
 ```
 
 - `rev` is a **release tag or a commit SHA** — never `main`, which moves under you.
@@ -249,9 +249,9 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 | ------- | --------------- | ---- |
 | Next.js apps, `make deploy`, Cloudflare ingress, `exposure` | v0.1.0 | v0.1.0 |
 | `[server] allow` (403 for other peers, does not wake the app) | v0.1.0 | v0.1.0 |
-| Static sites (`server.mjs`, `SPA`) | after v0.1.0 — commit `8cce97b` until the next tag | v0.1.0 |
-| `NIMWAKE_DATA_DIR` (persistent app data), `make restore-data` | after v0.1.0 | v0.1.0 |
-| `nimwake status` on the phone (Core control socket) | after v0.1.0 | v0.1.2 or later — use v0.1.4 |
+| Static sites (`server.mjs`, `SPA`) | v0.1.1 | v0.1.0 |
+| `NIMWAKE_DATA_DIR` (persistent app data), `make restore-data` | v0.1.1 | v0.1.0 |
+| `nimwake status` on the phone (Core control socket) | v0.1.1 | v0.1.2 or later — v0.1.1 pins v0.1.4 |
 
 ## Reference
 
