@@ -4,7 +4,7 @@ HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps logs ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를,
 # check-docs는 docs/의 영문 · 국문 문서가 같은 뼈대 · 같은 명령인지를 본다
@@ -67,6 +67,10 @@ remove-app:
 
 apps:
 	scripts/apps.sh list
+
+# make logs APP=blog [LINES=200] [FOLLOW=1] — 그 앱의 출력과 Core의 사건만. APP 없이는 supervisor · daemon 로그
+logs:
+	scripts/logs.sh $(APP)
 
 # ingress provider (host/ingress/<provider>) — 켠 것은 다음 nimwake-host stop · start부터
 #   make ingress-enable INGRESS=cloudflare [MODE=quick]   ·   make ingress-token < 토큰파일   ·   make ingress-disable
