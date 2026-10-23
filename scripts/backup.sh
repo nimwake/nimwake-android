@@ -38,6 +38,16 @@ cmd_backup() {
 	rm -rf "$dir/app-data"
 	mv "$dir/app-data.new" "$dir/app-data"
 	echo "  app data: $(find "$dir/app-data" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') app(s), $(du -sk "$dir/app-data" | cut -f1) KB"
+	# 깨어 있던 앱의 데이터는 쓰는 중에 복사됐을 수 있다(SQLite 등) — Core에게 물어 이름을 알린다 (control socket §85)
+	# shellcheck disable=SC2016 # $는 기기에서 푼다
+	awake="$(ssh "$device" '. "$HOME/.nimwake-host/lib/config.sh" 2>/dev/null && [ -S "$NIMWAKE_SOCKET" ] &&
+		"$NIMWAKE_CORE_CLI" status --json --socket "$NIMWAKE_SOCKET" 2>/dev/null' </dev/null |
+		tr '{' '\n' | sed -n 's/.*"name":"\([a-z0-9-]*\)".*"state":"\(RUNNING\|STARTING\|STOPPING\)".*/\1/p' | tr '\n' ' ')"
+	for app in $awake; do
+		if [ -d "$dir/app-data/$app" ]; then
+			echo "  warning: $app was awake — its data may have been copied mid-write (SQLite?). Run make backup again when make apps shows it SLEEPING" >&2
+		fi
+	done
 }
 
 cmd_restore_data() {
