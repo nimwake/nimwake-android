@@ -107,7 +107,10 @@ make upgrade REV=<tag>
 | `NIMWAKE_MAX_RESTARTS` · `NIMWAKE_RESTART_WINDOW` | crash loop 한도 — 이 시간 안에 이만큼 재시작하면 `UNHEALTHY` |
 | `NIMWAKE_HOUSEKEEPING_INTERVAL` | 저장공간 · 배터리 · 로그 순환 점검 간격(초) |
 | `NIMWAKE_MIN_FREE_MB` · `NIMWAKE_STORAGE_CLEANUP` | 저장공간 부족 알림 기준, 그리고 순환된 로그를 먼저 지울지 |
-| `NIMWAKE_NOTIFY` | 알림 명령. 메시지는 `$1`, 종류(`storage`, `battery`)는 `$2` |
+| `NIMWAKE_NOTIFY` | 폰 알림 명령. 메시지는 `$1`, 종류(`storage`, `battery`, `unhealthy`, `lost`, `ingress`, `network`)는 `$2` |
+| `NIMWAKE_ALERT_URL` · `NIMWAKE_ALERT_FORMAT` | 같은 알림을 폰 밖으로 POST할 곳과 형식: `text`(ntfy 등), `discord`, `slack`. URL은 비밀이다 |
+| `NIMWAKE_HEARTBEAT_URL` | 서버가 RUNNING인 동안 정리 작업 주기마다 GET — 신호가 끊기면 그 서비스가 알린다. 폰이 꺼져도 |
+| `NIMWAKE_NAME` | 알림 앞에 붙는 이 서버의 이름 |
 | `NIMWAKE_BATTERY_WATCH` · `NIMWAKE_BATTERY_LOW` | 배터리 감시 켜기, 낮은 잔량 기준(%) |
 | `NIMWAKE_LOG_MAX_KB` · `NIMWAKE_LOG_KEEP` | 로그 순환 크기와 남길 옛 로그 수 |
 | `NIMWAKE_NET_INTERVAL` · `NIMWAKE_NET_GATEWAY` · `NIMWAKE_NET_INTERNET_URL` | 네트워크 감시 간격, 확인할 공유기, 선택적 인터넷 확인 |

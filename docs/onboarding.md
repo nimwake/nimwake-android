@@ -167,6 +167,17 @@ make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watchi
 make verify              # every device check that needs no hands — run it after upgrades
 ```
 
+**Know when it breaks.** A notification on the phone's screen helps nobody when the phone is off. Set two URLs in the phone's `host.conf`, then `make restart`:
+
+```text
+# ~/.nimwake-host/host.conf on the phone — the URLs are secrets, keep them out of your repo
+NIMWAKE_ALERT_URL=https://ntfy.sh/<a-long-random-topic>
+NIMWAKE_HEARTBEAT_URL=https://hc-ping.com/<uuid>
+NIMWAKE_NAME=phone
+```
+
+`NIMWAKE_ALERT_URL` gets a POST when something goes wrong — the server became `UNHEALTHY`, it was found down after a reboot or after Android stopped Termux, storage or battery is low, the ingress failed, or the network came back. Use `NIMWAKE_ALERT_FORMAT=discord` or `slack` for those webhooks. `NIMWAKE_HEARTBEAT_URL` is pinged every 10 minutes while the server is healthy; give it a period of 10 minutes and a grace of at least 10 minutes in healthchecks.io (or Uptime Kuma's push monitor), and **it tells you when the pings stop — even when the phone is dead.**
+
 Upgrade nimwake-android: read the new tag's CHANGELOG, then one command updates the lock, this machine and the phone, and redeploys every app (an app that does not start keeps its previous release):
 
 ```sh

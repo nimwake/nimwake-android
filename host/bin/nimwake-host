@@ -23,6 +23,8 @@ lib="${NIMWAKE_HOST_LIB:-$HOME/.nimwake-host/lib}"
 . "$lib/network.sh"
 # shellcheck source=../lib/ingress.sh
 . "$lib/ingress.sh"
+# shellcheck source=../lib/alert.sh
+. "$lib/alert.sh"
 # shellcheck source=../lib/battery.sh
 . "$lib/battery.sh"
 

@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **밖으로 알리기와 생존 신호** (`host/lib/alert.sh`): `NIMWAKE_ALERT_URL`(+ `NIMWAKE_ALERT_FORMAT` text · discord · slack)이 상태가 나빠질 때 POST를 받는다 — supervisor `UNHEALTHY`, 재부팅 · Termux 종료 뒤 꺼져 있었음, 저장공간 · 배터리, ingress `UNHEALTHY`, 네트워크 복구. 백그라운드로 보내고 실패하면 다시 시도한다(부팅 직후 네트워크). `NIMWAKE_HEARTBEAT_URL`은 RUNNING인 동안 정리 작업 주기마다 GET — 끊기면 healthchecks.io 등이 알린다(폰이 꺼져도). `NIMWAKE_NAME`이 메시지 앞에. 폰 화면 알림은 같은 함수로. 기기: kill -9로 Termux 종료를 재현하자 `lost (killed)` POST와 heartbeat가 도착
+
 ## [0.2.0] — 2026-10-24
 
 v1.0으로 가는 길의 자동 기준 다섯([v1.0](https://github.com/nimwake/nimwake-android/blob/main/.docs/phases/v1.0/README.md)). 배포가 스스로 확인하고 되돌리며, 로그 · 검증 · 올리기가 명령 하나가 됐고, 약속하는 것을 [계약](https://github.com/nimwake/nimwake-android/blob/main/docs/contract.md)으로 적었다. 남은 것은 사람이 필요한 실사용 근거뿐이다. Core는 그대로 `v0.1.4`.

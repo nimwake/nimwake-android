@@ -9,6 +9,7 @@ setup() {
 	export NIMWAKE_HOST_HOME="$BATS_TEST_TMPDIR/host"
 	. "$root/host/lib/config.sh"
 	. "$root/host/lib/supervisor.sh"
+	. "$root/host/lib/alert.sh"
 	. "$root/host/lib/network.sh"
 	log="$NIMWAKE_LOGS/supervisor.log"
 

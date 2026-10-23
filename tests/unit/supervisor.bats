@@ -190,6 +190,7 @@ load_libs() {
 	. "$root/host/lib/supervisor.sh"
 	. "$root/host/lib/logs.sh"
 	. "$root/host/lib/network.sh"
+	. "$root/host/lib/alert.sh"
 	. "$root/host/lib/battery.sh"
 }
 
@@ -605,4 +606,96 @@ EOF
 	wait_for 5 state_is RUNNING
 	NIMWAKE_CORE_CLI=/nonexistent run "$host" status
 	[[ "$output" == *"core        control socket not answering"* ]]
+}
+
+# 밖으로 알리기 (host/lib/alert.sh) — 폰이 꺼지면 폰 화면 알림은 아무도 못 본다
+# 가짜 curl: 인자를 한 줄씩 남기고, FAKE_DIR/curl-fail 횟수만큼 실패한다
+fake_curl() {
+	mkdir -p "$FAKE_DIR/bin"
+	cat >"$FAKE_DIR/bin/curl" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$@" >>"$FAKE_DIR/curl.args"
+echo "--" >>"$FAKE_DIR/curl.args"
+n="$(cat "$FAKE_DIR/curl-fail" 2>/dev/null || echo 0)"
+if [ "$n" -gt 0 ]; then
+	echo $((n - 1)) >"$FAKE_DIR/curl-fail"
+	exit 22
+fi
+exit 0
+EOF
+	chmod +x "$FAKE_DIR/bin/curl"
+	export PATH="$FAKE_DIR/bin:$PATH"
+}
+
+@test "alert notifies the phone and posts text to NIMWAKE_ALERT_URL (ntfy style)" {
+	fake_curl
+	export NIMWAKE_NOTIFY="echo \"\$2: \$1\" >>\"$FAKE_DIR/notified\""
+	export NIMWAKE_ALERT_URL="https://ntfy.example/topic"
+	export NIMWAKE_NAME=phone
+	load_libs
+	alert battery 'battery low: 15% — "plug it in"'
+	wait
+	grep -qx 'battery: battery low: 15% — "plug it in"' "$FAKE_DIR/notified"
+	grep -qx 'https://ntfy.example/topic' "$FAKE_DIR/curl.args"
+	grep -qx '\[phone\] battery low: 15% — "plug it in"' "$FAKE_DIR/curl.args"
+	grep -qx 'Title: nimwake battery' "$FAKE_DIR/curl.args"
+}
+
+@test "discord and slack get JSON with the message escaped" {
+	fake_curl
+	export NIMWAKE_NOTIFY=""
+	export NIMWAKE_ALERT_URL="https://discord.example/api/webhooks/x"
+	export NIMWAKE_ALERT_FORMAT=discord
+	load_libs
+	alert unhealthy 'say "hi"'
+	wait
+	grep -qx '{"content":"\[nimwake\] say \\"hi\\""}' "$FAKE_DIR/curl.args"
+	grep -qx 'Content-Type: application/json' "$FAKE_DIR/curl.args"
+}
+
+@test "a failed post is retried, and logged when it never gets through" {
+	fake_curl
+	export NIMWAKE_NOTIFY=""
+	export NIMWAKE_ALERT_URL="https://ntfy.example/topic"
+	export NIMWAKE_ALERT_RETRY_DELAY=0
+	load_libs
+	echo 2 >"$FAKE_DIR/curl-fail"
+	alert storage "storage low"
+	wait
+	[ "$(grep -c '^--$' "$FAKE_DIR/curl.args")" -eq 3 ]
+	! grep -q "alert to NIMWAKE_ALERT_URL failed" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+
+	echo 9 >"$FAKE_DIR/curl-fail"
+	alert storage "storage low"
+	wait
+	grep -q "storage: alert to NIMWAKE_ALERT_URL failed after 3 tries" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+}
+
+@test "UNHEALTHY, a lost supervisor and the network coming back are alerted" {
+	fake_curl
+	export NIMWAKE_NOTIFY="echo \"\$2\" >>\"$FAKE_DIR/kinds\""
+	load_libs
+	set_state UNHEALTHY "crash loop: 5 restarts within 300s"
+	set_state RUNNING "ok"
+	net_record OFFLINE RECOVERING "wlan0 192.168.0.25"
+	net_record RECOVERING ONLINE "wlan0 192.168.0.25"
+	echo "RUNNING 2026-10-24 10:00:00 x" >"$NIMWAKE_HOST_HOME/run/state"
+	echo "2026-10-24 10:00:00" >"$NIMWAKE_HOST_HOME/run/heartbeat"
+	NIMWAKE_BOOTED_AT="2000-01-01 00:00:00" detect_unclean_end >/dev/null
+	[ "$(tr '\n' ' ' <"$FAKE_DIR/kinds")" = "unhealthy network lost " ]
+}
+
+@test "the heartbeat pings while RUNNING (housekeeping), and is silent without a URL" {
+	fake_curl
+	export NIMWAKE_STORAGE_PATH="$BATS_TEST_TMPDIR"
+	export NIMWAKE_BATTERY_WATCH=0
+	load_libs
+	housekeeping
+	wait
+	[ ! -f "$FAKE_DIR/curl.args" ]
+
+	NIMWAKE_HEARTBEAT_URL="https://hc-ping.example/uuid"
+	housekeeping
+	wait
+	grep -qx 'https://hc-ping.example/uuid' "$FAKE_DIR/curl.args"
 }

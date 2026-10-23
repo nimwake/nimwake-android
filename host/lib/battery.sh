@@ -80,10 +80,7 @@ check_battery() {
 		draining) _why="plugged in but discharging — the charger, cable or PC USB port cannot keep up; use a wall charger" ;;
 		esac
 		host_log "battery: ${_level} — $_now — $_why"
-		if [ -n "$NIMWAKE_NOTIFY" ]; then
-			sh -c "$NIMWAKE_NOTIFY" -- "battery ${_level}: ${bat_pct}% — $_why" battery >/dev/null 2>&1 ||
-				host_log "battery: notify failed"
-		fi
+		alert battery "battery ${_level}: ${bat_pct}% — $_why"
 		;;
 	esac
 }

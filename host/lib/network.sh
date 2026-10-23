@@ -63,6 +63,10 @@ net_classify() {
 net_record() {
 	printf '%s %s %s\n' "$2" "$(date '+%Y-%m-%d %H:%M:%S')" "$3" >"$NIMWAKE_RUN/network"
 	host_log "network ${1:-?} → $2 — $3"
+	# 끊긴 동안에는 밖으로 알릴 수 없다 — 돌아왔을 때 알린다
+	if [ "$2" = ONLINE ] && [ "${1:-}" = RECOVERING ]; then
+		alert network "network back — $3"
+	fi
 }
 
 # 복구 hook. 출력은 supervisor.log로 간다. 걸려도 감시 루프가 멈추지 않게 시간을 제한한다

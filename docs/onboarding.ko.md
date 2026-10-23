@@ -167,6 +167,17 @@ make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watchi
 make verify              # every device check that needs no hands — run it after upgrades
 ```
 
+**고장 나면 알게 한다.** 폰 화면의 알림은 폰이 꺼지면 아무도 못 본다. 폰의 `host.conf`에 URL 두 개를 넣고 `make restart`:
+
+```text
+# ~/.nimwake-host/host.conf on the phone — the URLs are secrets, keep them out of your repo
+NIMWAKE_ALERT_URL=https://ntfy.sh/<a-long-random-topic>
+NIMWAKE_HEARTBEAT_URL=https://hc-ping.com/<uuid>
+NIMWAKE_NAME=phone
+```
+
+`NIMWAKE_ALERT_URL`은 문제가 생기면 POST를 받는다 — 서버가 `UNHEALTHY`가 됨, 재부팅이나 Android의 Termux 종료 뒤 꺼져 있었음이 드러남, 저장공간이나 배터리 부족, ingress 실패, 네트워크 복구. Discord · Slack 웹훅이면 `NIMWAKE_ALERT_FORMAT=discord` 또는 `slack`. `NIMWAKE_HEARTBEAT_URL`은 서버가 정상인 동안 10분마다 호출된다. healthchecks.io(또는 Uptime Kuma의 push 모니터)에서 period 10분, grace 10분 이상으로 두면 **신호가 끊길 때 알려 준다 — 폰이 꺼져 있어도.**
+
 nimwake-android 올리기: 새 태그의 CHANGELOG를 읽은 뒤, 명령 하나가 lock · 이 머신 · 폰을 올리고 앱을 전부 다시 배포한다(뜨지 않는 앱은 이전 release를 유지한다):
 
 ```sh

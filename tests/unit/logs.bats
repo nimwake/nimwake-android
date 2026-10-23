@@ -8,6 +8,7 @@ setup() {
 	export NIMWAKE_LOG_KEEP=2
 	. "$root/host/lib/config.sh"
 	. "$root/host/lib/supervisor.sh"
+	. "$root/host/lib/alert.sh"
 	. "$root/host/lib/logs.sh"
 	log="$NIMWAKE_LOGS/nimwaked.log"
 }
