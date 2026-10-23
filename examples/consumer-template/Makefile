@@ -10,6 +10,7 @@
 #   make status                    폰의 앱 · Core · supervisor · ingress
 #   make logs APP=blog [FOLLOW=1]  그 앱의 출력과 Core의 사건 (LINES=200으로 더)
 #   make verify                    사람 손 없이 도는 기기 검증 전부 (APP_HOST=블로그 host)
+#   make upgrade REV=v0.1.2        nimwake-android를 올린다 — lock · 이 머신 · 폰(Core · Host Layer) · 앱 전부 재배포
 #
 # .env (커밋하지 않는다): NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — .env.example 참고
 
@@ -20,7 +21,7 @@ NA := .nimwake-android
 APP ?= blog
 MODE ?=
 
-.PHONY: setup build deploy rollback ingress token restart status logs verify
+.PHONY: setup build deploy rollback ingress token restart status logs verify upgrade
 
 setup:
 	@repo="$$(sed -n 's/^repo=//p' nimwake-android.lock)"; rev="$$(sed -n 's/^rev=//p' nimwake-android.lock)"; \
@@ -57,3 +58,21 @@ logs:
 
 verify:
 	$(MAKE) -C $(NA) verify
+
+# 올리기는 한 번에 — 문서의 네 단계를 잊지 않게. rev는 태그나 commit SHA만 (main은 움직인다).
+# 앱은 새 빌드 도구로 다시 묶어 올린다 — 뜨지 않는 앱은 배포가 이전 release로 되돌린다(deploy-app의 확인)
+upgrade:
+	@case "$(REV)" in \
+	'') echo "upgrade: REV is empty — make upgrade REV=<tag> (see the nimwake-android releases and CHANGELOG)"; exit 1 ;; \
+	main | master | HEAD) echo "upgrade: REV=$(REV) moves under you — use a release tag or a commit SHA"; exit 1 ;; \
+	esac
+	sed -i.bak 's/^rev=.*/rev=$(REV)/' nimwake-android.lock && rm -f nimwake-android.lock.bak
+	$(MAKE) setup
+	$(MAKE) -C $(NA) fetch-core deploy
+	$(MAKE) restart
+	@for d in apps/*/; do \
+		[ -f "$$d/nimwake.toml" ] || continue; \
+		$(MAKE) deploy APP="$$(basename "$$d")" || failed="$$failed $$(basename "$$d")"; \
+	done; \
+	if [ -n "$$failed" ]; then echo "upgrade: these apps did not redeploy:$$failed — they keep their previous release"; exit 1; fi
+	@echo "upgrade: nimwake-android $(REV) — commit nimwake-android.lock, then make verify"

@@ -10,6 +10,7 @@
 
 ### Added
 
+- **템플릿 `make upgrade REV=…`**: nimwake-android 올리기를 한 번에 — lock의 rev(태그나 SHA만, `main` 거부) → setup → 폰에 Core · Host Layer(`fetch-core deploy`) → restart → `apps/`의 앱 전부 재배포(뜨지 않는 앱은 이전 release를 유지하고 실패로 알린다)
 - **`make verify`**(이 레포 · 템플릿): 사람 손이 필요 없는 기기 검증을 한 번에 — doctor에 FAIL 없음 · Core socket 응답 · 배터리를 읽고 충전 중 · lifecycle · recovery · LAN(열려 있을 때) · 실제 앱(있을 때, cold · RSS). PASS/FAIL/SKIP과 시간을 표로, 단계별 로그와 `summary.md`를 `dist/verify/<UTC>/`에. soak 중 거부(`FORCE=1`)
 - **`make logs APP=…`**(이 레포 · 템플릿): 그 앱의 출력(stdout · stderr)과 Core의 사건만 `시각 out|err|core 내용`으로. `LINES=` · `FOLLOW=1`(최근 줄 뒤로 새 줄을 따라간다, 로그 순환에도). APP 없이는 supervisor · daemon 로그
 - **배포 후 확인과 자동 롤백**: `make deploy-app`이 재적재 뒤 새 release를 한 번 깨우고 control socket으로 상태를 본다. 뜨지 않으면(FAILED · 무응답 · 5xx) 이전 manifest로 되돌리고 새 release를 지우며, 앱의 마지막 로그(에러와 파일 · 줄)를 보여 준다. 처음 올린 앱이면 다시 내린다. `allow`에 127.0.0.1이 없으면 확인할 수 없다고만 하고 유지. `NO_VERIFY=1`로 건너뛴다. 기기 stage를 풀 때 수정 시각을 복원하지 않는다(PC와 폰의 시계 차이 경고)

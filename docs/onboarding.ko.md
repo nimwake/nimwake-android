@@ -167,13 +167,12 @@ make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watchi
 make verify              # every device check that needs no hands — run it after upgrades
 ```
 
-nimwake-android 올리기: `nimwake-android.lock`의 `rev`를 새 태그로 바꾸고 그 CHANGELOG를 읽은 뒤, 이 머신과 폰을 함께 올린다:
+nimwake-android 올리기: 새 태그의 CHANGELOG를 읽은 뒤, 명령 하나가 lock · 이 머신 · 폰을 올리고 앱을 전부 다시 배포한다(뜨지 않는 앱은 이전 release를 유지한다):
 
 ```sh
-make setup                                   # fetch the new nimwake-android into .nimwake-android/
-make -C .nimwake-android fetch-core deploy   # put its Core and Host Layer on the phone
-make restart                                 # run them (apps start again on the next request)
-make deploy APP=about                        # rebuild your app with the new build tools
+make upgrade REV=v0.1.2   # lock → this machine → phone (Core, Host Layer) → restart → redeploy every app
+make verify               # then check the phone
+git commit -am "nimwake-android v0.1.2"
 ```
 
 ## 7. 주기 작업과 웹훅

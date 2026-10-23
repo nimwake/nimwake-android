@@ -167,13 +167,12 @@ make logs APP=about      # its output and Core's events (FOLLOW=1 to keep watchi
 make verify              # every device check that needs no hands — run it after upgrades
 ```
 
-Upgrade nimwake-android: change `rev` in `nimwake-android.lock` to the new tag and read its CHANGELOG, then update both this machine and the phone:
+Upgrade nimwake-android: read the new tag's CHANGELOG, then one command updates the lock, this machine and the phone, and redeploys every app (an app that does not start keeps its previous release):
 
 ```sh
-make setup                                   # fetch the new nimwake-android into .nimwake-android/
-make -C .nimwake-android fetch-core deploy   # put its Core and Host Layer on the phone
-make restart                                 # run them (apps start again on the next request)
-make deploy APP=about                        # rebuild your app with the new build tools
+make upgrade REV=v0.1.2   # lock → this machine → phone (Core, Host Layer) → restart → redeploy every app
+make verify               # then check the phone
+git commit -am "nimwake-android v0.1.2"
 ```
 
 ## 7. Scheduled jobs and webhooks
