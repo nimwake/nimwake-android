@@ -10,6 +10,7 @@
 
 ### Added
 
+- `make backup`이 깨어 있던 앱(RUNNING · STARTING · STOPPING)의 데이터가 쓰는 중에 복사됐을 수 있다고 이름을 들어 알린다 — 잠든 뒤 다시 하면 된다 (SQLite 등)
 - **앱의 비밀 — `make secret`**: `make secret APP=… KEY=… < 파일`이 값을 폰의 `/home/nimwake/secrets/<app>/<KEY>`(디렉터리 0700, 파일 0600)에 둔다 — 표준 입력으로만(터미널 직접 입력 · 명령줄 거부), 빈 값 거부, 임시 파일에서 옮긴다. 배포가 `NIMWAKE_SECRETS_DIR`을 manifest에 넣고(직접 적으면 거부) 디렉터리를 만든다. `secrets`(이름과 시각만) · `secret-rm`. 백업하지 않는다. 템플릿 · 계약 · 온보딩(주기 작업 절의 ssh 명령을 대체). 기기: 넣기 전 missing → 넣은 뒤 다음 시작에서 읽음 · 권한 · 백업에 없음 · 삭제
 - **밖으로 알리기와 생존 신호** (`host/lib/alert.sh`): `NIMWAKE_ALERT_URL`(+ `NIMWAKE_ALERT_FORMAT` text · discord · slack)이 상태가 나빠질 때 POST를 받는다 — supervisor `UNHEALTHY`, 재부팅 · Termux 종료 뒤 꺼져 있었음, 저장공간 · 배터리, ingress `UNHEALTHY`, 네트워크 복구. 백그라운드로 보내고 실패하면 다시 시도한다(부팅 직후 네트워크). `NIMWAKE_HEARTBEAT_URL`은 RUNNING인 동안 정리 작업 주기마다 GET — 끊기면 healthchecks.io 등이 알린다(폰이 꺼져도). `NIMWAKE_NAME`이 메시지 앞에. 폰 화면 알림은 같은 함수로. 기기: kill -9로 Termux 종료를 재현하자 `lost (killed)` POST와 heartbeat가 도착
 
