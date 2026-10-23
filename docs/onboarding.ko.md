@@ -117,6 +117,8 @@ make deploy APP=about    # build → bundle/ → phone → reload; other apps ke
 make status              # apps, Core, supervisor, ingress
 ```
 
+재적재 뒤 `make deploy`는 **새 release를 한 번 깨워 본다.** 뜨지 않으면(Core가 `FAILED`, 응답 없음, gateway의 5xx) 이전 release로 되돌리고 앱의 마지막 로그를 보여 준 뒤 실패로 끝난다 — 사이트는 옛 버전을 계속 내준다. 처음 올리는 앱이 뜨지 않으면 다시 내린다. `NO_VERIFY=1`이면 건너뛴다. `allow`에 `127.0.0.1`이 없는 앱은 폰 안에서 깨울 수 없다 — 배포가 그렇게 알리고 유지한다.
+
 집 안의 다른 기기에서 앱에 접속하려면, 폰의 gateway를 LAN에 한 번 연다(기본은 loopback만). 그리고 다시 띄운다:
 
 ```sh
@@ -237,6 +239,7 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 | `make deploy`가 `native module`로 멈춤 | 의존성이 컴파일된 `.node` 파일을 담고 있다 — 빼거나 순수 JS 대안을 쓴다 |
 | `app-manifest: … does not include 127.0.0.1` | `allow`가 있는 `public` 앱 — `allow`를 지우거나 `"127.0.0.1/32"`를 넣는다 |
 | `app-manifest: warning: … lan but has no [server] allow` | 터널이 절대 닿지 않게 `allow = ["192.168.0.0/16"]`을 넣는다 |
+| `apps: release … did not start (…) — rolling back` | 새 release가 시작하다 죽었다. 메시지 아래 로그가 이유다. 이전 release가 다시 응답한다 |
 | `core: … keeping the current set` | Core가 manifest를 거부했다(port 중복, 잘못된 CIDR …). 배포가 이전 것으로 되돌렸다 — 메시지를 읽는다 |
 | 정적 사이트에서 `/`는 되는데 `/about`이 404 | 클라이언트 라우터면 `SPA = "1"` |
 | gateway가 503 | 폰 메모리가 부족하다(`NIMWAKE_MIN_FREE_MEMORY_MB`) — 깨어 있는 앱을 줄이거나 임계값을 낮춘다 |

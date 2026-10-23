@@ -117,6 +117,8 @@ make deploy APP=about    # build → bundle/ → phone → reload; other apps ke
 make status              # apps, Core, supervisor, ingress
 ```
 
+After the reload, `make deploy` **wakes the new release once**. If it does not start (Core reports `FAILED`, no answer, or a 5xx from the gateway), the deploy puts the previous release back, prints the app's last log lines, and fails — your site keeps serving the old version. A brand-new app that never starts is removed again. Set `NO_VERIFY=1` to skip the check. An app whose `allow` leaves out `127.0.0.1` cannot be woken from the phone itself; the deploy says so and keeps it.
+
 To reach apps from other devices at home, open the phone's gateway to the LAN once (the default is loopback only), then restart:
 
 ```sh
@@ -237,6 +239,7 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 | `make deploy` stops: `native module` | a dependency ships a compiled `.node` file — drop it or use a pure-JS alternative |
 | `app-manifest: … does not include 127.0.0.1` | a `public` app with `allow` — remove `allow`, or add `"127.0.0.1/32"` |
 | `app-manifest: warning: … lan but has no [server] allow` | add `allow = ["192.168.0.0/16"]` so the tunnel can never reach it |
+| `apps: release … did not start (…) — rolling back` | the new release crashed on start; the log lines below the message show why. The previous release is serving again |
 | `core: … keeping the current set` | Core rejected the manifest (duplicate port, bad CIDR …); deploy restored the previous one — read the message |
 | `/about` is 404 on a static site, `/` works | set `SPA = "1"` for client-side routers |
 | 503 from the gateway | the phone is short on memory (`NIMWAKE_MIN_FREE_MEMORY_MB`) — fewer awake apps, or a lower threshold |

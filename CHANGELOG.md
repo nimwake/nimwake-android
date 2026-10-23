@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **배포 후 확인과 자동 롤백**: `make deploy-app`이 재적재 뒤 새 release를 한 번 깨우고 control socket으로 상태를 본다. 뜨지 않으면(FAILED · 무응답 · 5xx) 이전 manifest로 되돌리고 새 release를 지우며, 앱의 마지막 로그(에러와 파일 · 줄)를 보여 준다. 처음 올린 앱이면 다시 내린다. `allow`에 127.0.0.1이 없으면 확인할 수 없다고만 하고 유지. `NO_VERIFY=1`로 건너뛴다. 기기 stage를 풀 때 수정 시각을 복원하지 않는다(PC와 폰의 시계 차이 경고)
+
 ## [0.1.1] — 2026-10-23
 
 실사용 첫 개선. 정적 사이트와 상태를 가진 앱을 올릴 수 있고, 폰의 전원과 Core 상태를 직접 본다. 개인 레포는 이 태그로 고정한다 — [온보딩](https://github.com/nimwake/nimwake-android/blob/main/docs/onboarding.md).
