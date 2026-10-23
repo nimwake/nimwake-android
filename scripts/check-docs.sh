@@ -5,6 +5,7 @@
 #   2. 같은 뼈대: 두 판의 제목 단계(#, ##, ###)가 같은 순서로 같다 — 한쪽에만 절을 더하면 실패
 #   3. 같은 명령: 두 판의 코드 블록이 글자 그대로 같다 — 명령은 번역하지 않는다(블록 안 주석도 영문)
 #   4. 있는 명령: 코드 블록의 `make <대상>`이 이 레포 Makefile이나 소비처 템플릿 Makefile에 있다
+#   5. 계약: docs/contract.md · contract.ko.md가 host/host.conf.example의 모든 키를 적는다
 #
 #   ROOT  레포 위치 (기본: 이 스크립트의 상위). 테스트가 바꾼다
 set -eu
@@ -80,6 +81,18 @@ for doc in "$docs"/*.md; do
 		grep -qx "$target" "$tmp/targets" || problem "$name uses 'make $target', which no Makefile defines"
 	done <"$tmp/used"
 done
+
+# 5. 계약 문서(docs/contract*.md)가 host.conf.example의 모든 키를 적는다 — 새 설정을 더하면 계약에도 적게
+example="$root/host/host.conf.example"
+if [ -f "$example" ]; then
+	sed -n 's/^#\{0,1\}\(NIMWAKE_[A-Z0-9_]*\)=.*/\1/p' "$example" | sort -u >"$tmp/keys"
+	for contract in "$docs"/contract.md "$docs"/contract.ko.md; do
+		[ -f "$contract" ] || continue
+		while read -r key; do
+			grep -q "\`$key\`" "$contract" || problem "$(basename "$contract") does not document host.conf key $key (host/host.conf.example)"
+		done <"$tmp/keys"
+	done
+fi
 
 [ "$fail" -eq 0 ] || exit 1
 echo "check-docs: ok ($n documents, English + Korean)"

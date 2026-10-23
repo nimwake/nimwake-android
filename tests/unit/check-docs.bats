@@ -92,3 +92,16 @@ EOF
 	echo "$output"
 	[ "$status" -eq 0 ]
 }
+
+@test "the contract must document every host.conf key" {
+	mkdir -p "$ROOT/host"
+	printf "#NIMWAKE_LISTEN=0.0.0.0:8080\nNIMWAKE_NEW_THING=1\n" >"$ROOT/host/host.conf.example"
+	for f in contract.md contract.ko.md; do
+		printf "# C\n\n## Keys\n\n| \`NIMWAKE_LISTEN\` | x |\n" >"$ROOT/docs/$f"
+	done
+	run "$check"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"contract.md does not document host.conf key NIMWAKE_NEW_THING"* ]]
+	[[ "$output" == *"contract.ko.md does not document host.conf key NIMWAKE_NEW_THING"* ]]
+	[[ "$output" != *"key NIMWAKE_LISTEN"* ]]
+}

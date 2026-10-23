@@ -259,6 +259,7 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 
 ## 참고
 
+- [계약](contract.ko.md) — 무엇이 안정적인가: 앱 디렉터리, manifest 규칙, 명령, `host.conf` 키, ingress provider
 - [소비처 템플릿 README](../examples/consumer-template/README.md) — 템플릿 자체 설명
 - [배포 · ingress 계약](../.docs/phases/phase-2/03-deploy-and-ingress-contract.md) · [노출 보안](../.docs/phases/phase-2/04-exposure-security.md)
 - [CHANGELOG](../CHANGELOG.md) · [검증 리포트](../.docs/validation/)
