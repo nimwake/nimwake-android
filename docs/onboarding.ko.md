@@ -54,7 +54,7 @@ cp .env.example .env  # NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — never commit .
 
 ```text
 repo=nimwake/nimwake-android
-rev=v0.1.0
+rev=v0.1.1
 ```
 
 - `rev`에는 **릴리스 태그나 commit SHA**를 적는다. 계속 움직이는 `main`은 쓰지 않는다.
@@ -249,9 +249,9 @@ ssh nimwake-phone 'umask 077; cat > "$PREFIX/var/lib/proot-distro/containers/ubu
 | ---- | --------------- | ---- |
 | Next.js 앱, `make deploy`, Cloudflare ingress, `exposure` | v0.1.0 | v0.1.0 |
 | `[server] allow`(다른 peer는 403, 앱을 깨우지 않음) | v0.1.0 | v0.1.0 |
-| 정적 사이트(`server.mjs`, `SPA`) | v0.1.0 이후 — 다음 태그 전까지 commit `8cce97b` | v0.1.0 |
-| `NIMWAKE_DATA_DIR`(앱의 영구 데이터), `make restore-data` | v0.1.0 이후 | v0.1.0 |
-| 폰에서 `nimwake status`(Core control socket) | v0.1.0 이후 | v0.1.2 이상 — v0.1.4를 쓴다 |
+| 정적 사이트(`server.mjs`, `SPA`) | v0.1.1 | v0.1.0 |
+| `NIMWAKE_DATA_DIR`(앱의 영구 데이터), `make restore-data` | v0.1.1 | v0.1.0 |
+| 폰에서 `nimwake status`(Core control socket) | v0.1.1 | v0.1.2 이상 — v0.1.1은 v0.1.4를 고정한다 |
 
 ## 참고
 

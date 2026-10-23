@@ -31,7 +31,7 @@ make ingress && make token && make restart   # Cloudflare Tunnel로 공개 (선�
 
 ## 상태
 
-**`v0.1.0` 릴리스** (2026-10-15) — Core `v0.1.0`과 함께. Core의 v0.1.0은 이 레포의 **Android 8항목** 검증을 근거로 태깅됐다. 이제 실사용하며 고친다.
+**최신 `v0.1.1`** (2026-10-23) — 정적 사이트 · 앱 데이터 디렉터리 · 배터리 감시 · Core control socket. 첫 릴리스 `v0.1.0`(2026-10-15) — Core `v0.1.0`과 함께. Core의 v0.1.0은 이 레포의 **Android 8항목** 검증을 근거로 태깅됐다. 이제 실사용하며 고친다.
 
 ```text
 Install ✓   Boot recovery ✓   Cold start ✓   Scale-to-zero ✓
@@ -44,7 +44,7 @@ Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 
 | nimwake-android | Core | 검증 |
 | --------------- | ---- | ---- |
-| `main` | **`v0.1.4`** (`bf79367`, release asset) | control socket(§85 · §86) — lifecycle · recovery · 실제 앱 ✓ ([18](.docs/validation/18-core-v0.1.4-control-socket.md), #71) |
+| **`v0.1.1`** · `main` | **`v0.1.4`** (`bf79367`, release asset) | control socket(§85 · §86) — lifecycle · recovery · 실제 앱 ✓ ([18](.docs/validation/18-core-v0.1.4-control-socket.md), #71) |
 | **`v0.1.0`** | `v0.1.0` (`b6fec40`, release asset) | rc7과 런타임이 같다 — 기기에서 lifecycle · 블로그 확인 · soak 55h(배터리 방전으로 멈춤, 결함 0) |
 | #65 이전 | `v0.1.0-rc7` (`1e2bf91`, release asset) | 10-15 배치 — lifecycle · recovery · LAN · 실제 앱 ✓, §82 peer 제한 · §83 header 상한 ✓ ([16](.docs/validation/16-core-rc7.md), #59). 재부팅 · Wi-Fi ✓ · 초기화 기기 `make install` ✓ ([17](.docs/validation/17-install-wiped-device.md)) |
 | #61 이전 | `v0.1.0-rc6` (`4f7d991`, release asset) | [13](.docs/validation/13-blog-on-device.md) · [14](.docs/validation/14-memory-admission-eviction.md) · [15](.docs/validation/15-deploy-and-public-url.md) — 실제 앱 · 메모리 · 배포 · 공개 URL |

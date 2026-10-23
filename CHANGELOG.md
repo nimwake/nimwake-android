@@ -8,9 +8,18 @@
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-10-23
+
+실사용 첫 개선. 정적 사이트와 상태를 가진 앱을 올릴 수 있고, 폰의 전원과 Core 상태를 직접 본다. 개인 레포는 이 태그로 고정한다 — [온보딩](https://github.com/nimwake/nimwake-android/blob/main/docs/onboarding.md).
+
 ### Core
 
 - **Core `v0.1.4`** (`bf79367`, #71) — §85 control socket · §86 `nimwake` CLI · §84 WebSocket upgrade는 501 · 정지 완료 로그 `took_ms`. v0.1.2 · v0.1.3은 건너뛴다(기동 직후 SIGTERM에 app 생존 · FAILED app에서 CLI 실패)
+
+### Changed
+
+- 예시 앱 Next.js 16.3.6 → 16.3.8 — 템플릿 블로그(#69) · `examples/blog`(#72)
+- `make test-app`이 Core의 정지 완료 `took_ms`도 출력한다 — polling으로 잰 `stop_ms`는 거칠다 (validation/18)
 
 ### Added
 
