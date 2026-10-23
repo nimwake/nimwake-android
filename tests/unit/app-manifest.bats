@@ -165,3 +165,29 @@ with_allow() {
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"allow 는 한 줄로"* ]]
 }
+
+# 앱의 영구 디렉터리 — working_dir은 release마다 바뀐다. 남겨야 하는 것은 NIMWAKE_DATA_DIR에
+@test "render tells the app its data directory inside an existing [runtime.env]" {
+	run "$m" render "$app/nimwake.toml" /home/nimwake/apps/blog/releases/20261014T000000Z /home/nimwake/data/blog
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[ "$(printf '%s\n' "$output" | grep -A1 '^\[runtime\.env\]$' | tail -n 1)" = 'NIMWAKE_DATA_DIR = "/home/nimwake/data/blog"' ]
+	[ "$(printf '%s\n' "$output" | grep -c '^\[runtime\.env\]$')" -eq 1 ]
+	[ "$(printf '%s\n' "$output" | grep -c '^NIMWAKE_DATA_DIR')" -eq 1 ]
+}
+
+@test "render adds [runtime.env] at the end when the manifest has none" {
+	awk '/^\[runtime\.env\]$/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$app/nimwake.toml" >"$app/t" && mv "$app/t" "$app/nimwake.toml"
+	! grep -q 'runtime.env' "$app/nimwake.toml"
+	run "$m" render "$app/nimwake.toml" /w /home/nimwake/data/blog
+	echo "$output"
+	[ "$(printf '%s\n' "$output" | tail -n 2 | head -n 1)" = "[runtime.env]" ]
+	[ "$(printf '%s\n' "$output" | tail -n 1)" = 'NIMWAKE_DATA_DIR = "/home/nimwake/data/blog"' ]
+}
+
+@test "a manifest that sets NIMWAKE_DATA_DIR itself is refused" {
+	awk '{ print } /^\[runtime\.env\]$/ { print "NIMWAKE_DATA_DIR = \"/tmp/mine\"" }' "$app/nimwake.toml" >"$app/t" && mv "$app/t" "$app/nimwake.toml"
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"NIMWAKE_DATA_DIR 은 쓰지 않는다"* ]]
+}

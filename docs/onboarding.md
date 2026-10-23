@@ -108,6 +108,8 @@ Rules the deploy checks for you (`make deploy` refuses or warns before touching 
 - a `public` app must not have an `allow` that leaves out `127.0.0.1` — tunnel traffic comes from there;
 - `VITE_*` and other build-time values end up in the browser — never put secrets there.
 
+**Data your app keeps** (SQLite, uploads, caches) goes in the directory named by the `NIMWAKE_DATA_DIR` environment variable — `/home/nimwake/data/<name>` on the phone. The deploy creates it and fills the variable in; don't set it yourself. The working directory is a new release folder on every deploy, so anything written there is gone after the next one. The data directory survives redeploys, rollbacks and `remove-app`, and `make backup` copies it to your machine (`make restore-data` puts it back on a wiped phone).
+
 ## 4. Deploy and check it on your LAN
 
 ```sh
@@ -190,6 +192,7 @@ make deploy APP=about                        # rebuild your app with the new bui
 | Next.js apps, `make deploy`, Cloudflare ingress, `exposure` | v0.1.0 | v0.1.0 |
 | `[server] allow` (403 for other peers, does not wake the app) | v0.1.0 | v0.1.0 |
 | Static sites (`server.mjs`, `SPA`) | after v0.1.0 — commit `8cce97b` until the next tag | v0.1.0 |
+| `NIMWAKE_DATA_DIR` (persistent app data), `make restore-data` | after v0.1.0 | v0.1.0 |
 | `nimwake status` on the phone (Core control socket) | after v0.1.0 | v0.1.2 or later — use v0.1.4 |
 
 ## Reference

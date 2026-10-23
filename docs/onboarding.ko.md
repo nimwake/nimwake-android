@@ -108,6 +108,8 @@ cp -R apps/site apps/about
 - `public` 앱의 `allow`에 `127.0.0.1`이 빠지면 안 된다. 터널 요청이 거기서 온다.
 - `VITE_*` 같은 빌드 때 넣는 값은 브라우저에 그대로 보인다. 비밀을 넣지 않는다.
 
+**앱이 남겨야 하는 데이터**(SQLite, 업로드, 캐시)는 환경 변수 `NIMWAKE_DATA_DIR`이 가리키는 디렉터리에 둔다 — 폰의 `/home/nimwake/data/<name>`. 배포가 만들고 변수를 채우니 직접 적지 않는다. 작업 디렉터리는 배포마다 새 release 폴더라 거기에 쓴 것은 다음 배포 뒤 사라진다. 데이터 디렉터리는 재배포, rollback, `remove-app`을 거쳐도 남고, `make backup`이 개발 머신으로 복사한다(초기화한 폰에는 `make restore-data`로 되살린다).
+
 ## 4. 배포하고 LAN에서 확인
 
 ```sh
@@ -190,6 +192,7 @@ make deploy APP=about                        # rebuild your app with the new bui
 | Next.js 앱, `make deploy`, Cloudflare ingress, `exposure` | v0.1.0 | v0.1.0 |
 | `[server] allow`(다른 peer는 403, 앱을 깨우지 않음) | v0.1.0 | v0.1.0 |
 | 정적 사이트(`server.mjs`, `SPA`) | v0.1.0 이후 — 다음 태그 전까지 commit `8cce97b` | v0.1.0 |
+| `NIMWAKE_DATA_DIR`(앱의 영구 데이터), `make restore-data` | v0.1.0 이후 | v0.1.0 |
 | 폰에서 `nimwake status`(Core control socket) | v0.1.0 이후 | v0.1.2 이상 — v0.1.4를 쓴다 |
 
 ## 참고
