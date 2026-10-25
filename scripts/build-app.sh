@@ -15,6 +15,7 @@
 # 결과는 순수 JS다 — 빌드 머신의 CPU(x86_64)와 폰(aarch64)이 달라도 된다. 네이티브 모듈을 쓰면 깨진다.
 #
 # Node는 guest/node.lock의 버전을 쓴다. PATH에 그 버전이 없으면 mise로 고른다.
+# 빌드 전에 묶음에 들어갈 의존성의 알려진 취약점을 본다 — NIMWAKE_AUDIT=warn(기본) · fail · off
 set -eu
 
 root="$(cd "$(dirname "$0")/.." && pwd -P)"
@@ -59,12 +60,47 @@ node_cmd() {
 	fi
 }
 
+# 묶음에 들어갈 의존성(dev 제외)의 알려진 취약점 — 공개 앱 하나가 뚫리면 폰 전체가 넘어갈 수 있다 (Phase 2 04 T1).
+#   NIMWAKE_AUDIT  warn(기본 — critical · high를 알린다) · fail(그러면 멈춘다) · off
+audit_deps() {
+	mode="${NIMWAKE_AUDIT:-warn}"
+	case "$mode" in
+	off) return 0 ;;
+	warn | fail) ;;
+	*)
+		echo "build-app: NIMWAKE_AUDIT=$mode — warn | fail | off" >&2
+		exit 2
+		;;
+	esac
+	# npm audit은 취약점이 있으면 0이 아닌 코드로 끝난다 — 결과는 JSON의 metadata에서 읽는다
+	counts="$(node_cmd npm audit --omit=dev --json 2>/dev/null |
+		node_cmd node -e 'let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
+			try { const v = JSON.parse(s).metadata.vulnerabilities; console.log([v.critical, v.high, v.moderate, v.low].map((n) => n || 0).join(" ")); }
+			catch { console.log(""); } })' || true)"
+	if [ -z "$counts" ]; then
+		echo "build-app: npm audit could not run (offline?) — production dependencies were not checked" >&2
+		return 0
+	fi
+	# shellcheck disable=SC2086 # "critical high moderate low"를 넷으로 나눈다
+	set -- $counts
+	if [ "$1" -gt 0 ] || [ "$2" -gt 0 ]; then
+		echo "build-app: npm audit — $1 critical, $2 high, $3 moderate in production dependencies (npm audit --omit=dev for details, npm audit fix to update)" >&2
+		if [ "$mode" = fail ]; then
+			echo "build-app: stopping (NIMWAKE_AUDIT=fail)" >&2
+			exit 1
+		fi
+	else
+		echo "build-app: npm audit — no critical or high in production dependencies (moderate $3, low $4)"
+	fi
+}
+
 cd "$src"
 kind=static
 for f in next.config.js next.config.mjs next.config.ts next.config.cjs; do
 	[ -f "$f" ] && kind=next
 done
 node_cmd npm ci --no-audit --no-fund
+audit_deps
 NEXT_TELEMETRY_DISABLED=1 node_cmd npm run build
 
 if [ "$kind" = static ]; then
