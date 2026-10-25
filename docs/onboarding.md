@@ -78,7 +78,7 @@ apps/<name>/
   bundle/        build output — created by make deploy, ignored by git
 ```
 
-Pick the example that matches your app and copy it:
+Pick the kind that matches your app — `make new-app` copies its example and fills in the name, the host, and a port no other app in your repo uses (from 3200). A `lan` app (the default) also gets `allow` for your LAN:
 
 | Your app | Copy | `command` | Notes |
 | -------- | ---- | --------- | ----- |
@@ -86,10 +86,11 @@ Pick the example that matches your app and copy it:
 | Next.js | `apps/blog` | `server.js` | `output: "standalone"` and `images.unoptimized: true` in `next.config.mjs` |
 
 ```sh
-cp -R apps/site apps/about
+make new-app NAME=about KIND=static                          # or KIND=next
+make new-app NAME=www KIND=static HOST=www.example.com EXPOSURE=public
 ```
 
-Then edit `apps/about/nimwake.toml`:
+Check `apps/about/nimwake.toml` — what each field means:
 
 | Field | Set it to |
 | ----- | --------- |

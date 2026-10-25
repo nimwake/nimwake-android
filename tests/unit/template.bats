@@ -51,3 +51,42 @@ setup() {
 	[ "$status" -eq 2 ]
 	[[ "$output" == *"usage:"* ]]
 }
+
+@test "new-app copies the example, picks a free port, and the result passes the deploy contract" {
+	newapp="$root/scripts/new-app.sh"
+	m="$root/scripts/app-manifest.sh"
+	run "$newapp" "$repo/apps" about static
+	echo "$output"
+	[ "$status" -eq 0 ]
+	# 템플릿의 blog(3102) · site(3110)와 겹치지 않는다 — 3200부터
+	grep -qx 'port = 3200' "$repo/apps/about/nimwake.toml"
+	grep -qx 'PORT = "3200"' "$repo/apps/about/nimwake.toml"
+	grep -qx 'allow = \["192.168.0.0/16"\]' "$repo/apps/about/nimwake.toml"
+	[ "$(cat "$repo/apps/about/exposure")" = lan ]
+	[ ! -e "$repo/apps/about/bundle" ] && [ ! -e "$repo/apps/about/app/node_modules" ]
+	grep -q '"name": "about"' "$repo/apps/about/app/package.json"
+	[ "$(grep -c '"name": "about"' "$repo/apps/about/app/package-lock.json")" -eq 2 ]
+
+	run "$newapp" "$repo/apps" www static www.example.com public
+	grep -qx 'port = 3201' "$repo/apps/www/nimwake.toml"
+	! grep -q '^allow' "$repo/apps/www/nimwake.toml"
+	grep -qx 'host = "www.example.com"' "$repo/apps/www/nimwake.toml"
+
+	mkdir -p "$repo/apps/about/bundle" "$repo/apps/www/bundle"
+	run "$m" check "$repo/apps/about"
+	[ "$status" -eq 0 ]
+	[ "${lines[${#lines[@]}-1]}" = "about about.example.com 3200 lan" ]
+	run "$m" check "$repo/apps/www"
+	[ "$output" = "www www.example.com 3201 public" ]
+}
+
+@test "new-app refuses an existing folder, a bad name and an unknown kind" {
+	newapp="$root/scripts/new-app.sh"
+	run "$newapp" "$repo/apps" blog static
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"already exists"* ]]
+	run "$newapp" "$repo/apps" "My App" static
+	[[ "$output" == *"name 'My App'"* ]]
+	run "$newapp" "$repo/apps" x rails
+	[[ "$output" == *"KIND=rails"* ]]
+}

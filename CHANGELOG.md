@@ -10,6 +10,7 @@
 
 ### Added
 
+- **템플릿 `make new-app NAME=… KIND=static|next`** (`scripts/new-app.sh`): 예시(site · blog)를 소스만 복사하고 name · host(`HOST`, 기본 `NAME.example.com`) · 개인 레포의 다른 앱과 겹치지 않는 port(3200부터, manifest와 `PORT` 둘 다) · `package.json`과 lock의 이름을 채운다. `EXPOSURE=lan`(기본)이면 LAN 대역 `allow`를 넣는다. 있는 폴더 · 잘못된 이름 · 종류는 거부
 - **정적 사이트의 `_redirects` · `_headers`** (Cloudflare Pages · Netlify 형식): 리디렉트(301 · 302 · 303 · 307 · 308, `*` → `:splat`, `:name`, 질의 문자열 유지, 다른 사이트로)와 경로별 응답 헤더(보안 헤더, `Cache-Control` 덮어쓰기 — 200 · 304 · 404 · 리디렉트 모두). 잘못된 줄은 이유와 함께 무시, 두 파일은 내주지 않는다. 템플릿 site에 기본 보안 헤더(`X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy`)
 
 ## [0.3.0] — 2026-10-24
