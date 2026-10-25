@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **정적 사이트의 `_redirects` · `_headers`** (Cloudflare Pages · Netlify 형식): 리디렉트(301 · 302 · 303 · 307 · 308, `*` → `:splat`, `:name`, 질의 문자열 유지, 다른 사이트로)와 경로별 응답 헤더(보안 헤더, `Cache-Control` 덮어쓰기 — 200 · 304 · 404 · 리디렉트 모두). 잘못된 줄은 이유와 함께 무시, 두 파일은 내주지 않는다. 템플릿 site에 기본 보안 헤더(`X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy`)
+
 ## [0.3.0] — 2026-10-24
 
 실서비스 직전. 서버가 고장 나거나 폰이 꺼지면 밖에서 알게 하고(알림 URL · 생존 신호), 앱의 비밀을 레포 밖 폰에 둔다. Core는 그대로 `v0.1.4`.

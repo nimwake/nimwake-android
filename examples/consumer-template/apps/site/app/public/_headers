@@ -1,0 +1,5 @@
+# 응답 헤더 — 경로 패턴 아래에 들여 쓴 "Name: value" (nimwake-android의 정적 서버 · Cloudflare Pages · Netlify와 같은 모양)
+/*
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

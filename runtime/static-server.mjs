@@ -8,11 +8,17 @@
 //   SPA        1(기본) — 없는 경로를 index.html로 (클라이언트 라우터가 그린다: TanStack Router · React Router)
 //              0 — 페이지마다 HTML이 있는 사이트(Docusaurus 등): 없는 경로는 404.html
 //
+// 사이트 루트의 _redirects · _headers (Cloudflare Pages · Netlify와 같은 모양 — Vite면 public/에 둔다):
+//   _redirects   한 줄에 하나: `/from /to [301|302|303|307|308]` (기본 302). `*`은 끝까지, `:name`은 한 칸 —
+//                to에서 `:splat` · `:name`으로 쓴다. to가 https://…이면 다른 사이트로. 위에서부터 첫 일치
+//   _headers     경로 패턴 한 줄, 그 아래 들여 쓴 `Name: value` 줄들. 맞는 블록을 모두 적용하고 같은 이름은 뒤가 이긴다
+//                (Cache-Control도 덮을 수 있다). 두 파일 자체는 내주지 않는다
+//
 // 압축은 하지 않는다 — Cloudflare가 가장자리에서 한다. 캐시: 해시가 붙은 파일은 1년 immutable,
 // HTML은 매번 확인(no-cache + ETag → 304). 배포가 바뀌면 HTML이 새 해시 파일을 가리킨다.
 
 import { createServer } from "node:http";
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,8 +56,97 @@ const TYPES = {
 // Vite(assets/name-abc123.js) · Docusaurus(main.abc12345.js) · webpack([contenthash]) 모양
 const HASHED = /[.-][0-9a-zA-Z_-]{8,}\.[a-z0-9]+$/;
 
+// `/blog/:slug/*` → 정규식과 자리 이름들
+function compilePattern(pattern) {
+	const keys = [];
+	let re = "";
+	for (let i = 0; i < pattern.length; i++) {
+		const c = pattern[i];
+		if (c === "*") {
+			keys.push("splat");
+			re += "(.*)";
+		} else if (c === ":" && /[A-Za-z]/.test(pattern[i + 1] ?? "")) {
+			let name = "";
+			while (/[A-Za-z0-9_]/.test(pattern[i + 1] ?? "")) name += pattern[++i];
+			keys.push(name);
+			re += "([^/]+)";
+		} else {
+			re += c.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+		}
+	}
+	return { re: new RegExp(`^${re}$`), keys };
+}
+
+function readRules(file) {
+	try {
+		return readFileSync(file, "utf8").split(/\r?\n/);
+	} catch {
+		return [];
+	}
+}
+
+const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
+
+export function parseRedirects(lines) {
+	const rules = [];
+	for (const raw of lines) {
+		const line = raw.trim();
+		if (line === "" || line.startsWith("#")) continue;
+		const [from, to, code] = line.split(/\s+/);
+		const status = code === undefined ? 302 : Number(code);
+		if (!from?.startsWith("/") || !to || !REDIRECT_STATUS.has(status)) {
+			console.error(`static-server: _redirects: ignored "${line}" — /from /to [301|302|303|307|308]`);
+			continue;
+		}
+		rules.push({ ...compilePattern(from), to, status });
+	}
+	return rules;
+}
+
+export function parseHeaders(lines) {
+	const rules = [];
+	let current = null;
+	for (const raw of lines) {
+		if (raw.trim() === "" || raw.trim().startsWith("#")) continue;
+		if (!/^\s/.test(raw)) {
+			current = { ...compilePattern(raw.trim()), headers: [] };
+			rules.push(current);
+			continue;
+		}
+		const m = raw.trim().match(/^([A-Za-z0-9-]+):\s*(.*)$/);
+		if (!current || !m) {
+			console.error(`static-server: _headers: ignored "${raw.trim()}" — a path line, then indented "Name: value" lines`);
+			continue;
+		}
+		current.headers.push([m[1], m[2]]);
+	}
+	return rules;
+}
+
+function fill(to, keys, match) {
+	let out = to;
+	keys.forEach((k, i) => {
+		out = out.replaceAll(`:${k}`, match[i + 1] ?? "");
+	});
+	return out;
+}
+
 export function createStaticServer({ root, spa = true }) {
 	root = resolve(root);
+	const redirects = parseRedirects(readRules(join(root, "_redirects")));
+	const headerRules = parseHeaders(readRules(join(root, "_headers")));
+
+	// _headers — 맞는 블록을 모두, 같은 이름은 뒤가 이긴다 (대소문자를 가리지 않고)
+	function withRules(urlPath, headers) {
+		for (const rule of headerRules) {
+			if (!rule.re.test(urlPath)) continue;
+			for (const [name, value] of rule.headers) {
+				for (const k of Object.keys(headers)) if (k.toLowerCase() === name.toLowerCase()) delete headers[k];
+				headers[name] = value;
+			}
+		}
+		return headers;
+	}
 
 	// 요청 경로 → root 안의 파일 경로. root를 벗어나거나 점 파일이면 null
 	function toFile(urlPath) {
@@ -65,6 +160,8 @@ export function createStaticServer({ root, spa = true }) {
 		const segments = path.split("/").filter(Boolean);
 		// .env · .git 같은 것을 내주지 않는다 (.well-known은 인증서 · 앱 연결에 쓰인다)
 		if (segments.some((s) => s.startsWith(".") && s !== ".well-known")) return null;
+		// 규칙 파일은 서버의 설정이다
+		if (segments.length === 1 && (segments[0] === "_redirects" || segments[0] === "_headers")) return null;
 		const file = resolve(root, ...segments);
 		if (file !== root && !file.startsWith(root + sep)) return null;
 		return file;
@@ -88,16 +185,16 @@ export function createStaticServer({ root, spa = true }) {
 		return null;
 	}
 
-	function send(req, res, status, found, cacheControl) {
+	function send(req, res, status, found, cacheControl, urlPath) {
 		const { file, stat: s } = found;
 		const etag = `W/"${s.size.toString(16)}-${Math.floor(s.mtimeMs).toString(16)}"`;
-		const headers = {
+		const headers = withRules(urlPath, {
 			"Content-Type": TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
 			"Cache-Control": cacheControl,
 			ETag: etag,
 			"Last-Modified": s.mtime.toUTCString(),
 			"X-Content-Type-Options": "nosniff",
-		};
+		});
 		if (status === 200 && req.headers["if-none-match"] === etag) {
 			res.writeHead(304, headers);
 			res.end();
@@ -120,13 +217,13 @@ export function createStaticServer({ root, spa = true }) {
 		return "public, max-age=3600";
 	}
 
-	async function notFound(req, res) {
+	async function notFound(req, res, urlPath) {
 		const page = await lookup(join(root, "404.html"));
 		if (page) {
-			send(req, res, 404, page, "no-cache");
+			send(req, res, 404, page, "no-cache", urlPath);
 			return;
 		}
-		res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" });
+		res.writeHead(404, withRules(urlPath, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" }));
 		res.end(req.method === "HEAD" ? undefined : "not found\n");
 	}
 
@@ -137,15 +234,25 @@ export function createStaticServer({ root, spa = true }) {
 				res.end("method not allowed\n");
 				return;
 			}
-			const urlPath = (req.url ?? "/").split("?")[0].split("#")[0];
+			const [urlPath, query] = (req.url ?? "/").split("#")[0].split("?");
+			for (const rule of redirects) {
+				const m = urlPath.match(rule.re);
+				if (!m) continue;
+				let location = fill(rule.to, rule.keys, m);
+				// 질의 문자열은 따라간다 — to에 이미 있으면 그것을
+				if (query !== undefined && !location.includes("?")) location += `?${query}`;
+				res.writeHead(rule.status, withRules(urlPath, { Location: location, "Cache-Control": "no-cache" }));
+				res.end();
+				return;
+			}
 			const file = toFile(urlPath);
 			if (file === null) {
-				await notFound(req, res);
+				await notFound(req, res, urlPath);
 				return;
 			}
 			const found = await lookup(file);
 			if (found) {
-				send(req, res, 200, found, cacheFor(found.file));
+				send(req, res, 200, found, cacheFor(found.file), urlPath);
 				return;
 			}
 			// 확장자가 없는 경로는 페이지다 — 클라이언트 라우터에 맡긴다. /assets/x.js 같은 파일은 없으면 404
@@ -153,11 +260,11 @@ export function createStaticServer({ root, spa = true }) {
 			if (spa && extname(urlPath) === "") {
 				const index = await lookup(join(root, "index.html"));
 				if (index) {
-					send(req, res, 200, index, "no-cache");
+					send(req, res, 200, index, "no-cache", urlPath);
 					return;
 				}
 			}
-			await notFound(req, res);
+			await notFound(req, res, urlPath);
 		} catch (err) {
 			console.error(`static-server: ${req.method} ${req.url}: ${err?.stack ?? err}`);
 			if (!res.headersSent) res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });

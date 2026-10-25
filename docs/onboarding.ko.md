@@ -82,7 +82,7 @@ apps/<name>/
 
 | 내 앱 | 복사할 것 | `command` | 참고 |
 | ----- | --------- | --------- | ---- |
-| 정적 사이트 — Vite, Vite + TanStack Router / React Router, Docusaurus | `apps/site` | `server.mjs` | 클라이언트 라우터면 `SPA = "1"`, URL마다 페이지가 있는 사이트(Docusaurus)면 `"0"` |
+| 정적 사이트 — Vite, Vite + TanStack Router / React Router, Docusaurus | `apps/site` | `server.mjs` | 클라이언트 라우터면 `SPA = "1"`, URL마다 페이지가 있는 사이트(Docusaurus)면 `"0"`. 리디렉트와 응답 헤더는 사이트 루트의 `_redirects` · `_headers`(Cloudflare Pages 형식) |
 | Next.js | `apps/blog` | `server.js` | `next.config.mjs`에 `output: "standalone"`과 `images.unoptimized: true` |
 
 ```sh
