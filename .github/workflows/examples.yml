@@ -116,3 +116,5 @@ jobs:
           code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3198/assets/missing-AbCd1234.js)"
           echo "/assets/missing $code"
           [ "$code" = 404 ]
+          # public/_headers가 묶음에 들어가 응답에 붙는다
+          curl -sI http://127.0.0.1:3198/about | tr -d '\r' | grep -qx 'X-Frame-Options: DENY'

@@ -82,7 +82,7 @@ Pick the example that matches your app and copy it:
 
 | Your app | Copy | `command` | Notes |
 | -------- | ---- | --------- | ----- |
-| Static site — Vite, Vite + TanStack Router / React Router, Docusaurus | `apps/site` | `server.mjs` | `SPA = "1"` for client routers, `"0"` for sites with a page per URL (Docusaurus) |
+| Static site — Vite, Vite + TanStack Router / React Router, Docusaurus | `apps/site` | `server.mjs` | `SPA = "1"` for client routers, `"0"` for sites with a page per URL (Docusaurus). Redirects and response headers go in `_redirects` and `_headers` at the site root (Cloudflare Pages format) |
 | Next.js | `apps/blog` | `server.js` | `output: "standalone"` and `images.unoptimized: true` in `next.config.mjs` |
 
 ```sh

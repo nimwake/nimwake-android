@@ -1,0 +1,3 @@
+# 리디렉트 — "/from /to [301|302|303|307|308]", 위에서부터 첫 일치. * 는 :splat, :name 은 한 칸
+# /old-post /posts/new-post 301
+# /blog/* /posts/:splat 301

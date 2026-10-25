@@ -85,6 +85,8 @@ make status
 | 없는 `/assets/…` | 404 (SPA여도 `index.html`을 JS로 주지 않는다) |
 | `.env` · `.git` 같은 점 파일, `..` | 404 (`.well-known`만 연다) |
 | 압축 | 하지 않는다 — Cloudflare가 가장자리에서 한다 |
+| `_redirects` | 사이트 루트(Vite면 `public/`)에 — `/from /to [301|302|303|307|308]`, `*` → `:splat`, `:name`. 위에서부터 첫 일치. 옛 주소를 옮길 때(SEO) |
+| `_headers` | 경로 패턴 아래 들여 쓴 `Name: value` — 보안 헤더 · 경로별 `Cache-Control`. 맞는 블록을 모두, 같은 이름은 뒤가 이긴다. 예시 `apps/site/app/public/_headers` |
 
 - 빌드 때 넣는 값(`VITE_*`)은 **브라우저에 그대로 보인다** — 비밀을 넣지 않는다. 개인 레포의 `.env`에 두고 빌드 환경으로 넘긴다
 - `base`(Vite) · `baseUrl`(Docusaurus)은 `/` — 사이트는 자기 hostname의 루트에 선다
