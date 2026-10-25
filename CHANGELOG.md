@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Security
+
+- **예시 앱 Next.js 16.3.8 → 16.4.1** — next 16.0.0–16.4.0의 critical 취약점: 인증 없이 원격 코드 실행 둘(이미지 최적화 API에서 SVG · GHSA-2464-fhr4-w9xw, `use cache`의 typed array · GHSA-673q-mjm6-r5xr)과 Server Actions 서비스 거부(GHSA-p3m5-59mp-jv5r). 아래의 새 의존성 검사가 찾았다. 템플릿(#90) · `examples/blog`. 예시는 이미지 최적화를 끄고 `use cache`를 쓰지 않지만 **템플릿에서 시작한 개인 레포는 `next`를 16.4.1 이상으로 올린다**
+
 ### Added
 
 - **빌드 때 의존성 취약점 검사**: `build-app.sh`가 `npm ci` 뒤 묶음에 들어갈 의존성(dev 제외)에 `npm audit` — critical · high가 있으면 알린다. `NIMWAKE_AUDIT=fail`이면 멈추고 `off`면 건너뛴다. 오프라인이면 확인하지 못했다고만 한다 (Phase 2 04 T1 — 공개 앱 하나가 뚫리면 폰 전체)
