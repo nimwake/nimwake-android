@@ -84,6 +84,7 @@ make verify                       # every check that needs no hands
 
 ```sh
 make setup
+make new-app NAME=<name> KIND=static|next
 make deploy APP=<name>
 make rollback APP=<name>
 make ingress

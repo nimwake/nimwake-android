@@ -78,7 +78,7 @@ apps/<name>/
   bundle/        build output — created by make deploy, ignored by git
 ```
 
-내 앱에 맞는 예시를 골라 복사한다:
+내 앱에 맞는 종류를 고른다 — `make new-app`이 그 예시를 복사하고 이름, host, 개인 레포의 다른 앱과 겹치지 않는 port(3200부터)를 채운다. `lan` 앱(기본)에는 LAN 대역 `allow`도 넣는다:
 
 | 내 앱 | 복사할 것 | `command` | 참고 |
 | ----- | --------- | --------- | ---- |
@@ -86,10 +86,11 @@ apps/<name>/
 | Next.js | `apps/blog` | `server.js` | `next.config.mjs`에 `output: "standalone"`과 `images.unoptimized: true` |
 
 ```sh
-cp -R apps/site apps/about
+make new-app NAME=about KIND=static                          # or KIND=next
+make new-app NAME=www KIND=static HOST=www.example.com EXPOSURE=public
 ```
 
-그다음 `apps/about/nimwake.toml`을 고친다:
+`apps/about/nimwake.toml`을 확인한다 — 각 항목의 뜻:
 
 | 항목 | 값 |
 | ---- | -- |

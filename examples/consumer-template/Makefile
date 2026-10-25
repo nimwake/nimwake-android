@@ -11,6 +11,7 @@
 #   make logs APP=blog [FOLLOW=1]  그 앱의 출력과 Core의 사건 (LINES=200으로 더)
 #   make verify                    사람 손 없이 도는 기기 검증 전부 (APP_HOST=블로그 host)
 #   make secret APP=blog KEY=X < f 앱의 비밀을 폰에 (표준 입력으로만) · make secrets APP=blog — 이름만
+#   make new-app NAME=about KIND=static|next [HOST=…] [EXPOSURE=public]  예시에서 새 앱 — 겹치지 않는 port
 #   make upgrade REV=v0.1.2        nimwake-android를 올린다 — lock · 이 머신 · 폰(Core · Host Layer) · 앱 전부 재배포
 #
 # .env (커밋하지 않는다): NIMWAKE_DEVICE, CLOUDFLARE_TOKEN_FILE — .env.example 참고
@@ -22,7 +23,7 @@ NA := .nimwake-android
 APP ?= blog
 MODE ?=
 
-.PHONY: setup build deploy rollback ingress token restart status logs verify upgrade secret secrets
+.PHONY: setup build deploy rollback ingress token restart status logs verify upgrade secret secrets new-app
 
 setup:
 	@repo="$$(sed -n 's/^repo=//p' nimwake-android.lock)"; rev="$$(sed -n 's/^rev=//p' nimwake-android.lock)"; \
@@ -59,6 +60,9 @@ logs:
 
 verify:
 	$(MAKE) -C $(NA) verify
+
+new-app:
+	$(NA)/scripts/new-app.sh apps "$(NAME)" "$(KIND)" "$(HOST)" "$(EXPOSURE)"
 
 secret:
 	$(MAKE) -C $(NA) secret APP=$(APP) KEY=$(KEY)
