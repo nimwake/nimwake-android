@@ -10,6 +10,7 @@
 
 ### Added
 
+- **빌드 때 의존성 취약점 검사**: `build-app.sh`가 `npm ci` 뒤 묶음에 들어갈 의존성(dev 제외)에 `npm audit` — critical · high가 있으면 알린다. `NIMWAKE_AUDIT=fail`이면 멈추고 `off`면 건너뛴다. 오프라인이면 확인하지 못했다고만 한다 (Phase 2 04 T1 — 공개 앱 하나가 뚫리면 폰 전체)
 - **템플릿 `make new-app NAME=… KIND=static|next`** (`scripts/new-app.sh`): 예시(site · blog)를 소스만 복사하고 name · host(`HOST`, 기본 `NAME.example.com`) · 개인 레포의 다른 앱과 겹치지 않는 port(3200부터, manifest와 `PORT` 둘 다) · `package.json`과 lock의 이름을 채운다. `EXPOSURE=lan`(기본)이면 LAN 대역 `allow`를 넣는다. 있는 폴더 · 잘못된 이름 · 종류는 거부
 - **정적 사이트의 `_redirects` · `_headers`** (Cloudflare Pages · Netlify 형식): 리디렉트(301 · 302 · 303 · 307 · 308, `*` → `:splat`, `:name`, 질의 문자열 유지, 다른 사이트로)와 경로별 응답 헤더(보안 헤더, `Cache-Control` 덮어쓰기 — 200 · 304 · 404 · 리디렉트 모두). 잘못된 줄은 이유와 함께 무시, 두 파일은 내주지 않는다. 템플릿 site에 기본 보안 헤더(`X-Frame-Options` · `Referrer-Policy` · `Permissions-Policy`)
 

@@ -106,6 +106,7 @@ make new-app NAME=www KIND=static HOST=www.example.com EXPOSURE=public
 
 - 빌드는 **개발 머신에서** 한다. 폰에서는 빌드하지 않고, 묶음에 네이티브 모듈(`*.node`)이 있으면 안 된다.
 - 런타임은 `guest/node.lock`의 Node(`/opt/node/bin/node`) 하나뿐이다.
+- 묶음에 들어갈 의존성을 `npm audit`으로 본다 — critical · high가 있으면 알린다(`NIMWAKE_AUDIT=fail`이면 빌드를 멈추고, `off`면 건너뛴다).
 - `public` 앱의 `allow`에 `127.0.0.1`이 빠지면 안 된다. 터널 요청이 거기서 온다.
 - `VITE_*` 같은 빌드 때 넣는 값은 브라우저에 그대로 보인다. 비밀을 넣지 않는다.
 - 비밀(API 키, 비밀번호)은 `make secret APP=<name> KEY=<KEY> < 파일`로 폰에 넣는다 — 표준 입력으로만, `/home/nimwake/secrets/<name>`에 0600, 앱은 `NIMWAKE_SECRETS_DIR`에서 읽는다. `make backup`에는 들어가지 않는다 — 원본은 비밀번호 관리자에.

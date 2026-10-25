@@ -106,6 +106,7 @@ Rules the deploy checks for you (`make deploy` refuses or warns before touching 
 
 - the build runs **on your machine**, never on the phone, and must not contain native modules (`*.node`);
 - the only runtime is the Node from `guest/node.lock` (`/opt/node/bin/node`);
+- production dependencies are checked with `npm audit` — critical or high findings are reported (`NIMWAKE_AUDIT=fail` stops the build instead, `off` skips it);
 - a `public` app must not have an `allow` that leaves out `127.0.0.1` — tunnel traffic comes from there;
 - `VITE_*` and other build-time values end up in the browser — never put secrets there.
 - Secrets (API keys, passwords) go to the phone with `make secret APP=<name> KEY=<KEY> < file` — standard input only, stored 0600 in `/home/nimwake/secrets/<name>`, read by the app from `NIMWAKE_SECRETS_DIR`. They are not in `make backup`; keep the originals in your password manager.
