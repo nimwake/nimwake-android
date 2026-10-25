@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-25
+
+보안 수정이 들어간 릴리스다 — **템플릿에서 시작한 개인 레포는 `make upgrade REV=v0.4.0`과 함께 앱의 `next`를 16.4.1 이상으로 올린다.** 그리고 실서비스 앱을 위한 것들: 정적 사이트의 리디렉트 · 보안 헤더, `make new-app`, 빌드 때 의존성 취약점 검사. Core는 그대로 `v0.1.4`.
+
 ### Security
 
 - **예시 앱 Next.js 16.3.8 → 16.4.1** — next 16.0.0–16.4.0의 critical 취약점: 인증 없이 원격 코드 실행 둘(이미지 최적화 API에서 SVG · GHSA-2464-fhr4-w9xw, `use cache`의 typed array · GHSA-673q-mjm6-r5xr)과 Server Actions 서비스 거부(GHSA-p3m5-59mp-jv5r). 아래의 새 의존성 검사가 찾았다. 템플릿(#90) · `examples/blog`. 예시는 이미지 최적화를 끄고 `use cache`를 쓰지 않지만 **템플릿에서 시작한 개인 레포는 `next`를 16.4.1 이상으로 올린다**
