@@ -32,8 +32,10 @@ setup:
 	{ [ "$$rev" != main ] || git -C $(NA) pull -q --ff-only; } && \
 	echo "nimwake-android $$(git -C $(NA) rev-parse --short HEAD) ($$rev)"
 
-# 폰에서는 빌드하지 않는다 — 여기서 standalone으로 만들어 bundle/로
+# 폰에서는 빌드하지 않는다 — 여기서 만들어 bundle/로. 패키지 매니저는 lock 파일로 정한다(npm · pnpm · yarn).
+# apps/<앱>/build.env가 있으면 읽는다 — 앱마다 BUILD_CMD · STATIC_DIR · NIMWAKE_PM (make upgrade도 지킨다)
 build:
+	@set -a; [ ! -f apps/$(APP)/build.env ] || . ./apps/$(APP)/build.env; set +a; \
 	$(NA)/scripts/build-app.sh apps/$(APP)/app apps/$(APP)/bundle
 
 deploy: build

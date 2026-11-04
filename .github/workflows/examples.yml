@@ -11,6 +11,7 @@ on:
       - "examples/**"
       - "scripts/build-app.sh"
       - "runtime/**"
+      - "tests/build/**"
       - "guest/node.lock"
       - ".github/workflows/examples.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - "examples/**"
       - "scripts/build-app.sh"
       - "runtime/**"
+      - "tests/build/**"
       - "guest/node.lock"
       - ".github/workflows/examples.yml"
 
@@ -118,3 +120,22 @@ jobs:
           [ "$code" = 404 ]
           # public/_headers가 묶음에 들어가 응답에 붙는다
           curl -sI http://127.0.0.1:3198/about | tr -d '\r' | grep -qx 'X-Frame-Options: DENY'
+
+  # pnpm · yarn 1 · yarn 4 · pnpm workspace의 Next.js가 묶이고, 묶음이 뜨고, audit이 취약점을 잡는다
+  package-managers:
+    name: build with pnpm and yarn
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node version from guest/node.lock
+        id: node
+        run: echo "version=$(sed -n 's/^version=//p' guest/node.lock)" >>"$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+
+      - run: tests/build/package-managers.sh

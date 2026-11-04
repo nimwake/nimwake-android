@@ -20,7 +20,8 @@
 apps/<name>/
   nimwake.toml   Core manifest
   exposure       public | lan  (missing means lan)
-  app/           source, built on your machine (package.json + package-lock.json)
+  build.env      optional — BUILD_CMD, STATIC_DIR, NIMWAKE_PM for this app
+  app/           source, built on your machine (package.json + a lock file), or a symlink to it
   bundle/        what runs on the phone — produced by the build, never built on the phone
 ```
 

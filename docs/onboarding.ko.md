@@ -74,7 +74,8 @@ make setup
 apps/<name>/
   nimwake.toml   Core manifest — name, host, port, command, lifecycle
   exposure       public | lan (missing means lan)
-  app/           your project's source (package.json + package-lock.json)
+  build.env      optional — BUILD_CMD, STATIC_DIR, NIMWAKE_PM for this app
+  app/           your project's source (package.json + a lock file), or a symlink to it
   bundle/        build output — created by make deploy, ignored by git
 ```
 
@@ -106,10 +107,19 @@ make new-app NAME=www KIND=static HOST=www.example.com EXPOSURE=public
 
 - 빌드는 **개발 머신에서** 한다. 폰에서는 빌드하지 않고, 묶음에 네이티브 모듈(`*.node`)이 있으면 안 된다.
 - 런타임은 `guest/node.lock`의 Node(`/opt/node/bin/node`) 하나뿐이다.
-- 묶음에 들어갈 의존성을 `npm audit`으로 본다 — critical · high가 있으면 알린다(`NIMWAKE_AUDIT=fail`이면 빌드를 멈추고, `off`면 건너뛴다).
+- 묶음에 들어갈 의존성을 패키지 매니저의 audit으로 본다 — critical · high가 있으면 알린다(`NIMWAKE_AUDIT=fail`이면 빌드를 멈추고, `off`면 건너뛴다).
 - `public` 앱의 `allow`에 `127.0.0.1`이 빠지면 안 된다. 터널 요청이 거기서 온다.
 - `VITE_*` 같은 빌드 때 넣는 값은 브라우저에 그대로 보인다. 비밀을 넣지 않는다.
 - 비밀(API 키, 비밀번호)은 `make secret APP=<name> KEY=<KEY> < 파일`로 폰에 넣는다 — 표준 입력으로만, `/home/nimwake/secrets/<name>`에 0600, 앱은 `NIMWAKE_SECRETS_DIR`에서 읽는다. `make backup`에는 들어가지 않는다 — 원본은 비밀번호 관리자에.
+
+**npm, pnpm, yarn 모두 된다.** lock 파일이 정한다: 빌드가 앱 폴더에서 레포 최상위까지 올라가며 `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`을 찾는다. pnpm과 yarn이 설치돼 있지 않으면 Node의 corepack이 받는다(버전은 `package.json`의 `packageManager`로 고정). `NIMWAKE_PM`으로 직접 정할 수도 있다.
+
+**모노레포라면** `apps/<name>/app`을 그 안의 앱으로 향하는 심볼릭 링크로 둔다. lock이 앱 위에 있으면 workspace다: 의존성은 workspace 루트에서 설치하고 앱은 자기 폴더에서 빌드한다. 내부 패키지를 먼저 빌드해야 하면 `apps/<name>/build.env`에 적는다 — `make deploy`와 `make upgrade`가 함께 읽는다:
+
+```sh
+# apps/about/build.env
+BUILD_CMD="pnpm --filter about... build"
+```
 
 **앱이 남겨야 하는 데이터**(SQLite, 업로드, 캐시)는 환경 변수 `NIMWAKE_DATA_DIR`이 가리키는 디렉터리에 둔다 — 폰의 `/home/nimwake/data/<name>`. 배포가 만들고 변수를 채우니 직접 적지 않는다. 작업 디렉터리는 배포마다 새 release 폴더라 거기에 쓴 것은 다음 배포 뒤 사라진다. 데이터 디렉터리는 재배포, rollback, `remove-app`을 거쳐도 남고, `make backup`이 개발 머신으로 복사한다(초기화한 폰에는 `make restore-data`로 되살린다).
 
@@ -274,6 +284,7 @@ make secrets APP=jobs    # names only, never values
 | 배포 확인과 자동 롤백, `make logs`, `make verify`, `make upgrade` | v0.2.0 | v0.1.4 |
 | 폰 밖으로 알리기와 생존 신호(`NIMWAKE_ALERT_URL`, `NIMWAKE_HEARTBEAT_URL`), `make secret` | v0.3.0 | v0.1.4 |
 | 정적 사이트의 `_redirects` · `_headers`, `make new-app`, 빌드 때 `npm audit` | v0.4.0 | v0.1.4 |
+| pnpm과 yarn, workspace, `build.env` | v0.4.0 이후 | v0.1.4 |
 
 ## 참고
 

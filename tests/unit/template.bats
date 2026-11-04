@@ -90,3 +90,48 @@ setup() {
 	run "$newapp" "$repo/apps" x rails
 	[[ "$output" == *"KIND=rails"* ]]
 }
+
+# 패키지 매니저 판별 — lock 파일로, 앱 폴더에서 위로 (실제 빌드는 tests/build/package-managers.sh, examples.yml)
+detect() {
+	"$root/scripts/build-app.sh" --detect "$1"
+}
+
+@test "the nearest lock file decides, and a lock higher up is a workspace" {
+	w="$BATS_TEST_TMPDIR/w"
+	mkdir -p "$w/.git" "$w/apps/web" "$w/apps/own"
+	: >"$w/pnpm-lock.yaml"
+	: >"$w/apps/own/yarn.lock"
+	[ "$(detect "$w/apps/web")" = "pnpm $w" ]
+	[ "$(detect "$w/apps/own")" = "yarn $w/apps/own" ]
+	: >"$w/apps/web/package-lock.json"
+	[ "$(detect "$w/apps/web")" = "npm $w/apps/web" ]
+}
+
+@test "in one folder pnpm comes before yarn before npm, and NIMWAKE_PM picks" {
+	w="$BATS_TEST_TMPDIR/w"
+	mkdir -p "$w/.git"
+	: >"$w/package-lock.json"
+	: >"$w/yarn.lock"
+	[ "$(detect "$w")" = "yarn $w" ]
+	: >"$w/pnpm-lock.yaml"
+	[ "$(detect "$w")" = "pnpm $w" ]
+	NIMWAKE_PM=npm run detect "$w"
+	[ "$output" = "npm $w" ]
+	NIMWAKE_PM=bun run detect "$w"
+	[ "$status" -eq 2 ]
+	[[ "$output" == *"NIMWAKE_PM=bun"* ]]
+}
+
+@test "the search stops at the repository top and at HOME — no stray lock, a clear message" {
+	w="$BATS_TEST_TMPDIR/w"
+	mkdir -p "$w/repo/.git" "$w/repo/app"
+	: >"$w/package-lock.json"
+	run detect "$w/repo/app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"no lock file"* ]]
+
+	mkdir -p "$w/home/project"
+	: >"$w/home/package-lock.json"
+	HOME="$w/home" run detect "$w/home/project"
+	[ "$status" -eq 1 ]
+}
