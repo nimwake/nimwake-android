@@ -295,3 +295,34 @@ EOF
 	run sh -c "\"$soak\" summarize --bogus" < <(sample_csv)
 	[ "$status" -eq 2 ]
 }
+
+# make test-schedule의 report — 폰 쪽 스크립트를 가짜 ssh로 여기서 돌린다. 로그 줄은 Core schedule.rs의 모양 (#95)
+@test "schedule report counts wakes, requests and the longest gap" {
+	date -u -d "2026-11-04 00:00:00" +%s >/dev/null 2>&1 || skip "needs GNU date (runs on the phone)"
+	export HOME="$BATS_TEST_TMPDIR/home"
+	mkdir -p "$HOME/.nimwake-host/logs" "$BATS_TEST_TMPDIR/bin" "$root/dist"
+	printf '#!/bin/sh\nshift\nexec "$@"\n' >"$BATS_TEST_TMPDIR/bin/ssh"
+	chmod +x "$BATS_TEST_TMPDIR/bin/ssh"
+	PATH="$BATS_TEST_TMPDIR/bin:$PATH"
+	saved=""
+	[ ! -f "$root/dist/schedule-start" ] || saved="$(cat "$root/dist/schedule-start")"
+	start="$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+	echo "$start" >"$root/dist/schedule-start"
+	line() { date -u -d "$1 minutes ago" +%Y-%m-%dT%H:%M:00.000000Z; }
+	{
+		echo "2000-01-01T00:00:00.000000Z  INFO nimwake_core::schedule: scheduled wake app=schedprobe keep_awake_seconds=0 path=/"
+		for ago in 9 8 7 3 2; do
+			echo "$(line "$ago")  INFO nimwake_core::schedule: scheduled wake app=schedprobe keep_awake_seconds=0 path=/"
+			echo "$(line "$ago")  INFO nimwake_core::schedule: scheduled request app=schedprobe status=200 path=/"
+		done
+		echo "$(line 1)  WARN nimwake_core::schedule: scheduled wake did not start the application app=schedprobe error=x"
+		echo "$(line 1)  INFO nimwake_core::schedule: scheduled wake app=other keep_awake_seconds=0 path=/"
+	} >"$HOME/.nimwake-host/logs/nimwaked.log"
+	run "$root/tests/device/schedule.sh" report
+	if [ -n "$saved" ]; then echo "$saved" >"$root/dist/schedule-start"; else rm -f "$root/dist/schedule-start"; fi
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"wakes       5 of 10 expected — missed 5"* ]]
+	[[ "$output" == *"requests    5 ok, 0 failed · did not start 1"* ]]
+	[[ "$output" == *"longest gap 4 minutes"* ]]
+}

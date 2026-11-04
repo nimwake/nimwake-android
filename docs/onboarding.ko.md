@@ -201,11 +201,26 @@ git commit -am "nimwake-android v0.1.2"
 
 ## 7. 주기 작업과 웹훅
 
-Nimwake에는 스케줄러가 없고, 잠든 앱은 자기 cron을 돌리지 못한다. **밖에서 HTTP 요청으로 깨운다** — 요청이 앱을 띄우고, 앱이 일을 하고, 다시 잠든다.
+잠든 앱은 자기 cron을 돌리지 못한다. **Core가 정해진 시각에 깨우거나**(Core v0.1.6 이상), 폰 밖에서 호출한다.
+
+```toml
+# apps/jobs/nimwake.toml
+[schedule]
+wake = "0 18 * * *"        # UTC, not local time — 03:00 in Korea
+keep_awake_seconds = 600   # keep it up for 10 minutes after waking
+path = "/cron/nightly"     # requested once after waking
+```
+
+- **`wake`는 UTC다.** cron 다섯 칸. `make deploy`가 내 시간대의 시각을 보여 주니 확인한다.
+- **`path`가 없으면 아무 일도 일어나지 않는다** — 웹 서버는 뜨기만 한다. 작업은 그 경로 뒤에 둔다.
+- **놓친 실행은 건너뛴다. 따라잡지 않는다.** 폰이 꺼져 있거나 그 순간 서버가 재시작되면 그 회차는 사라진다. 작업 시각 앞뒤로 배포나 `make restart`를 하지 않고, 한 번 건너뛰어도 괜찮게 만든다.
+- **요청은 `127.0.0.1`에서 gateway를 지나온다.** `allow`가 있는 앱은 `"127.0.0.1/32"`를 넣어야 한다. 없으면 403이다(배포가 거부한다). 터널도 같은 주소에서 오므로, 넣으면 Cloudflare에 이름을 잘못 등록했을 때 앱이 열린다.
+- **공개 앱이면 그 경로는 인터넷에서도 닿는다.** `X-Forwarded-For`가 정확히 `127.0.0.1`일 때만 작업을 받는다 — 터널로 온 요청은 앞에 방문자 주소가 붙는다.
 
 | 필요한 것 | 쓰는 것 |
 | --------- | ------- |
-| 매일 밤 · 10분마다 무언가 돌리기 | GitHub Actions `schedule`, 또는 Cron Trigger를 단 Cloudflare Worker가 앱의 엔드포인트를 부른다 |
+| 매일 밤 · 10분마다 무언가 돌리기 | 위의 `[schedule]` |
+| 같은 일인데 폰의 타이머가 늦어도 돌아야 하거나 재시도가 필요할 때 | GitHub Actions `schedule`, 또는 Cron Trigger를 단 Cloudflare Worker가 앱의 엔드포인트를 부른다 |
 | 이벤트에 반응(GitHub push, 결제, 폼) | 그 서비스의 웹훅을 앱으로 |
 | 폰이 꺼져 있어도 잃으면 안 되는 일 | 폰 밖의 큐(Cloudflare Queues) — consumer가 앱을 부르고 실패하면 다시 시도한다 |
 
@@ -285,6 +300,7 @@ make secrets APP=jobs    # names only, never values
 | 폰 밖으로 알리기와 생존 신호(`NIMWAKE_ALERT_URL`, `NIMWAKE_HEARTBEAT_URL`), `make secret` | v0.3.0 | v0.1.4 |
 | 정적 사이트의 `_redirects` · `_headers`, `make new-app`, 빌드 때 `npm audit` | v0.4.0 | v0.1.4 |
 | pnpm과 yarn, workspace, `build.env` | v0.4.0 이후 | v0.1.4 |
+| `[schedule]`, `[server] aliases` | v0.4.0 이후 | v0.1.6 |
 
 ## 참고
 

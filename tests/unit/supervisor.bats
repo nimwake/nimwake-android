@@ -340,6 +340,15 @@ ingress_state() { cut -d' ' -f1 "$NIMWAKE_HOST_HOME/run/ingress" 2>/dev/null; }
 ingress_state_is() { [ "$(ingress_state)" = "$1" ]; }
 ingress_runs() { wc -l <"$FAKE_DIR/ingress-runs" 2>/dev/null | tr -d ' '; }
 
+@test "the provider gets a public app's aliases too (Core §87)" {
+	use_fake_ingress
+	printf 'name = "blog"\n[server]\nhost = "blog.example.com"\naliases = ["www.blog.example.com", "b.example.com"]\nport = 3102\n' >"$NIMWAKE_MANIFESTS/blog/nimwake.toml"
+	"$host" start
+	wait_for 5 state_is RUNNING
+	wait_for 5 ingress_state_is RUNNING
+	grep -q "hosts=blog.example.com www.blog.example.com b.example.com secrets=" "$FAKE_DIR/ingress-env"
+}
+
 @test "ingress runs beside the daemon with the contract environment, and stop takes it down" {
 	use_fake_ingress
 	"$host" start

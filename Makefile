@@ -4,7 +4,7 @@ HOURS ?= 24
 INTERVAL ?= 300
 ROUNDS ?= 3
 
-.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps logs verify secret secrets secret-rm ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-experiments bench soak-start soak-stop soak-report
+.PHONY: lint test doctor-dev release-check install backup restore-data fetch-core app-blog deploy device-status deploy-app rollback-app remove-app apps logs verify secret secrets secret-rm ingress-enable ingress-token ingress-disable restart run stop doctor test-device test-boot test-recovery test-lan test-wifi test-app test-schedule test-experiments bench soak-start soak-stop soak-report
 
 # shellcheck는 bash 문법을, check-portability는 BSD/GNU 옵션 차이(sed -i, date -d …)를,
 # check-docs는 docs/의 영문 · 국문 문서가 같은 뼈대 · 같은 명령인지를 본다
@@ -131,6 +131,10 @@ test-wifi:
 # 실제 앱 하나를 잰다 — cold(Core 분해) · warm · RSS · 유휴 정지 · SIGUSR1. make test-app HOST=blog.local ROUNDS=3
 test-app:
 	tests/device/app.sh $(HOST) $(ROUNDS)
+
+# 예정된 깨움이 제때 도는가 — 매분 일정을 걸고 센다. make test-schedule ACTION=start | report | stop (Core §89, #95)
+test-schedule:
+	tests/device/schedule.sh $(ACTION)
 
 # 실패 경로 실험 E2–E4 + 고아 정리 (별도 경로 /opt/nimwake-exp · 포트 :8090 — 운영 daemon과 soak은 건드리지 않는다)
 test-experiments:

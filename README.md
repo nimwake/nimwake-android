@@ -44,7 +44,8 @@ Daemon recovery ✓   Network recovery ✓   24h soak ✓   72h soak ✓
 
 | nimwake-android | Core | 검증 |
 | --------------- | ---- | ---- |
-| **`v0.4.0`** · `v0.3.0` · `v0.2.0` · `v0.1.1` · `main` | **`v0.1.4`** (`bf79367`, release asset) | control socket(§85 · §86) — lifecycle · recovery · 실제 앱 ✓ ([18](.docs/validation/18-core-v0.1.4-control-socket.md), #71) |
+| `main` | **`v0.1.6`** (`f2efa5e`, release asset) | §87 `aliases` · §89 `[schedule]` — 기기 검증 전 (#95) |
+| `v0.4.0` · `v0.3.0` · `v0.2.0` · `v0.1.1` | `v0.1.4` (`bf79367`, release asset) | control socket(§85 · §86) — lifecycle · recovery · 실제 앱 ✓ ([18](.docs/validation/18-core-v0.1.4-control-socket.md), #71) |
 | **`v0.1.0`** | `v0.1.0` (`b6fec40`, release asset) | rc7과 런타임이 같다 — 기기에서 lifecycle · 블로그 확인 · soak 55h(배터리 방전으로 멈춤, 결함 0) |
 | #65 이전 | `v0.1.0-rc7` (`1e2bf91`, release asset) | 10-15 배치 — lifecycle · recovery · LAN · 실제 앱 ✓, §82 peer 제한 · §83 header 상한 ✓ ([16](.docs/validation/16-core-rc7.md), #59). 재부팅 · Wi-Fi ✓ · 초기화 기기 `make install` ✓ ([17](.docs/validation/17-install-wiped-device.md)) |
 | #61 이전 | `v0.1.0-rc6` (`4f7d991`, release asset) | [13](.docs/validation/13-blog-on-device.md) · [14](.docs/validation/14-memory-admission-eviction.md) · [15](.docs/validation/15-deploy-and-public-url.md) — 실제 앱 · 메모리 · 배포 · 공개 URL |
@@ -104,6 +105,7 @@ WSL에서는 레포를 WSL 파일시스템(`~/dev/...`)에 clone한다 — `/mnt
 | `make device-status` | 기기에 지금 무엇이 도는가 — Core(설치 · 메모리) · supervisor · soak. 배포 전에 먼저 |
 | `make restart` | supervisor를 다시 띄운다 — `host.conf` 변경 반영 (soak 중 거부) |
 | `make secret APP=… KEY=… < 파일` · `secrets` · `secret-rm` | 앱의 비밀을 폰에 — 표준 입력으로만, 0600, 앱은 `NIMWAKE_SECRETS_DIR`로. 목록은 이름만. 백업하지 않는다 |
+| `make test-schedule ACTION=start` · `report` · `stop` | 예정된 깨움(§89)이 제때 도는가 — 매분 일정을 걸고 놓친 횟수를 센다 |
 | `make verify` | 사람 손이 필요 없는 기기 검증 전부 — doctor · Core socket · 전원 · lifecycle · recovery · LAN · 실제 앱. 표와 단계별 로그를 `dist/verify/<UTC>/`에. soak 중 거부 |
 | `make logs APP=… [FOLLOW=1]` | 그 앱의 출력(stdout · stderr)과 Core의 사건만 — 시각 · 종류 · 내용. APP 없이는 supervisor · daemon 로그 |
 | `make deploy-app APP=…` · `rollback-app NAME=…` · `remove-app NAME=…` · `apps` | 소비처 앱 배포 계약 — release · SIGHUP 재적재 · 노출 |

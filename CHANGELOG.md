@@ -8,12 +8,18 @@
 
 ## [Unreleased]
 
+### Core
+
+- **Core `v0.1.6`** (`f2efa5e`, #95) — §87 `[server] aliases` · §89 `[schedule]`. v0.1.5는 태그만 있고 릴리스가 없다. **기기 검증 전이다**
+
 ### Fixed
 
 - `nimwake-host start`가 wake lock을 잡는다 — 부팅 스크립트만 잡아서 `make install` 직후나 Android가 Termux를 내린 뒤 손으로 시작한 서버는 lock 없이 돌았다 (#95, validation/19)
 
 ### Added
 
+- **예정된 깨움 (`[schedule]`, Core §89)**: 템플릿 · 온보딩 · 계약. 배포 검사가 `wake`를 내 시간대로 보여 주고(UTC 실수 방지), `path`가 없으면 경고하고, `allow`가 `127.0.0.1`을 막으면 거부한다 — 예약 요청은 gateway를 지나 매번 403이 된다. `make test-schedule`이 매분 일정으로 놓친 횟수를 센다
+- **`[server] aliases` (Core §87)**: ingress가 공개할 이름에 넣는다 · 한 줄 검사
 - **pnpm · yarn · workspace**: `build-app.sh`가 lock 파일로 패키지 매니저를 정한다 — 앱 폴더에서 레포 최상위까지(`$HOME` 전에서 멈춘다) `pnpm-lock.yaml` · `yarn.lock` · `package-lock.json`. `NIMWAKE_PM`으로 고정. lock이 위에 있으면 workspace — 설치는 거기서, 빌드는 앱 폴더에서. `BUILD_CMD` · 템플릿의 `apps/<앱>/build.env`. 없으면 Node의 corepack이 받는다(WSL PATH의 Windows 쪽 도구는 쓰지 않는다). Next.js standalone: workspace의 깊은 `server.js`를 맨 위에서 부르고, pnpm의 `.pnpm/sharp@*`도 뺀다. audit은 pnpm · yarn 1 · yarn 2+의 형식을 읽는다. `tests/build/package-managers.sh`가 CI에서 실제로 빌드해 띄우고 취약한 의존성을 잡는지 본다
 
 ## [0.4.0] — 2026-10-25

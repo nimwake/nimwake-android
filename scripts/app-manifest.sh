@@ -67,7 +67,59 @@ cmd_check() {
 		esac
 	fi
 	check_allow
+	check_aliases
+	check_schedule
 	echo "$name $host $port $exposure"
+}
+
+# [server] aliases (Core §87) — ingress가 한 줄을 읽는다. 다른 검사는 Core가 한다
+check_aliases() {
+	_line="$(grep '^[[:space:]]*aliases[[:space:]]*=' "$toml" | head -n 1 || true)"
+	case "$_line" in
+	'' | *\]*) ;;
+	*) fail "aliases 는 한 줄로 적는다 — aliases = [\"www.example.com\"]" ;;
+	esac
+	return 0
+}
+
+# [schedule]의 키 — 다른 section의 같은 이름과 섞이지 않게 그 section만 본다
+schedule_value() {
+	awk '/^[[:space:]]*\[/ { on = ($0 ~ /^[[:space:]]*\[schedule\][[:space:]]*$/); next } on' "$toml" |
+		sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -n 1
+}
+
+# [schedule] (Core §89) — wake는 UTC다. 깨우기만 하므로 웹 서버 모양의 앱은 path가 있어야 일을 한다.
+# 예약 요청은 Core가 127.0.0.1에서 gateway로 보낸다 — allow에 없으면 매번 403이고 앱은 깨어나기만 한다
+check_schedule() {
+	grep -q '^[[:space:]]*\[schedule\][[:space:]]*$' "$toml" || return 0
+	_wake="$(schedule_value wake)"
+	_path="$(schedule_value path)"
+	[ -n "$_wake" ] || fail "[schedule] wake 가 없다 — wake = \"0 18 * * *\" (UTC)"
+	if [ -z "$_path" ]; then
+		echo "app-manifest: warning: $name [schedule] has no path — the app is woken but nothing asks it to work. Add path = \"/cron/...\"" >&2
+	elif [ "${_has_allow:-no}" = yes ] && [ "${_tunnel:-no}" = no ]; then
+		fail "$name [schedule] path would get 403 — Core sends the scheduled request through the gateway from 127.0.0.1, and allow does not include it. Add \"127.0.0.1/32\" to allow (a tunnel request then gets through too — see the onboarding), or remove allow"
+	fi
+	# 가장 흔한 실수 — 지역 시간으로 적는다. 분과 시가 숫자면 이 머신의 시각으로 보여 준다
+	_min="${_wake%% *}"
+	_rest="${_wake#* }"
+	_hour="${_rest%% *}"
+	case "$_min$_hour" in
+	*[!0-9]* | '')
+		echo "app-manifest: note: [schedule] wake \"$_wake\" is UTC, not local time" >&2
+		;;
+	*)
+		_z="$(date +%z)"
+		_local="$(awk -v z="$_z" -v h="$_hour" -v m="$_min" 'BEGIN {
+			o = (substr(z, 2, 2) * 60 + substr(z, 4, 2))
+			if (substr(z, 1, 1) == "-") o = -o
+			t = ((h * 60 + m + o) % 1440 + 1440) % 1440
+			printf "%02d:%02d", int(t / 60), t % 60
+		}')"
+		echo "app-manifest: note: [schedule] wake \"$_wake\" is UTC — $_local here ($_z)" >&2
+		;;
+	esac
+	return 0
 }
 
 # [server] allow — Core §82(rc7): gateway가 직접 본 TCP peer로만 판단, 넘으면 403이고 앱을 깨우지 않는다.
@@ -80,6 +132,7 @@ check_allow() {
 		fi
 		return 0
 	fi
+	_has_allow=yes
 	case "$_line" in
 	*\]*) ;;
 	*) fail "allow 는 한 줄로 적는다 — allow = [\"192.168.0.0/16\"] (이 검사는 TOML을 해석하지 않는다)" ;;
