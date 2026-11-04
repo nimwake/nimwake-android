@@ -30,9 +30,10 @@ Manifest rules the deploy enforces before touching the phone:
 | Rule | |
 | ---- | - |
 | `name` | lowercase letters, digits, `-` — it becomes a path on the phone |
-| `[server] host` | the public hostname; one host per app |
+| `[server] host`, `aliases` | the public hostname, plus other names for the same app (Core v0.1.6); `aliases` on one line |
 | `[server] port` | 1024–65535, not 8080, unique on the phone |
 | `[server] allow` | one line. A `public` app must include `127.0.0.1` or leave `allow` out; a `lan` app without it gets a warning |
+| `[schedule]` | `wake` is required and UTC. With `path`, `allow` must include `127.0.0.1` or be absent; without `path` a warning |
 | `[runtime] command` | `/opt/node/bin/node` or a binary under `/opt/nimwake/bin/` |
 | `working_dir`, `NIMWAKE_DATA_DIR`, `NIMWAKE_SECRETS_DIR` | never set them — the deploy fills them |
 | bundle | no native modules (`*.node`) |

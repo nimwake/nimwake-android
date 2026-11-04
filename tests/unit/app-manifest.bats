@@ -222,3 +222,65 @@ EOF
 	[ "$status" -eq 0 ]
 	[ "$(printf '%s\n' "$output" | tail -n 4 | tr '\n' '|')" = '[schedule]|wake = "0 18 * * *"|keep_awake_seconds = 600|path = "/cron/nightly"|' ]
 }
+
+schedule() { # TOML 줄들
+	printf '\n[schedule]\n%b\n' "$1" >>"$app/nimwake.toml"
+}
+
+@test "[schedule] shows wake in local time and says it is UTC" {
+	schedule 'wake = "0 18 * * *"\npath = "/cron/nightly"'
+	TZ=Asia/Seoul run "$m" check "$app"
+	echo "$output"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *'wake "0 18 * * *" is UTC — 03:00 here (+0900)'* ]]
+	TZ=America/New_York run "$m" check "$app"
+	[[ "$output" == *"is UTC — 1"* || "$output" == *"is UTC — 0"* ]]
+}
+
+@test "[schedule] with a pattern hour just says UTC" {
+	schedule 'wake = "*/10 * * * *"\npath = "/cron/x"'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *'wake "*/10 * * * *" is UTC, not local time'* ]]
+}
+
+@test "[schedule] without path warns — the app starts and nothing happens" {
+	schedule 'wake = "0 18 * * *"'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[[ "$output" == *"has no path"* ]]
+}
+
+@test "[schedule] without wake is refused" {
+	schedule 'path = "/cron/x"'
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"wake 가 없다"* ]]
+}
+
+@test "a [schedule] path on an app whose allow leaves out 127.0.0.1 is refused — it would always get 403" {
+	with_allow '["192.168.0.0/16"]'
+	schedule 'wake = "0 18 * * *"\npath = "/cron/x"'
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"would get 403"* ]]
+}
+
+@test "the same app passes once 127.0.0.1 is allowed, or with no path" {
+	with_allow '["192.168.0.0/16", "127.0.0.1/32"]'
+	schedule 'wake = "0 18 * * *"\npath = "/cron/x"'
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+
+	sed -i.bak '/^path = /d' "$app/nimwake.toml"
+	sed -i.bak 's/, "127.0.0.1\/32"//' "$app/nimwake.toml"
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+}
+
+@test "aliases must stay on one line" {
+	awk '{ print } /^port = / { print "aliases = [" }' "$app/nimwake.toml" >"$app/t" && mv "$app/t" "$app/nimwake.toml"
+	run "$m" check "$app"
+	[ "$status" -eq 1 ]
+	[[ "$output" == *"aliases 는 한 줄로"* ]]
+}

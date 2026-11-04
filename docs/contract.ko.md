@@ -30,9 +30,10 @@ apps/<name>/
 | 규칙 | |
 | ---- | - |
 | `name` | 소문자, 숫자, `-` — 폰의 경로 이름이 된다 |
-| `[server] host` | 공개 hostname. 앱 하나에 host 하나 |
+| `[server] host`, `aliases` | 공개 hostname과 같은 앱의 다른 이름(Core v0.1.6). `aliases`는 한 줄로 |
 | `[server] port` | 1024–65535, 8080 제외, 폰에서 겹치지 않게 |
 | `[server] allow` | 한 줄로. `public` 앱은 `127.0.0.1`을 넣거나 `allow`를 빼야 한다. `allow`가 없는 `lan` 앱은 경고 |
+| `[schedule]` | `wake`는 필수이고 UTC. `path`가 있으면 `allow`에 `127.0.0.1`이 있거나 `allow`가 없어야 한다. `path`가 없으면 경고 |
 | `[runtime] command` | `/opt/node/bin/node` 또는 `/opt/nimwake/bin/` 아래 binary |
 | `working_dir`, `NIMWAKE_DATA_DIR`, `NIMWAKE_SECRETS_DIR` | 적지 않는다 — 배포가 채운다 |
 | bundle | 네이티브 모듈(`*.node`) 없음 |

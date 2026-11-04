@@ -201,11 +201,26 @@ git commit -am "nimwake-android v0.1.2"
 
 ## 7. Scheduled jobs and webhooks
 
-Nimwake has no scheduler, and an app that is asleep cannot run its own cron. **Wake it from outside with an HTTP request** — the request starts the app, the app does the work, and it goes back to sleep.
+An app that is asleep cannot run its own cron. **Core can wake it on a schedule** (Core v0.1.6 or later), or something outside the phone can call it.
+
+```toml
+# apps/jobs/nimwake.toml
+[schedule]
+wake = "0 18 * * *"        # UTC, not local time — 03:00 in Korea
+keep_awake_seconds = 600   # keep it up for 10 minutes after waking
+path = "/cron/nightly"     # requested once after waking
+```
+
+- **`wake` is UTC.** Five cron fields. `make deploy` prints the time in your own zone so you can check it.
+- **Without `path` nothing happens** — a web server just starts. Put the job behind that path.
+- **A missed run is skipped, not caught up.** If the phone is off, or the server restarts at that moment, that run is gone. Don't deploy or `make restart` right around a job's time, and make the job safe to skip.
+- **The request goes through the gateway from `127.0.0.1`.** On an app with `allow`, add `"127.0.0.1/32"` or the request gets 403 (the deploy refuses this). A tunnel comes from the same address, so that opens the app to a mis-registered Cloudflare name.
+- **On a public app that path is reachable from the internet.** Accept the job only when `X-Forwarded-For` is exactly `127.0.0.1` — a request through the tunnel has the visitor's address in front of it.
 
 | Need | Use |
 | ---- | --- |
-| Run something every night / every 10 minutes | GitHub Actions `schedule`, or a Cloudflare Worker with a Cron Trigger, calling an endpoint of your app |
+| Run something every night / every 10 minutes | `[schedule]` above |
+| The same, but it must run even if timers on the phone are late, or you want retries | GitHub Actions `schedule`, or a Cloudflare Worker with a Cron Trigger, calling an endpoint of your app |
 | React to an event (GitHub push, payment, form) | the service's webhook, pointed at your app |
 | Work that must not be lost while the phone is off | a queue outside the phone (Cloudflare Queues) whose consumer calls your app and retries |
 
@@ -285,6 +300,7 @@ make secrets APP=jobs    # names only, never values
 | Alerts off the phone and heartbeat (`NIMWAKE_ALERT_URL`, `NIMWAKE_HEARTBEAT_URL`), `make secret` | v0.3.0 | v0.1.4 |
 | `_redirects` · `_headers` for static sites, `make new-app`, `npm audit` at build | v0.4.0 | v0.1.4 |
 | pnpm and yarn, workspaces, `build.env` | after v0.4.0 | v0.1.4 |
+| `[schedule]`, `[server] aliases` | after v0.4.0 | v0.1.6 |
 
 ## Reference
 

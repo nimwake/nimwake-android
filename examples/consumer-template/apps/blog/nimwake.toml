@@ -6,6 +6,7 @@ name = "blog"
 
 [server]
 host = "blog.example.com"
+# aliases = ["www.blog.example.com"]   # 같은 앱의 다른 이름 — Cloudflare에도 이름마다 등록한다
 port = 3102
 
 [runtime]
@@ -17,6 +18,14 @@ PORT = "3102"
 HOSTNAME = "127.0.0.1"
 NODE_ENV = "production"
 NEXT_TELEMETRY_DISABLED = "1"
+
+# 정해진 시각에 깨우기 (Core §89) — 쓰려면 주석을 푼다. nimwake-android 온보딩 7절
+#   wake  cron 다섯 칸, **UTC다 — 지역 시간이 아니다.** "0 18 * * *"는 한국 시간 새벽 3시
+#   path  깨운 뒤 요청 하나를 보낸다. 없으면 뜨기만 하고 아무 일도 하지 않는다
+# [schedule]
+# wake = "0 18 * * *"
+# keep_awake_seconds = 600
+# path = "/cron/nightly"
 
 [lifecycle]
 idle_timeout_seconds = 300

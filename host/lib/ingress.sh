@@ -38,6 +38,8 @@ ingress_hosts() {
 		_app="$(basename "$(dirname "$_m")")"
 		[ "$(app_exposure "$_app")" = public ] || continue
 		sed -n 's/^host = "\(.*\)"/\1/p' "$_m"
+		# [server] aliases (Core §87) — 같은 앱의 다른 이름 (app-manifest가 한 줄임을 확인했다)
+		sed -n 's/^[[:space:]]*aliases[[:space:]]*=[[:space:]]*\[\(.*\)\].*/\1/p' "$_m" | tr ',' '\n' | tr -d ' \t"' | sed '/^$/d'
 	done | tr '\n' ' ' | sed 's/ $//'
 }
 
