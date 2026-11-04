@@ -74,7 +74,8 @@ Each app is a folder under `apps/`:
 apps/<name>/
   nimwake.toml   Core manifest — name, host, port, command, lifecycle
   exposure       public | lan (missing means lan)
-  app/           your project's source (package.json + package-lock.json)
+  build.env      optional — BUILD_CMD, STATIC_DIR, NIMWAKE_PM for this app
+  app/           your project's source (package.json + a lock file), or a symlink to it
   bundle/        build output — created by make deploy, ignored by git
 ```
 
@@ -106,10 +107,19 @@ Rules the deploy checks for you (`make deploy` refuses or warns before touching 
 
 - the build runs **on your machine**, never on the phone, and must not contain native modules (`*.node`);
 - the only runtime is the Node from `guest/node.lock` (`/opt/node/bin/node`);
-- production dependencies are checked with `npm audit` — critical or high findings are reported (`NIMWAKE_AUDIT=fail` stops the build instead, `off` skips it);
+- production dependencies are checked with your package manager's audit — critical or high findings are reported (`NIMWAKE_AUDIT=fail` stops the build instead, `off` skips it);
 - a `public` app must not have an `allow` that leaves out `127.0.0.1` — tunnel traffic comes from there;
 - `VITE_*` and other build-time values end up in the browser — never put secrets there.
 - Secrets (API keys, passwords) go to the phone with `make secret APP=<name> KEY=<KEY> < file` — standard input only, stored 0600 in `/home/nimwake/secrets/<name>`, read by the app from `NIMWAKE_SECRETS_DIR`. They are not in `make backup`; keep the originals in your password manager.
+
+**npm, pnpm and yarn all work.** The lock file decides: the build looks for `pnpm-lock.yaml`, `yarn.lock` or `package-lock.json` from the app folder upwards, up to the top of the repository. pnpm and yarn come from Node's corepack if they are not installed (pin the version with `packageManager` in `package.json`). `NIMWAKE_PM` overrides the choice.
+
+**In a monorepo,** point `apps/<name>/app` at the app inside it with a symlink. A lock file above the app means a workspace: dependencies install at the workspace root and the app builds in its own folder. If internal packages must build first, say so in `apps/<name>/build.env` — `make deploy` and `make upgrade` both read it:
+
+```sh
+# apps/about/build.env
+BUILD_CMD="pnpm --filter about... build"
+```
 
 **Data your app keeps** (SQLite, uploads, caches) goes in the directory named by the `NIMWAKE_DATA_DIR` environment variable — `/home/nimwake/data/<name>` on the phone. The deploy creates it and fills the variable in; don't set it yourself. The working directory is a new release folder on every deploy, so anything written there is gone after the next one. The data directory survives redeploys, rollbacks and `remove-app`, and `make backup` copies it to your machine (`make restore-data` puts it back on a wiped phone).
 
@@ -274,6 +284,7 @@ make secrets APP=jobs    # names only, never values
 | Deploy check and automatic rollback, `make logs`, `make verify`, `make upgrade` | v0.2.0 | v0.1.4 |
 | Alerts off the phone and heartbeat (`NIMWAKE_ALERT_URL`, `NIMWAKE_HEARTBEAT_URL`), `make secret` | v0.3.0 | v0.1.4 |
 | `_redirects` · `_headers` for static sites, `make new-app`, `npm audit` at build | v0.4.0 | v0.1.4 |
+| pnpm and yarn, workspaces, `build.env` | after v0.4.0 | v0.1.4 |
 
 ## Reference
 

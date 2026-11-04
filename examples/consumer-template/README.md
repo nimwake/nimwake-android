@@ -71,7 +71,7 @@ make status
 
 새 정적 사이트는 `apps/site`를 복사해 시작한다:
 
-1. `apps/<이름>/app/`에 프로젝트 — `package.json`의 `build`가 정적 파일을 낸다. **`package-lock.json`을 커밋한다** (빌드는 `npm ci`)
+1. `apps/<이름>/app/`에 프로젝트 — `package.json`의 `build`가 정적 파일을 낸다. **lock 파일을 커밋한다** (`package-lock.json` · `pnpm-lock.yaml` · `yarn.lock` — 그것이 패키지 매니저를 정한다). 모노레포면 그 앱으로 향하는 심볼릭 링크로 두고, 빌드 명령은 `apps/<이름>/build.env`의 `BUILD_CMD`에
 2. `apps/<이름>/nimwake.toml` — `name` · `host` · `port`(앱마다 다르게) · `PORT`를 바꾼다. `command`는 그대로 `server.mjs`
 3. `SPA` — 클라이언트 라우터(TanStack Router · React Router)면 `"1"`: 없는 경로에 `index.html`을 줘 새로고침 · 직접 링크가 열린다. 페이지마다 HTML이 있는 사이트(Docusaurus · Astro 정적)면 `"0"`: 없는 경로는 `404.html`
 4. `apps/<이름>/exposure` — `public` 또는 `lan`

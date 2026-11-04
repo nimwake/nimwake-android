@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **pnpm · yarn · workspace**: `build-app.sh`가 lock 파일로 패키지 매니저를 정한다 — 앱 폴더에서 레포 최상위까지(`$HOME` 전에서 멈춘다) `pnpm-lock.yaml` · `yarn.lock` · `package-lock.json`. `NIMWAKE_PM`으로 고정. lock이 위에 있으면 workspace — 설치는 거기서, 빌드는 앱 폴더에서. `BUILD_CMD` · 템플릿의 `apps/<앱>/build.env`. 없으면 Node의 corepack이 받는다(WSL PATH의 Windows 쪽 도구는 쓰지 않는다). Next.js standalone: workspace의 깊은 `server.js`를 맨 위에서 부르고, pnpm의 `.pnpm/sharp@*`도 뺀다. audit은 pnpm · yarn 1 · yarn 2+의 형식을 읽는다. `tests/build/package-managers.sh`가 CI에서 실제로 빌드해 띄우고 취약한 의존성을 잡는지 본다
+
 ## [0.4.0] — 2026-10-25
 
 보안 수정이 들어간 릴리스다 — **템플릿에서 시작한 개인 레포는 `make upgrade REV=v0.4.0`과 함께 앱의 `next`를 16.4.1 이상으로 올린다.** 그리고 실서비스 앱을 위한 것들: 정적 사이트의 리디렉트 · 보안 헤더, `make new-app`, 빌드 때 의존성 취약점 검사. Core는 그대로 `v0.1.4`.
