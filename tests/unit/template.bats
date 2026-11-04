@@ -97,7 +97,7 @@ detect() {
 }
 
 @test "the nearest lock file decides, and a lock higher up is a workspace" {
-	w="$BATS_TEST_TMPDIR/w"
+	w="$(cd "$BATS_TEST_TMPDIR" && pwd -P)/w"
 	mkdir -p "$w/.git" "$w/apps/web" "$w/apps/own"
 	: >"$w/pnpm-lock.yaml"
 	: >"$w/apps/own/yarn.lock"
@@ -108,7 +108,7 @@ detect() {
 }
 
 @test "in one folder pnpm comes before yarn before npm, and NIMWAKE_PM picks" {
-	w="$BATS_TEST_TMPDIR/w"
+	w="$(cd "$BATS_TEST_TMPDIR" && pwd -P)/w"
 	mkdir -p "$w/.git"
 	: >"$w/package-lock.json"
 	: >"$w/yarn.lock"
@@ -123,7 +123,7 @@ detect() {
 }
 
 @test "the search stops at the repository top and at HOME — no stray lock, a clear message" {
-	w="$BATS_TEST_TMPDIR/w"
+	w="$(cd "$BATS_TEST_TMPDIR" && pwd -P)/w"
 	mkdir -p "$w/repo/.git" "$w/repo/app"
 	: >"$w/package-lock.json"
 	run detect "$w/repo/app"

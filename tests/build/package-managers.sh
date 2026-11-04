@@ -18,6 +18,7 @@ cleanup() {
 }
 trap cleanup EXIT
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# yarn 4는 CI에서 기본이 lock 고정이다 — 시험용 lock을 만들 때는 푼다 (build-app.sh의 --immutable은 그대로)
 # 테스트 파일은 $HOME 아래가 아닐 수도 있다 — lock 탐색이 임시 디렉터리에서 끝나게
 git init -q "$t"
 
@@ -79,7 +80,7 @@ echo "== yarn 4, static"
 site "$t/yarn4"
 sed 's/"private": true,/"private": true,\n  "packageManager": "yarn@4.9.2",/' "$t/yarn4/package.json" >"$t/yarn4/p" && mv "$t/yarn4/p" "$t/yarn4/package.json"
 echo 'nodeLinker: node-modules' >"$t/yarn4/.yarnrc.yml"
-(cd "$t/yarn4" && corepack yarn install --mode=skip-build >/dev/null 2>&1 && rm -rf node_modules .yarn/cache)
+(cd "$t/yarn4" && YARN_ENABLE_IMMUTABLE_INSTALLS=false corepack yarn install --mode=skip-build >/dev/null 2>&1 && rm -rf node_modules .yarn/cache)
 run_build "$t/yarn4" "$t/out-yarn4"
 serve "$t/out-yarn4" server.mjs / /about
 
@@ -128,7 +129,7 @@ EOF
 	[ -z "$3" ] || echo "$3" >"$v/.yarnrc.yml"
 	case "$2" in
 	pnpm*) (cd "$v" && corepack pnpm install --lockfile-only >/dev/null) ;;
-	*) (cd "$v" && corepack yarn install >/dev/null 2>&1 && rm -rf node_modules .yarn/cache) ;;
+	*) (cd "$v" && YARN_ENABLE_IMMUTABLE_INSTALLS=false corepack yarn install >/dev/null 2>&1 && rm -rf node_modules .yarn/cache) ;;
 	esac
 	if NIMWAKE_AUDIT=fail "$build" "$v" "$t/out-vuln-$1" >"$t/build.log" 2>&1; then
 		cat "$t/build.log"

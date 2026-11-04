@@ -30,7 +30,9 @@ root="$(cd "$(dirname "$0")/.." && pwd -P)"
 # 앱 폴더부터 위로 lock 파일을 찾는다. 레포 최상위(.git)까지만 — $HOME에 놓인 관계없는 lock으로 설치하지 않게
 find_lock() {
 	_d="$1"
-	while [ "$_d" != "$HOME" ]; do
+	# 앱 경로는 실제 경로(pwd -P)다 — $HOME이 링크일 수 있어 같은 모양으로 맞춘다 (macOS의 /var → /private/var)
+	_home="$(cd "$HOME" 2>/dev/null && pwd -P || echo "$HOME")"
+	while [ "$_d" != "$_home" ]; do
 		if [ -z "${NIMWAKE_PM:-}" ] || [ "${NIMWAKE_PM:-}" = pnpm ]; then
 			[ -f "$_d/pnpm-lock.yaml" ] && { echo "pnpm $_d"; return 0; }
 		fi
