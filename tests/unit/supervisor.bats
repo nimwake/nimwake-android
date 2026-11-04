@@ -699,3 +699,25 @@ EOF
 	wait
 	grep -qx 'https://hc-ping.example/uuid' "$FAKE_DIR/curl.args"
 }
+
+# wake lock — 부팅 스크립트를 거치지 않은 시작(make install · 손으로 start)도 잡는다
+fake_wake_lock() { # EXIT_CODE
+	mkdir -p "$FAKE_DIR/bin"
+	printf '#!/bin/sh\necho held >>"%s/wake-lock"\nexit %s\n' "$FAKE_DIR" "$1" >"$FAKE_DIR/bin/termux-wake-lock"
+	chmod +x "$FAKE_DIR/bin/termux-wake-lock"
+	export PATH="$FAKE_DIR/bin:$PATH"
+}
+
+@test "start takes the wake lock" {
+	fake_wake_lock 0
+	"$host" start
+	wait_for 5 state_is RUNNING
+	[ "$(wc -l <"$FAKE_DIR/wake-lock" | tr -d ' ')" -eq 1 ]
+}
+
+@test "a failing wake lock is logged and the server still starts" {
+	fake_wake_lock 1
+	"$host" start
+	wait_for 5 state_is RUNNING
+	grep -q "wake lock: termux-wake-lock failed" "$NIMWAKE_HOST_HOME/logs/supervisor.log"
+}

@@ -205,3 +205,20 @@ with_allow() {
 	[ "$status" -eq 1 ]
 	[[ "$output" == *"NIMWAKE_SECRETS_DIR 은 쓰지 않는다"* ]]
 }
+
+# Core §89의 [schedule] — 배포 경로는 그대로다: 검사를 통과하고 렌더가 건드리지 않는다 (#95)
+@test "a [schedule] section passes the deploy contract and renders unchanged" {
+	cat >>"$app/nimwake.toml" <<'EOF'
+
+[schedule]
+wake = "0 18 * * *"
+keep_awake_seconds = 600
+path = "/cron/nightly"
+EOF
+	run "$m" check "$app"
+	[ "$status" -eq 0 ]
+	[ "${lines[${#lines[@]}-1]}" = "blog blog.example.com 3102 lan" ]
+	run "$m" render "$app/nimwake.toml" /w /home/nimwake/data/blog /home/nimwake/secrets/blog
+	[ "$status" -eq 0 ]
+	[ "$(printf '%s\n' "$output" | tail -n 4 | tr '\n' '|')" = '[schedule]|wake = "0 18 * * *"|keep_awake_seconds = 600|path = "/cron/nightly"|' ]
+}

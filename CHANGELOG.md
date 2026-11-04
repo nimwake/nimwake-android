@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `nimwake-host start`가 wake lock을 잡는다 — 부팅 스크립트만 잡아서 `make install` 직후나 Android가 Termux를 내린 뒤 손으로 시작한 서버는 lock 없이 돌았다 (#95, validation/19)
+
 ### Added
 
 - **pnpm · yarn · workspace**: `build-app.sh`가 lock 파일로 패키지 매니저를 정한다 — 앱 폴더에서 레포 최상위까지(`$HOME` 전에서 멈춘다) `pnpm-lock.yaml` · `yarn.lock` · `package-lock.json`. `NIMWAKE_PM`으로 고정. lock이 위에 있으면 workspace — 설치는 거기서, 빌드는 앱 폴더에서. `BUILD_CMD` · 템플릿의 `apps/<앱>/build.env`. 없으면 Node의 corepack이 받는다(WSL PATH의 Windows 쪽 도구는 쓰지 않는다). Next.js standalone: workspace의 깊은 `server.js`를 맨 위에서 부르고, pnpm의 `.pnpm/sharp@*`도 뺀다. audit은 pnpm · yarn 1 · yarn 2+의 형식을 읽는다. `tests/build/package-managers.sh`가 CI에서 실제로 빌드해 띄우고 취약한 의존성을 잡는지 본다
