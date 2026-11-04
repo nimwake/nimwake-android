@@ -52,6 +52,7 @@ cmd_start() {
 	fi
 	# 이전 실행이 종료를 기록하지 못하고 사라졌는가 (재부팅 · Android가 Termux를 내림) — 상태를 지우기 전에 본다
 	detect_unclean_end
+	acquire_wake_lock
 	# 이전 실행의 RUNNING을 새 실행의 것으로 읽지 않게 상태를 비운다 (10-nimwake가 이것을 기다린다)
 	rm -f "$NIMWAKE_RUN/stop" "$NIMWAKE_RUN/hung" "$NIMWAKE_RUN/state" "$NIMWAKE_RUN/heartbeat"
 	nohup "$0" __supervise >/dev/null 2>&1 &

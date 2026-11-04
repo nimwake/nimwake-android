@@ -43,6 +43,17 @@ core_status_json() {
 	"$NIMWAKE_CORE_CLI" status --json --socket "$NIMWAKE_SOCKET" 2>/dev/null
 }
 
+# wake lock — 기기가 잠들어도 CPU가 돌게 한다. 부팅 스크립트만 잡으면 make install 직후나 Android가 Termux를 내린 뒤
+# 손으로 시작한 서버는 lock 없이 돈다. 여러 번 잡아도 같다. Termux:API가 아니라 Termux 자신의 명령이다
+acquire_wake_lock() {
+	command -v termux-wake-lock >/dev/null 2>&1 || return 0
+	if command -v timeout >/dev/null 2>&1; then
+		timeout 10 termux-wake-lock >/dev/null 2>&1 || host_log "wake lock: termux-wake-lock failed"
+	else
+		termux-wake-lock >/dev/null 2>&1 || host_log "wake lock: termux-wake-lock failed"
+	fi
+}
+
 # 이번 부팅 시각 "YYYY-MM-DD HH:MM:SS". Android는 /proc/uptime을 막는다 — `uptime -s`(sysinfo)를 쓴다
 booted_at() {
 	if [ -n "${NIMWAKE_BOOTED_AT:-}" ]; then
