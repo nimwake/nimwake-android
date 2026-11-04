@@ -114,10 +114,13 @@ node_cmd() {
 pm_ready() {
 	[ "$pm" != npm ] || return 0
 	# WSL의 PATH에는 Windows 쪽 도구(/mnt/c/…)가 섞인다 — 다른 Node의 오래된 corepack이라 믿지 않는다
-	case "$(node_cmd sh -c "command -v $pm" 2>/dev/null || true)" in
-	'' | /mnt/*) ;;
-	*) return 0 ;;
-	esac
+	# package.json의 packageManager가 있으면 그 버전이 우선이다 — 전역 yarn 1은 yarn 4 프로젝트를 거부한다
+	if ! grep -q '"packageManager"' "$pm_root/package.json" 2>/dev/null; then
+		case "$(node_cmd sh -c "command -v $pm" 2>/dev/null || true)" in
+		'' | /mnt/*) ;;
+		*) return 0 ;;
+		esac
+	fi
 	shims="$(mktemp -d)"
 	trap 'rm -rf "$shims"' EXIT
 	node_cmd corepack enable --install-directory "$shims" "$pm"
